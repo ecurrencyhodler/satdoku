@@ -49,7 +49,7 @@ npm run dev
    - `MDK_MNEMONIC`
 4. Configure webhook in MoneyDevKit dashboard:
    - Go to your MoneyDevKit dashboard
-   - Set webhook URL to: `https://your-domain.com/api/mdk/webhook`
+   - Set webhook URL to: `https://your-domain.com` (root URL)
    - This allows the server to verify payments and grant lives securely
 5. Deploy!
 
