@@ -1,13 +1,13 @@
 'use client';
 
 import { useCheckoutSuccess } from '@moneydevkit/nextjs';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePurchaseVerification } from '../../components/hooks/usePurchaseVerification';
 import { useLifeGranting } from '../../components/hooks/useLifeGranting';
 import { PurchaseSuccessUI } from '../../components/PurchaseSuccessUI';
 
-export default function PurchaseSuccessPage() {
+function PurchaseSuccessContent() {
   const { isCheckoutPaidLoading, isCheckoutPaid, metadata } = useCheckoutSuccess();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -109,6 +109,18 @@ export default function PurchaseSuccessPage() {
       error={error}
       onReturnToGame={() => router.push('/')}
     />
+  );
+}
+
+export default function PurchaseSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    }>
+      <PurchaseSuccessContent />
+    </Suspense>
   );
 }
 

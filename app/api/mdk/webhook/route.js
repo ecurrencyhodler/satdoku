@@ -1,6 +1,51 @@
 import { NextResponse } from 'next/server';
-import { verifyWebhookSignature } from '@moneydevkit/nextjs/server';
-import { set } from '../../../lib/redis.js';
+import crypto from 'crypto';
+import { set } from '@/lib/redis';
+
+/**
+ * Verify webhook signature using HMAC-SHA256
+ * Supports both simple signature and timestamp-based signature formats
+ */
+function verifyWebhookSignature(body, signature, secret, timestamp = null) {
+  if (!signature || !secret) {
+    throw new Error('Missing signature or secret');
+  }
+
+  let signedContent = body;
+  
+  // If timestamp is provided, use timestamp.body format (common webhook pattern)
+  if (timestamp) {
+    signedContent = `${timestamp}.${body}`;
+  }
+
+  // Compute expected signature
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(signedContent);
+  const expectedSignature = hmac.digest('hex');
+
+  // Use timing-safe comparison to prevent timing attacks
+  // Handle both hex string and buffer formats
+  let signatureBuffer;
+  try {
+    signatureBuffer = Buffer.from(signature, 'hex');
+  } catch (e) {
+    // If hex parsing fails, try treating it as a raw string
+    signatureBuffer = Buffer.from(signature);
+  }
+  
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+  
+  if (signatureBuffer.length !== expectedBuffer.length) {
+    throw new Error('Invalid webhook signature length');
+  }
+
+  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    throw new Error('Invalid webhook signature');
+  }
+
+  // Parse and return the event
+  return JSON.parse(body);
+}
 
 /**
  * Webhook handler for MoneyDevKit payment events
@@ -8,14 +53,16 @@ import { set } from '../../../lib/redis.js';
  */
 export async function POST(request) {
   const body = await request.text();
-  const signature = request.headers.get('mdk-signature');
+  const signature = request.headers.get('mdk-signature') || request.headers.get('moneydevkit-signature');
+  const timestamp = request.headers.get('moneydevkit-timestamp');
 
   try {
     // Verify webhook signature
     const event = verifyWebhookSignature(
       body,
       signature,
-      process.env.MDK_WEBHOOK_SECRET
+      process.env.MDK_WEBHOOK_SECRET,
+      timestamp
     );
 
     // Handle successful payment
@@ -25,13 +72,13 @@ export async function POST(request) {
       // Check if this is a life purchase
       if (session.metadata?.type === 'life_purchase') {
         const checkoutId = session.id;
-        const timestamp = Date.now();
+        const purchaseTimestamp = Date.now();
         
         // Store purchase token in Redis with 24 hour expiration
         // Key format: purchase:{checkoutId}
         // Value: timestamp when payment was verified
         try {
-          await set(`purchase:${checkoutId}`, timestamp, {
+          await set(`purchase:${checkoutId}`, purchaseTimestamp, {
             ex: 60 * 60 * 24, // Expires in 24 hours
           });
           

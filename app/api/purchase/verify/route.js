@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { get, del } from '../../../lib/redis.js';
+import { get, del } from '@/lib/redis';
 
 /**
  * API route to verify purchase
