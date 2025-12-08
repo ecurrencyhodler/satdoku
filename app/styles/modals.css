@@ -1,0 +1,92 @@
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s;
+}
+
+.modal.show {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #2d3748;
+    text-align: center;
+}
+
+.modal-content p {
+    margin-bottom: 10px;
+    color: #4a5568;
+    font-size: 16px;
+    text-align: center;
+}
+
+.win-message {
+    text-align: center;
+    color: #48bb78;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.modal-stats {
+    margin-bottom: 25px;
+}
+
+.modal-stats p {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #4a5568;
+    text-align: left;
+}
+
+.modal-stats strong {
+    color: #2d3748;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0;
+}
+
+.modal-actions .btn {
+    min-width: 140px;
+}

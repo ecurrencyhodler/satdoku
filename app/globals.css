@@ -1,0 +1,7 @@
+@import './styles/reset.css';
+@import './styles/layout.css';
+@import './styles/components.css';
+@import './styles/game-board.css';
+@import './styles/animations.css';
+@import './styles/modals.css';
+@import './styles/responsive.css';

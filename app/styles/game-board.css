@@ -1,0 +1,97 @@
+.game-board-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 0;
+    border: 2px solid #2d3748;
+    background: #2d3748;
+    width: 100%;
+    max-width: 450px;
+    aspect-ratio: 1;
+}
+
+.cell {
+    background: white;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 500;
+    color: #2d3748;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    position: relative;
+}
+
+.cell:hover:not(.cell-prefilled):not(.cell-locked) {
+    background: #edf2f7;
+}
+
+.cell-prefilled {
+    background: #f7fafc;
+    color: #4a5568;
+    cursor: default;
+    font-weight: 600;
+}
+
+.cell-locked {
+    cursor: default;
+    font-weight: 500;
+}
+
+.cell-selected {
+    background: #bee3f8 !important;
+}
+
+.cell-error {
+    animation: redFlash 0.3s;
+}
+
+@keyframes redFlash {
+    0%, 100% { background-color: white; }
+    50% { background-color: #fc8181; }
+}
+
+.cell-completed-row {
+    background: #f0fff4 !important;
+    transition: background 0.2s;
+}
+
+.cell-completed-box {
+    background: #e6fffa !important;
+    transition: background 0.2s;
+}
+
+.cell-completed-row.cell-completed-box {
+    background: #d4f4e6 !important;
+}
+
+/* Ensure completed styles show even when selected */
+.cell-selected.cell-completed-row {
+    background: #f0fff4 !important;
+}
+
+.cell-selected.cell-completed-box {
+    background: #e6fffa !important;
+}
+
+.cell-selected.cell-completed-row.cell-completed-box {
+    background: #d4f4e6 !important;
+}
+
+/* Box borders for 3x3 sections */
+.cell:nth-child(3n) {
+    border-right: 2px solid #2d3748;
+}
+
+.cell:nth-child(n+19):nth-child(-n+27),
+.cell:nth-child(n+46):nth-child(-n+54) {
+    border-bottom: 2px solid #2d3748;
+}

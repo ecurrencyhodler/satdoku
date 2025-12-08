@@ -1,0 +1,22 @@
+{
+  "name": "satdoku",
+  "version": "1.0.0",
+  "description": "Sudoku game with Lightning payments via Money Dev Kit",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@moneydevkit/nextjs": "^1.0.0",
+    "@vercel/kv": "^1.0.0",
+    "next": "^15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
