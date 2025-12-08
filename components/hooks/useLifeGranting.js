@@ -38,8 +38,8 @@ export function useLifeGranting() {
       
       if (saved) {
         const livesManager = new LivesManager();
-        const beforeLives = saved.lives || INITIAL_LIVES;
-        const beforePurchased = saved.livesPurchased || 0;
+        const beforeLives = saved.lives ?? INITIAL_LIVES;
+        const beforePurchased = saved.livesPurchased ?? 0;
         
         livesManager.lives = beforeLives;
         livesManager.livesPurchased = beforePurchased;
