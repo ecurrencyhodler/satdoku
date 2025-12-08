@@ -56,12 +56,14 @@ function PurchaseSuccessContent() {
     if (hasProcessed.current) return;
     
     if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'verifying') {
-      // Get checkout ID from URL search params (MoneyDevKit uses 'checkout-id' with hyphen)
+      // Get checkout ID from URL search params (check both formats for compatibility)
       // or from metadata
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const checkoutId = 
         searchParams?.get('checkout-id') ||
+        searchParams?.get('checkout_id') ||
         urlParams?.get('checkout-id') ||
+        urlParams?.get('checkout_id') ||
         metadata?.checkoutId ||
         metadata?.id;
       
