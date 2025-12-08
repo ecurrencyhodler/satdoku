@@ -16,7 +16,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
       title: 'Satdoku',
       description: 'Buy a life to keep playing',
       amount: LIFE_PURCHASE_PRICE_SATS,
-      currency: 'USD', // MDK will convert sats
+      currency: 'SAT', // Amount is in satoshis
       metadata: {
         type: 'life_purchase',
         successUrl: '/purchase-success?checkout_id={CHECKOUT_ID}',
