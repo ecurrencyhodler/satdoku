@@ -19,28 +19,36 @@ export default function PurchaseSuccessPage() {
   const { grantLife, isGranting, lifeAdded, error: grantError } = useLifeGranting();
 
   const processPurchase = async (checkoutId) => {
-    // Step 1: Verify purchase
-    const verified = await verifyPurchase(checkoutId);
-    if (!verified) {
-      setError(verifyError);
-      setStatus('error');
-      return;
-    }
+    try {
+      // Step 1: Verify purchase
+      const verified = await verifyPurchase(checkoutId);
+      if (!verified) {
+        const errorMessage = verifyError || 'Purchase verification failed. Please try again or contact support.';
+        setError(errorMessage);
+        setStatus('error');
+        return;
+      }
 
-    // Step 2: Grant life
-    setStatus('granting');
-    const result = await grantLife(checkoutId);
-    if (!result.success) {
-      setError(grantError);
-      setStatus('error');
-      return;
-    }
+      // Step 2: Grant life
+      setStatus('granting');
+      const result = await grantLife(checkoutId);
+      if (!result.success) {
+        const errorMessage = grantError || 'Failed to add life to your game. Please contact support with your checkout ID.';
+        setError(errorMessage);
+        setStatus('error');
+        return;
+      }
 
-    // Step 3: Success - redirect
-    setStatus('success');
-    setTimeout(() => {
-      router.push(result.lifeAdded ? '/?payment_success=true' : '/');
-    }, 1500);
+      // Step 3: Success - redirect
+      setStatus('success');
+      setTimeout(() => {
+        router.push(result.lifeAdded ? '/?payment_success=true' : '/');
+      }, 1500);
+    } catch (err) {
+      console.error('Unexpected error during purchase processing:', err);
+      setError('An unexpected error occurred. Please contact support with your checkout ID.');
+      setStatus('error');
+    }
   };
 
   useEffect(() => {
@@ -60,12 +68,17 @@ export default function PurchaseSuccessPage() {
         (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout_id')) ||
         (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('id'));
       
-      if (checkoutId) {
+      // Validate checkout ID format (should be a non-empty string)
+      const isValidCheckoutId = checkoutId && 
+        typeof checkoutId === 'string' && 
+        checkoutId.trim().length > 0;
+      
+      if (isValidCheckoutId) {
         hasProcessed.current = true;
-        processPurchase(checkoutId);
+        processPurchase(checkoutId.trim());
       } else {
-        // If checkout ID not found, cannot verify purchase
-        console.warn('Checkout ID not found in URL or metadata');
+        // If checkout ID not found or invalid, cannot verify purchase
+        console.warn('Checkout ID not found or invalid in URL or metadata:', { checkoutId, metadata });
         setError('Checkout ID not found. Please contact support if payment was successful.');
         setStatus('error');
         hasProcessed.current = true; // Prevent retries

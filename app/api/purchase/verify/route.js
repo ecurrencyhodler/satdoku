@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { get, del } from '../../../lib/redis.js';
 
 /**
  * API route to verify purchase
- * Checks for valid purchase token in Vercel KV
+ * Checks for valid purchase token in Redis
  */
 export async function POST(request) {
   try {
@@ -16,9 +16,19 @@ export async function POST(request) {
       );
     }
 
-    // Check if purchase token exists in KV
+    // Check if purchase token exists in Redis
     const purchaseKey = `purchase:${checkoutId}`;
-    const purchaseTimestamp = await kv.get(purchaseKey);
+    let purchaseTimestamp;
+    
+    try {
+      purchaseTimestamp = await get(purchaseKey);
+    } catch (redisError) {
+      console.error('Redis error during purchase verification:', redisError);
+      return NextResponse.json(
+        { error: 'Failed to verify purchase. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     if (!purchaseTimestamp) {
       return NextResponse.json(
@@ -60,7 +70,14 @@ export async function DELETE(request) {
 
     // Delete the purchase token (one-time use)
     const purchaseKey = `purchase:${checkoutId}`;
-    await kv.del(purchaseKey);
+    
+    try {
+      await del(purchaseKey);
+      console.log(`Purchase token deleted for checkout: ${checkoutId}`);
+    } catch (redisError) {
+      // Log but don't fail - token will expire anyway
+      console.error('Failed to delete purchase token from Redis:', redisError);
+    }
 
     return NextResponse.json({ 
       success: true,

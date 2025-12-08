@@ -16,6 +16,11 @@ export function useLifeGranting() {
       setIsGranting(true);
       setError(null);
       
+      // Validate checkoutId format
+      if (!checkoutId || typeof checkoutId !== 'string' || checkoutId.trim().length === 0) {
+        throw new Error('Invalid checkout ID');
+      }
+      
       // Purchase verified - add life to game state
       const saved = StateManager.loadGameState();
       if (saved) {
@@ -32,15 +37,28 @@ export function useLifeGranting() {
         StateManager.saveGameState(saved);
         
         // Delete the purchase token after successful life grant
-        try {
-          await fetch('/api/purchase/verify', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ checkoutId }),
-          });
-        } catch (deleteError) {
-          // Log error but don't fail the operation - token will expire anyway
-          console.warn('Failed to delete purchase token:', deleteError);
+        // Retry up to 3 times to ensure token is deleted
+        let deleteSuccess = false;
+        for (let attempt = 0; attempt < 3 && !deleteSuccess; attempt++) {
+          try {
+            const deleteResponse = await fetch('/api/purchase/verify', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ checkoutId }),
+            });
+            
+            if (deleteResponse.ok) {
+              deleteSuccess = true;
+            } else if (attempt < 2) {
+              // Wait before retry (exponential backoff)
+              await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            }
+          } catch (deleteError) {
+            if (attempt === 2) {
+              // Log error on final attempt but don't fail the operation - token will expire anyway
+              console.warn('Failed to delete purchase token after retries:', deleteError);
+            }
+          }
         }
         
         setLifeAdded(true);
@@ -49,14 +67,25 @@ export function useLifeGranting() {
       } else {
         // No saved game, but still successful
         // Still delete token to prevent reuse
-        try {
-          await fetch('/api/purchase/verify', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ checkoutId }),
-          });
-        } catch (deleteError) {
-          console.warn('Failed to delete purchase token:', deleteError);
+        let deleteSuccess = false;
+        for (let attempt = 0; attempt < 3 && !deleteSuccess; attempt++) {
+          try {
+            const deleteResponse = await fetch('/api/purchase/verify', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ checkoutId }),
+            });
+            
+            if (deleteResponse.ok) {
+              deleteSuccess = true;
+            } else if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+            }
+          } catch (deleteError) {
+            if (attempt === 2) {
+              console.warn('Failed to delete purchase token after retries:', deleteError);
+            }
+          }
         }
         
         setIsGranting(false);
