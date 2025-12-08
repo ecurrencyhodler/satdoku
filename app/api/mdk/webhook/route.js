@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { set } from '@/lib/redis';
+import { set, get } from '@/lib/redis';
 
 /**
  * Verify webhook signature using HMAC-SHA256
@@ -72,13 +72,31 @@ export async function POST(request) {
       // Check if this is a life purchase
       if (session.metadata?.type === 'life_purchase') {
         const checkoutId = session.id;
-        const purchaseTimestamp = Date.now();
+        const purchaseKey = `purchase:${checkoutId}`;
+        
+        // Idempotency check: if token already exists, this is a duplicate webhook call
+        // Return success without error (webhooks can be called multiple times)
+        try {
+          const existingToken = await get(purchaseKey);
+          if (existingToken) {
+            console.log(`Purchase token already exists for checkout: ${checkoutId} (idempotent webhook call)`);
+            return NextResponse.json({ 
+              received: true,
+              checkoutId,
+              alreadyProcessed: true
+            });
+          }
+        } catch (redisError) {
+          // If check fails, continue to try storing (might be transient error)
+          console.warn('Failed to check existing token during idempotency check:', redisError);
+        }
         
         // Store purchase token in Redis with 24 hour expiration
         // Key format: purchase:{checkoutId}
         // Value: timestamp when payment was verified
+        const purchaseTimestamp = Date.now();
         try {
-          await set(`purchase:${checkoutId}`, purchaseTimestamp, {
+          await set(purchaseKey, purchaseTimestamp, {
             ex: 60 * 60 * 24, // Expires in 24 hours
           });
           

@@ -26,7 +26,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
       currency: 'SAT', // Amount is in satoshis
       metadata: {
         type: 'life_purchase',
-        successUrl: '/purchase-success?checkout_id={CHECKOUT_ID}',
+        successUrl: '/purchase-success',
       },
     });
   };

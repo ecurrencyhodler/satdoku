@@ -16,6 +16,17 @@ export async function POST(request) {
       );
     }
 
+    // Validate checkout ID format
+    if (typeof checkoutId !== 'string' || 
+        checkoutId.trim().length < 10 || 
+        checkoutId.trim().length > 100 ||
+        !/^[a-zA-Z0-9_-]+$/.test(checkoutId.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid checkout ID format' },
+        { status: 400 }
+      );
+    }
+
     // Check if purchase token exists in Redis
     const purchaseKey = `purchase:${checkoutId}`;
     let purchaseTimestamp;
@@ -37,9 +48,17 @@ export async function POST(request) {
       );
     }
 
-    // Don't delete token here - let client delete it after successfully granting life
-    // This prevents token loss if life granting fails
-    // Token will be deleted by client after successful life grant or will expire after 24 hours
+    // Delete token immediately after verification to make it one-time use
+    // This prevents token reuse if user refreshes page or makes multiple requests
+    try {
+      await del(purchaseKey);
+      console.log(`Purchase token consumed and deleted for checkout: ${checkoutId}`);
+    } catch (redisError) {
+      // Log but don't fail - token will expire anyway
+      // If deletion fails, token could potentially be reused, but expiration will prevent long-term issues
+      console.error('Failed to delete purchase token from Redis:', redisError);
+    }
+
     return NextResponse.json({ 
       success: true,
       message: 'Purchase verified',
@@ -64,6 +83,17 @@ export async function DELETE(request) {
     if (!checkoutId) {
       return NextResponse.json(
         { error: 'Checkout ID required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate checkout ID format
+    if (typeof checkoutId !== 'string' || 
+        checkoutId.trim().length < 10 || 
+        checkoutId.trim().length > 100 ||
+        !/^[a-zA-Z0-9_-]+$/.test(checkoutId.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid checkout ID format' },
         { status: 400 }
       );
     }

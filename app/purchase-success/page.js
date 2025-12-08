@@ -57,25 +57,34 @@ function PurchaseSuccessContent() {
     
     if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'verifying') {
       // Get checkout ID from multiple sources:
-      // 1. URL search params (if MoneyDevKit includes it)
+      // 1. URL search params (MoneyDevKit may use 'checkout-id' with hyphen or 'checkout_id' with underscore)
       // 2. Metadata from useCheckoutSuccess
       // 3. Check if useCheckoutSuccess provides checkoutId directly
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const checkoutId = 
+        searchParams?.get('checkout-id') ||  // MoneyDevKit uses hyphen
         searchParams?.get('checkout_id') || 
         searchParams?.get('id') ||
+        urlParams?.get('checkout-id') ||
+        urlParams?.get('checkout_id') ||
+        urlParams?.get('id') ||
         metadata?.checkoutId ||
-        metadata?.id ||
-        (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout_id')) ||
-        (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('id'));
+        metadata?.id;
       
-      // Validate checkout ID format (should be a non-empty string)
-      const isValidCheckoutId = checkoutId && 
-        typeof checkoutId === 'string' && 
-        checkoutId.trim().length > 0;
+      // Validate checkout ID format (should be a non-empty string and not a template variable)
+      const trimmedId = checkoutId && typeof checkoutId === 'string' ? checkoutId.trim() : '';
+      // MoneyDevKit checkout IDs are alphanumeric strings (e.g., "cmixbzzgu001nad0101qqxv87")
+      // Reject template variables, empty strings, and obviously invalid formats
+      const isValidCheckoutId = trimmedId.length > 0 && 
+        trimmedId.length >= 10 && // Reasonable minimum length
+        trimmedId.length <= 100 && // Reasonable maximum length
+        !trimmedId.includes('{') && // Reject template variables like {CHECKOUT_ID}
+        !trimmedId.includes('}') &&
+        /^[a-zA-Z0-9_-]+$/.test(trimmedId); // Only allow alphanumeric, underscore, and hyphen
       
       if (isValidCheckoutId) {
         hasProcessed.current = true;
-        processPurchase(checkoutId.trim());
+        processPurchase(trimmedId);
       } else {
         // If checkout ID not found or invalid, cannot verify purchase
         console.warn('Checkout ID not found or invalid in URL or metadata:', { checkoutId, metadata });
