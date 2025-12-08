@@ -1,12 +1,19 @@
 'use client';
 
 import { useCheckout } from '@moneydevkit/nextjs';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LIFE_PURCHASE_PRICE_SATS } from '../src/js/system/constants.js';
 
 export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
   const { navigate, isNavigating } = useCheckout();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Reset processing state when modal opens (handles case where user navigated back from checkout)
+  useEffect(() => {
+    if (isOpen) {
+      setIsProcessing(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -37,7 +44,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
           >
             {isNavigating || isProcessing ? 'Creating checkout…' : `Keep Playing (${LIFE_PURCHASE_PRICE_SATS} sats)`}
           </button>
-          <button onClick={onClose} className="btn btn-secondary" disabled={isNavigating || isProcessing}>
+          <button onClick={onClose} className="btn btn-secondary">
             End Game
           </button>
         </div>
