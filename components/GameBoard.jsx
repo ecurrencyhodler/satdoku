@@ -8,6 +8,7 @@ export default function GameBoard({
   puzzle, 
   selectedCell, 
   completedRows, 
+  completedColumns,
   completedBoxes,
   onCellClick,
   hasLives 
@@ -28,6 +29,7 @@ export default function GameBoard({
             const isPrefilled = puzzle[row][col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
             const completedRow = completedRows.includes(row);
+            const completedColumn = completedColumns.includes(col);
             const boxIndex = getBoxIndex(row, col);
             const completedBox = completedBoxes.includes(boxIndex);
 
@@ -40,6 +42,7 @@ export default function GameBoard({
                 isPrefilled={isPrefilled}
                 isSelected={isSelected}
                 completedRow={completedRow}
+                completedColumn={completedColumn}
                 completedBox={completedBox}
                 onClick={onCellClick}
                 hasLives={hasLives}

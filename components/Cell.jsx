@@ -7,6 +7,7 @@ export default function Cell({
   isPrefilled, 
   isSelected, 
   completedRow, 
+  completedColumn,
   completedBox, 
   onClick,
   hasLives 
@@ -23,7 +24,7 @@ export default function Cell({
 
   return (
     <div
-      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isSelected ? 'cell-selected' : ''} ${completedRow ? 'cell-completed-row' : ''} ${completedBox ? 'cell-completed-box' : ''}`}
+      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isSelected ? 'cell-selected' : ''} ${completedRow ? 'cell-completed-row' : ''} ${completedColumn ? 'cell-completed-column' : ''} ${completedBox ? 'cell-completed-box' : ''}`}
       data-row={row}
       data-col={col}
       onClick={handleClick}

@@ -1,6 +1,40 @@
 'use client';
 
+import { useEffect } from 'react';
+import confetti from 'canvas-confetti';
+
 export default function WinModal({ isOpen, onClose, onPlayAgain, onChangeDifficulty, stats }) {
+  useEffect(() => {
+    if (isOpen) {
+      // Trigger confetti celebration
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const colors = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#f56565'];
+
+      (function frame() {
+        confetti({
+          particleCount: 2,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: colors
+        });
+        confetti({
+          particleCount: 2,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: colors
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      }());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (

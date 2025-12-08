@@ -29,6 +29,9 @@ export class GameState {
             if (saved.completedRows) {
                 scoringEngine.completedRows = new Set(saved.completedRows);
             }
+            if (saved.completedColumns) {
+                scoringEngine.completedColumns = new Set(saved.completedColumns);
+            }
             if (saved.completedBoxes) {
                 scoringEngine.completedBoxes = new Set(saved.completedBoxes);
             }
@@ -55,6 +58,7 @@ export class GameState {
             lives: livesManager.getLives(),
             livesPurchased: livesManager.getLivesPurchased(),
             completedRows: Array.from(scoringEngine.completedRows),
+            completedColumns: Array.from(scoringEngine.completedColumns),
             completedBoxes: Array.from(scoringEngine.completedBoxes)
         };
         StateManager.saveGameState(state);

@@ -59,31 +59,19 @@
     50% { background-color: #fc8181; }
 }
 
-.cell-completed-row {
-    background: #f0fff4 !important;
-    transition: background 0.2s;
-}
-
+/* Single color for all completed regions (row, column, or box) */
+.cell-completed-row,
+.cell-completed-column,
 .cell-completed-box {
-    background: #e6fffa !important;
+    background: #e6f3ff !important;
     transition: background 0.2s;
-}
-
-.cell-completed-row.cell-completed-box {
-    background: #d4f4e6 !important;
 }
 
 /* Ensure completed styles show even when selected */
-.cell-selected.cell-completed-row {
-    background: #f0fff4 !important;
-}
-
+.cell-selected.cell-completed-row,
+.cell-selected.cell-completed-column,
 .cell-selected.cell-completed-box {
-    background: #e6fffa !important;
-}
-
-.cell-selected.cell-completed-row.cell-completed-box {
-    background: #d4f4e6 !important;
+    background: #e6f3ff !important;
 }
 
 /* Box borders for 3x3 sections */

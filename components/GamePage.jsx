@@ -157,6 +157,7 @@ export default function GamePage() {
         puzzle={gameState.puzzle}
         selectedCell={selectedCell}
         completedRows={gameState.completedRows}
+        completedColumns={gameState.completedColumns}
         completedBoxes={gameState.completedBoxes}
         onCellClick={handleCellClick}
         hasLives={gameState.lives > 0}

@@ -24,6 +24,15 @@ export class ScoreAnimationHandler {
                         UIAnimations.showScorePopup(firstCell, event.score);
                     }
                 }
+            } else if (event.type === 'column') {
+                // Show popup on first cell of column
+                // Note: Column completion styling is handled by React via Cell component props
+                if (board) {
+                    const firstCell = board.querySelector(`[data-row="0"][data-col="${event.column}"]`);
+                    if (firstCell) {
+                        UIAnimations.showScorePopup(firstCell, event.score);
+                    }
+                }
             } else if (event.type === 'box') {
                 // Show popup on first cell of box
                 // Note: Box completion styling is handled by React via Cell component props

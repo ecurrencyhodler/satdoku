@@ -36,6 +36,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       moves: scoringEngineRef.current.getMoves(),
       lives: livesManagerRef.current.getLives(),
       completedRows: Array.from(scoringEngineRef.current.completedRows),
+      completedColumns: Array.from(scoringEngineRef.current.completedColumns),
       completedBoxes: Array.from(scoringEngineRef.current.completedBoxes),
     });
   };

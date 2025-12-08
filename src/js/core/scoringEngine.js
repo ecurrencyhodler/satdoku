@@ -6,6 +6,7 @@ export class ScoringEngine {
         this.score = 0;
         this.moves = 0;
         this.completedRows = new Set();
+        this.completedColumns = new Set();
         this.completedBoxes = new Set();
     }
 
@@ -13,6 +14,7 @@ export class ScoringEngine {
         this.score = 0;
         this.moves = 0;
         this.completedRows.clear();
+        this.completedColumns.clear();
         this.completedBoxes.clear();
     }
 
@@ -29,6 +31,17 @@ export class ScoringEngine {
                 type: 'row',
                 row,
                 score: SCORE_VALUES.completeRow
+            });
+        }
+        
+        // Check for column completion
+        if (!this.completedColumns.has(col) && this.isColumnComplete(board, col)) {
+            this.completedColumns.add(col);
+            this.score += SCORE_VALUES.completeColumn;
+            events.push({
+                type: 'column',
+                column: col,
+                score: SCORE_VALUES.completeColumn
             });
         }
         
@@ -59,6 +72,16 @@ export class ScoringEngine {
     // Check if a row is complete
     isRowComplete(board, row) {
         for (let col = 0; col < BOARD_SIZE; col++) {
+            if (board[row][col] === 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Check if a column is complete
+    isColumnComplete(board, col) {
+        for (let row = 0; row < BOARD_SIZE; row++) {
             if (board[row][col] === 0) {
                 return false;
             }
@@ -113,6 +136,10 @@ export class ScoringEngine {
 
     getCompletedRows() {
         return Array.from(this.completedRows);
+    }
+
+    getCompletedColumns() {
+        return Array.from(this.completedColumns);
     }
 
     getCompletedBoxes() {

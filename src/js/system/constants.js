@@ -8,6 +8,7 @@ export const DIFFICULTY_LEVELS = {
 export const SCORE_VALUES = {
     correctCell: 1,
     completeRow: 5,
+    completeColumn: 5,
     completeBox: 10
 };
 
