@@ -1,4 +1,4 @@
-# SatDoku
+# Satdoku
 
 A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase additional lives when they run out.
 

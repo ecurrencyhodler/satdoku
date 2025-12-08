@@ -135,7 +135,7 @@ export default function GamePage() {
   return (
     <div className="container">
       <header>
-        <h1>SatDoku</h1>
+        <h1>Satdoku</h1>
       </header>
 
       <GameControls

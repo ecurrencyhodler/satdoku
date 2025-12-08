@@ -2,7 +2,7 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 
 export const metadata = {
-  title: 'SatDoku',
+  title: 'Satdoku',
   description: 'Sudoku game with Lightning payments',
 };
 
