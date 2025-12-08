@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@moneydevkit/nextjs": "^1.0.0",
+    "@moneydevkit/nextjs": "^0.1.19",
     "@vercel/kv": "^1.0.0",
     "next": "^15.1.3",
     "react": "^19.0.0",

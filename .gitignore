@@ -16,6 +16,7 @@ node_modules/
 # Misc
 .DS_Store
 *.pem
+prd.md
 
 # Debug
 npm-debug.log*
@@ -32,5 +33,3 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
-
-prd.md
