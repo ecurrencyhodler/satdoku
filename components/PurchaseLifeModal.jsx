@@ -13,7 +13,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
   const handlePurchase = () => {
     setIsProcessing(true);
     navigate({
-      title: 'Keep Playing',
+      title: 'Satdoku',
       description: 'Buy a life to keep playing',
       amount: LIFE_PURCHASE_PRICE_SATS,
       currency: 'USD', // MDK will convert sats
