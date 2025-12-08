@@ -97,3 +97,29 @@
     font-weight: 600;
     color: #2d3748;
 }
+
+.github-link-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    margin-bottom: 5px;
+}
+
+.github-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    transition: color 0.2s, transform 0.2s;
+    text-decoration: none;
+}
+
+.github-link:hover {
+    color: #000;
+    transform: scale(1.1);
+}
+
+.github-link svg {
+    display: block;
+}
