@@ -43,7 +43,7 @@ function PurchaseSuccessContent() {
       setStatus('success');
       setTimeout(() => {
         router.push(result.lifeAdded ? '/?payment_success=true' : '/');
-      }, 1500);
+      }, 10);
     } catch (err) {
       console.error('Unexpected error during purchase processing:', err);
       setError('An unexpected error occurred. Please contact support with your checkout ID.');
