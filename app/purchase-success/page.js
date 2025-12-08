@@ -40,27 +40,38 @@ function PurchaseSuccessContent() {
     if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'granting') {
       hasProcessed.current = true;
       
+      // Set sessionStorage flag IMMEDIATELY to prevent race condition
+      // This must happen BEFORE grantLife() to prevent duplicate grants
+      if (checkoutId) {
+        const sessionKey = `life_granted_${checkoutId}`;
+        sessionStorage.setItem(sessionKey, 'true');
+      }
+      
       // Grant life
       grantLife().then((result) => {
         if (result.success && result.lifeAdded) {
-          // Mark as granted in sessionStorage to prevent duplicate grants
-          if (checkoutId) {
-            const sessionKey = `life_granted_${checkoutId}`;
-            sessionStorage.setItem(sessionKey, 'true');
-          }
-          
           setStatus('success');
           // Redirect to game with payment success flag
           setTimeout(() => {
             router.push('/?payment_success=true');
           }, 500);
         } else {
+          // Remove sessionStorage flag on error to allow retry
+          if (checkoutId) {
+            const sessionKey = `life_granted_${checkoutId}`;
+            sessionStorage.removeItem(sessionKey);
+          }
           const errorMessage = grantError || 'Failed to add life to your game. Please contact support.';
           setError(errorMessage);
           setStatus('error');
           hasProcessed.current = false; // Allow retry on error
         }
       }).catch((err) => {
+        // Remove sessionStorage flag on error to allow retry
+        if (checkoutId) {
+          const sessionKey = `life_granted_${checkoutId}`;
+          sessionStorage.removeItem(sessionKey);
+        }
         console.error('Unexpected error during purchase processing:', err);
         setError('An unexpected error occurred. Please contact support.');
         setStatus('error');
