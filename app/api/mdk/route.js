@@ -14,18 +14,29 @@ export async function POST(request) {
   
   // Parse body first to get event data (before MDK consumes it)
   let eventData = null;
+  let rawBody = null;
   try {
-    const bodyText = await clonedRequest.text();
-    eventData = JSON.parse(bodyText);
-    console.log('[webhook] Parsed event data:', {
-      type: eventData?.type,
-      hasData: !!eventData?.data,
-      hasObject: !!eventData?.data?.object,
-      sessionId: eventData?.data?.object?.id,
-      metadata: eventData?.data?.object?.metadata
-    });
+    rawBody = await clonedRequest.text();
+    console.log('[webhook] Raw body length:', rawBody?.length);
+    console.log('[webhook] Raw body preview (first 500 chars):', rawBody?.substring(0, 500));
+    
+    if (rawBody) {
+      eventData = JSON.parse(rawBody);
+      console.log('[webhook] Parsed event data:', {
+        type: eventData?.type,
+        hasData: !!eventData?.data,
+        hasObject: !!eventData?.data?.object,
+        sessionId: eventData?.data?.object?.id,
+        metadata: eventData?.data?.object?.metadata,
+        // Log full structure for debugging
+        fullEvent: JSON.stringify(eventData).substring(0, 1000)
+      });
+    } else {
+      console.log('[webhook] Raw body is empty or null');
+    }
   } catch (error) {
     console.error('[webhook] Failed to parse request body:', error);
+    console.error('[webhook] Raw body that failed to parse:', rawBody?.substring(0, 500));
     // Still let MDK handle it - it will return proper error
   }
 
@@ -41,14 +52,35 @@ export async function POST(request) {
   console.log('[webhook] MDK signature verification successful');
 
   // MDK verified the signature successfully, now add our custom Redis logic
-  if (eventData?.type === 'checkout.session.completed') {
+  // Try multiple event structure formats that MDK might use
+  let session = null;
+  let eventType = null;
+  
+  if (eventData) {
+    // Try standard format: { type: 'checkout.session.completed', data: { object: {...} } }
+    if (eventData.type === 'checkout.session.completed' && eventData.data?.object) {
+      eventType = eventData.type;
+      session = eventData.data.object;
+    }
+    // Try alternative format: direct object
+    else if (eventData.object && eventData.object.id) {
+      eventType = 'checkout.session.completed';
+      session = eventData.object;
+    }
+    // Try nested in data
+    else if (eventData.data && typeof eventData.data === 'object' && eventData.data.id) {
+      eventType = 'checkout.session.completed';
+      session = eventData.data;
+    }
+  }
+  
+  if (eventType === 'checkout.session.completed' && session) {
     console.log('[webhook] Event type matches checkout.session.completed');
-    const session = eventData.data?.object;
-    
     console.log('[webhook] Session data:', {
       id: session?.id,
       metadataType: session?.metadata?.type,
-      fullMetadata: session?.metadata
+      fullMetadata: session?.metadata,
+      allKeys: Object.keys(session || {})
     });
     
     if (session?.metadata?.type === 'life_purchase' && session.id) {
@@ -81,11 +113,16 @@ export async function POST(request) {
         hasMetadata: !!session?.metadata,
         metadataType: session?.metadata?.type,
         expectedType: 'life_purchase',
-        hasSessionId: !!session?.id
+        hasSessionId: !!session?.id,
+        sessionKeys: Object.keys(session || {})
       });
     }
   } else {
-    console.log('[webhook] Event type does not match checkout.session.completed:', eventData?.type);
+    console.log('[webhook] Event type does not match checkout.session.completed:', {
+      eventType,
+      hasSession: !!session,
+      eventDataKeys: eventData ? Object.keys(eventData) : null
+    });
   }
   
   return mdkResponse;
