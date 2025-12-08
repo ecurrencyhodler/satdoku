@@ -17,16 +17,30 @@ function PurchaseSuccessContent() {
   const { grantLife, isGranting, lifeAdded, error: grantError } = useLifeGranting();
 
   useEffect(() => {
+    console.log('[purchase-success] useEffect triggered', {
+      hasProcessed: hasProcessed.current,
+      isCheckoutPaidLoading,
+      isCheckoutPaid,
+      status,
+      timestamp: new Date().toISOString()
+    });
+    
     // Prevent multiple calls with ref guard
-    if (hasProcessed.current) return;
+    if (hasProcessed.current) {
+      console.log('[purchase-success] Already processed, returning early');
+      return;
+    }
     
     // Get checkout ID from URL to create unique session key
     const checkoutId = searchParams?.get('checkout-id');
+    console.log('[purchase-success] Checkout ID:', checkoutId);
     
     // Check sessionStorage to prevent duplicate grants (persists across remounts)
     if (checkoutId) {
       const sessionKey = `life_granted_${checkoutId}`;
-      if (sessionStorage.getItem(sessionKey)) {
+      const alreadyGranted = sessionStorage.getItem(sessionKey);
+      console.log('[purchase-success] SessionStorage check:', { sessionKey, alreadyGranted });
+      if (alreadyGranted) {
         console.log('[purchase-success] Life already granted for this checkout, skipping');
         setStatus('success');
         setTimeout(() => {
@@ -38,6 +52,7 @@ function PurchaseSuccessContent() {
     
     // When payment is confirmed by MoneyDevKit, grant life
     if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'granting') {
+      console.log('[purchase-success] Conditions met, proceeding to grant life');
       hasProcessed.current = true;
       
       // Set sessionStorage flag IMMEDIATELY to prevent race condition
@@ -45,10 +60,13 @@ function PurchaseSuccessContent() {
       if (checkoutId) {
         const sessionKey = `life_granted_${checkoutId}`;
         sessionStorage.setItem(sessionKey, 'true');
+        console.log('[purchase-success] Set sessionStorage flag:', sessionKey);
       }
       
       // Grant life
+      console.log('[purchase-success] Calling grantLife()');
       grantLife().then((result) => {
+        console.log('[purchase-success] grantLife() result:', result);
         if (result.success && result.lifeAdded) {
           setStatus('success');
           // Redirect to game with payment success flag
@@ -76,6 +94,12 @@ function PurchaseSuccessContent() {
         setError('An unexpected error occurred. Please contact support.');
         setStatus('error');
         hasProcessed.current = false; // Allow retry on error
+      });
+    } else {
+      console.log('[purchase-success] Conditions not met:', {
+        isCheckoutPaidLoading,
+        isCheckoutPaid,
+        status
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
