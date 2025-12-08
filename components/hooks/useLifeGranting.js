@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { StateManager } from '../../src/js/system/localState.js';
 import { LivesManager } from '../../src/js/system/livesManager.js';
 import { INITIAL_LIVES } from '../../src/js/system/constants.js';
@@ -10,9 +10,17 @@ export function useLifeGranting() {
   const [isGranting, setIsGranting] = useState(false);
   const [lifeAdded, setLifeAdded] = useState(false);
   const [error, setError] = useState(null);
+  const isProcessingRef = useRef(false); // Guard to prevent concurrent executions
 
   const grantLife = useCallback(async () => {
+    // Prevent concurrent executions
+    if (isProcessingRef.current) {
+      console.log('[grantLife] Already processing, skipping duplicate call');
+      return { success: false, lifeAdded: false, error: 'Already processing' };
+    }
+
     try {
+      isProcessingRef.current = true;
       setIsGranting(true);
       setError(null);
       
@@ -33,16 +41,19 @@ export function useLifeGranting() {
         
         setLifeAdded(true);
         setIsGranting(false);
+        isProcessingRef.current = false;
         return { success: true, lifeAdded: true };
       } else {
         // No saved game state, but still successful
         setIsGranting(false);
+        isProcessingRef.current = false;
         return { success: true, lifeAdded: false };
       }
     } catch (err) {
       console.error('Failed to grant life:', err);
       setError(err.message);
       setIsGranting(false);
+      isProcessingRef.current = false;
       return { success: false, lifeAdded: false };
     }
   }, []);
