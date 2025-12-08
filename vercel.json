@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "method",
+          "value": "POST"
+        }
+      ],
+      "destination": "/api/mdk"
+    }
+  ]
+}
