@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { set, get } from '@/lib/redis';
+import { set } from '@/lib/redis';
 
 /**
  * Verify webhook signature using HMAC-SHA256
@@ -68,53 +68,45 @@ export async function POST(request) {
     // Handle successful payment
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
+      console.log('[webhook] Received checkout.session.completed event for session:', session.id);
+      console.log('[webhook] Session metadata:', session.metadata);
       
       // Check if this is a life purchase
       if (session.metadata?.type === 'life_purchase') {
         const checkoutId = session.id;
+        const purchaseTimestamp = Date.now();
         const purchaseKey = `purchase:${checkoutId}`;
         
-        // Idempotency check: if token already exists, this is a duplicate webhook call
-        // Return success without error (webhooks can be called multiple times)
-        try {
-          const existingToken = await get(purchaseKey);
-          if (existingToken) {
-            console.log(`Purchase token already exists for checkout: ${checkoutId} (idempotent webhook call)`);
-            return NextResponse.json({ 
-              received: true,
-              checkoutId,
-              alreadyProcessed: true
-            });
-          }
-        } catch (redisError) {
-          // If check fails, continue to try storing (might be transient error)
-          console.warn('Failed to check existing token during idempotency check:', redisError);
-        }
+        console.log('[webhook] Processing life purchase for checkoutId:', checkoutId);
+        console.log('[webhook] Storing token with key:', purchaseKey);
         
         // Store purchase token in Redis with 24 hour expiration
         // Key format: purchase:{checkoutId}
         // Value: timestamp when payment was verified
-        const purchaseTimestamp = Date.now();
         try {
           await set(purchaseKey, purchaseTimestamp, {
             ex: 60 * 60 * 24, // Expires in 24 hours
           });
           
-          console.log(`Purchase token stored for checkout: ${checkoutId}`);
+          console.log(`[webhook] Purchase token stored successfully for checkout: ${checkoutId}`);
           
           return NextResponse.json({ 
             received: true,
             checkoutId 
           });
         } catch (redisError) {
-          console.error('Failed to store purchase token in Redis:', redisError);
+          console.error('[webhook] Failed to store purchase token in Redis:', redisError);
           // Return 500 to trigger webhook retry from MoneyDevKit
           return NextResponse.json(
             { error: 'Failed to store purchase token', checkoutId },
             { status: 500 }
           );
         }
+      } else {
+        console.log('[webhook] Session is not a life purchase, metadata.type:', session.metadata?.type);
       }
+    } else {
+      console.log('[webhook] Event type is not checkout.session.completed:', event.type);
     }
 
     return NextResponse.json({ received: true });

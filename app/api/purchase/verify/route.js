@@ -9,6 +9,8 @@ export async function POST(request) {
   try {
     const { checkoutId } = await request.json();
     
+    console.log('[verify] Received verification request for checkoutId:', checkoutId);
+    
     if (!checkoutId) {
       return NextResponse.json(
         { error: 'Checkout ID required' },
@@ -16,25 +18,17 @@ export async function POST(request) {
       );
     }
 
-    // Validate checkout ID format
-    if (typeof checkoutId !== 'string' || 
-        checkoutId.trim().length < 10 || 
-        checkoutId.trim().length > 100 ||
-        !/^[a-zA-Z0-9_-]+$/.test(checkoutId.trim())) {
-      return NextResponse.json(
-        { error: 'Invalid checkout ID format' },
-        { status: 400 }
-      );
-    }
-
     // Check if purchase token exists in Redis
     const purchaseKey = `purchase:${checkoutId}`;
+    console.log('[verify] Looking up key in Redis:', purchaseKey);
+    
     let purchaseTimestamp;
     
     try {
       purchaseTimestamp = await get(purchaseKey);
+      console.log('[verify] Redis lookup result:', purchaseTimestamp ? 'found' : 'not found');
     } catch (redisError) {
-      console.error('Redis error during purchase verification:', redisError);
+      console.error('[verify] Redis error during purchase verification:', redisError);
       return NextResponse.json(
         { error: 'Failed to verify purchase. Please try again.' },
         { status: 500 }
@@ -42,23 +36,18 @@ export async function POST(request) {
     }
 
     if (!purchaseTimestamp) {
+      console.log('[verify] Token not found for checkoutId:', checkoutId);
       return NextResponse.json(
         { error: 'Invalid or expired purchase token. Payment may not have been verified yet.' },
         { status: 404 }
       );
     }
 
-    // Delete token immediately after verification to make it one-time use
-    // This prevents token reuse if user refreshes page or makes multiple requests
-    try {
-      await del(purchaseKey);
-      console.log(`Purchase token consumed and deleted for checkout: ${checkoutId}`);
-    } catch (redisError) {
-      // Log but don't fail - token will expire anyway
-      // If deletion fails, token could potentially be reused, but expiration will prevent long-term issues
-      console.error('Failed to delete purchase token from Redis:', redisError);
-    }
+    console.log('[verify] Purchase verified successfully for checkoutId:', checkoutId);
 
+    // Don't delete token here - let client delete it after successfully granting life
+    // This prevents token loss if life granting fails
+    // Token will be deleted by client after successful life grant or will expire after 24 hours
     return NextResponse.json({ 
       success: true,
       message: 'Purchase verified',
@@ -83,17 +72,6 @@ export async function DELETE(request) {
     if (!checkoutId) {
       return NextResponse.json(
         { error: 'Checkout ID required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate checkout ID format
-    if (typeof checkoutId !== 'string' || 
-        checkoutId.trim().length < 10 || 
-        checkoutId.trim().length > 100 ||
-        !/^[a-zA-Z0-9_-]+$/.test(checkoutId.trim())) {
-      return NextResponse.json(
-        { error: 'Invalid checkout ID format' },
         { status: 400 }
       );
     }
