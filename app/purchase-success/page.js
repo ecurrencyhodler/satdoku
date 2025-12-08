@@ -2,13 +2,14 @@
 
 import { useCheckoutSuccess } from '@moneydevkit/nextjs';
 import { useEffect, useState, useRef, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLifeGranting } from '../../components/hooks/useLifeGranting';
 import { PurchaseSuccessUI } from '../../components/PurchaseSuccessUI';
 
 function PurchaseSuccessContent() {
   const { isCheckoutPaidLoading, isCheckoutPaid } = useCheckoutSuccess();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState('granting'); // 'granting', 'success', 'error'
   const [error, setError] = useState(null);
   const hasProcessed = useRef(false); // Guard to prevent multiple processPurchase calls
@@ -19,27 +20,51 @@ function PurchaseSuccessContent() {
     // Prevent multiple calls with ref guard
     if (hasProcessed.current) return;
     
-    // When payment is confirmed by MoneyDevKit, immediately grant life
+    // Get checkout ID from URL to create unique session key
+    const checkoutId = searchParams?.get('checkout-id');
+    
+    // Check sessionStorage to prevent duplicate grants (persists across remounts)
+    if (checkoutId) {
+      const sessionKey = `life_granted_${checkoutId}`;
+      if (sessionStorage.getItem(sessionKey)) {
+        console.log('[purchase-success] Life already granted for this checkout, skipping');
+        setStatus('success');
+        setTimeout(() => {
+          router.push('/?payment_success=true');
+        }, 500);
+        return;
+      }
+    }
+    
+    // When payment is confirmed by MoneyDevKit, grant life
     if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'granting') {
       hasProcessed.current = true;
       
-      // Grant life immediately (no verification needed - MoneyDevKit already verified)
+      // Grant life
       grantLife().then((result) => {
-        if (result.success) {
+        if (result.success && result.lifeAdded) {
+          // Mark as granted in sessionStorage to prevent duplicate grants
+          if (checkoutId) {
+            const sessionKey = `life_granted_${checkoutId}`;
+            sessionStorage.setItem(sessionKey, 'true');
+          }
+          
           setStatus('success');
           // Redirect to game with payment success flag
           setTimeout(() => {
-            router.push(result.lifeAdded ? '/?payment_success=true' : '/');
+            router.push('/?payment_success=true');
           }, 500);
         } else {
           const errorMessage = grantError || 'Failed to add life to your game. Please contact support.';
           setError(errorMessage);
           setStatus('error');
+          hasProcessed.current = false; // Allow retry on error
         }
       }).catch((err) => {
         console.error('Unexpected error during purchase processing:', err);
         setError('An unexpected error occurred. Please contact support.');
         setStatus('error');
+        hasProcessed.current = false; // Allow retry on error
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
