@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -174,6 +175,22 @@ export default function GamePage() {
     <div className="container">
       <header>
         <h1>Satdoku</h1>
+        <div style={{ marginTop: '10px' }}>
+          <Link 
+            href="/leaderboard" 
+            style={{ 
+              color: '#4299e1', 
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#3182ce'}
+            onMouseLeave={(e) => e.target.style.color = '#4299e1'}
+          >
+            View Leaderboard →
+          </Link>
+        </div>
       </header>
 
       <GameControls
