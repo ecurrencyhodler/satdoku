@@ -43,7 +43,7 @@ function PurchaseSuccessContent() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCheckoutPaid, isCheckoutPaidLoading, status]);
+  }, [isCheckoutPaid, isCheckoutPaidLoading]);
 
   if (isCheckoutPaidLoading || isCheckoutPaid === null) {
     return (
