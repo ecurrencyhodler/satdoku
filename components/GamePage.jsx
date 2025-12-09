@@ -112,7 +112,9 @@ export default function GamePage() {
     setSelectedCell,
     setShowNewGameModal,
     updateGameState,
-    startNewGame
+    startNewGame,
+    isMobile,
+    mobileInputRef
   );
 
   // Detect mobile device
@@ -120,26 +122,16 @@ export default function GamePage() {
     const checkMobile = () => {
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       const isSmallScreen = window.innerWidth <= 768;
-      setIsMobile(isTouchDevice && isSmallScreen);
+      // Also check user agent for better mobile detection
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+      setIsMobile((isTouchDevice || isMobileUA) && isSmallScreen);
     };
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Focus mobile input when cell is selected (mobile only)
-  useEffect(() => {
-    if (isMobile && selectedCell && mobileInputRef.current && gameState?.gameInProgress) {
-      // Small delay to ensure the input is ready
-      const timer = setTimeout(() => {
-        mobileInputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    } else if (isMobile && !selectedCell && mobileInputRef.current) {
-      mobileInputRef.current.blur();
-    }
-  }, [selectedCell, isMobile, gameState?.gameInProgress]);
 
   // Handle mobile input
   const handleMobileInput = useCallback((e) => {
@@ -173,6 +165,14 @@ export default function GamePage() {
       e.preventDefault();
     }
   }, [handleCellInput]);
+
+  // Blur mobile input when cell is deselected
+  useEffect(() => {
+    if (isMobile && !selectedCell && mobileInputRef.current) {
+      mobileInputRef.current.blur();
+      mobileInputRef.current.value = '';
+    }
+  }, [selectedCell, isMobile]);
 
   // Click outside to deselect
   useEffect(() => {

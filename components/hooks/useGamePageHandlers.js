@@ -13,14 +13,24 @@ export function useGamePageHandlers(
   setSelectedCell,
   setShowNewGameModal,
   updateGameState,
-  startNewGame
+  startNewGame,
+  isMobile,
+  mobileInputRef
 ) {
   const router = useRouter();
 
   const handleCellClick = useCallback((row, col) => {
     if (!livesManagerRef.current.hasLives()) return;
     setSelectedCell({ row, col });
-  }, [livesManagerRef, setSelectedCell]);
+    
+    // Focus mobile input immediately on click (must be in user interaction handler)
+    if (isMobile && mobileInputRef?.current) {
+      // Use requestAnimationFrame to ensure it happens in the same event loop
+      requestAnimationFrame(() => {
+        mobileInputRef.current?.focus();
+      });
+    }
+  }, [livesManagerRef, setSelectedCell, isMobile, mobileInputRef]);
 
   const handleDifficultyChange = useCallback((newDifficulty) => {
     if (gameStateRef.current.gameInProgress) {
