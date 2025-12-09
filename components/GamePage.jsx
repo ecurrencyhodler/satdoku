@@ -121,11 +121,11 @@ export default function GamePage() {
   useEffect(() => {
     const checkMobile = () => {
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const isSmallScreen = window.innerWidth <= 768;
-      // Also check user agent for better mobile detection
+      // Check user agent for better mobile detection
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
       const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-      setIsMobile((isTouchDevice || isMobileUA) && isSmallScreen);
+      // More lenient: just check if it's a touch device OR mobile UA
+      setIsMobile(isTouchDevice || isMobileUA);
     };
 
     checkMobile();
@@ -225,21 +225,23 @@ export default function GamePage() {
         hasLives={gameState.lives > 0}
       />
 
-      {/* Hidden input for mobile native keyboard */}
-      {isMobile && (
-        <input
-          id="mobile-number-input"
-          ref={mobileInputRef}
-          type="number"
-          inputMode="numeric"
-          min="1"
-          max="9"
-          className="mobile-number-input"
-          onChange={handleMobileInput}
-          onKeyDown={handleMobileKeyDown}
-          aria-label="Enter number"
-        />
-      )}
+      {/* Hidden input for mobile native keyboard - always render for mobile detection */}
+      <input
+        id="mobile-number-input"
+        ref={mobileInputRef}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        className="mobile-number-input"
+        onChange={handleMobileInput}
+        onKeyDown={handleMobileKeyDown}
+        onBlur={(e) => {
+          // Clear value on blur
+          e.target.value = '';
+        }}
+        aria-label="Enter number"
+        style={{ display: isMobile ? 'block' : 'none' }}
+      />
 
       <div className="github-link-container">
         <a 

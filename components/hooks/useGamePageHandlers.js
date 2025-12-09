@@ -24,11 +24,16 @@ export function useGamePageHandlers(
     setSelectedCell({ row, col });
     
     // Focus mobile input immediately on click (must be in user interaction handler)
+    // Must be synchronous for mobile browsers to allow focus
     if (isMobile && mobileInputRef?.current) {
-      // Use requestAnimationFrame to ensure it happens in the same event loop
-      requestAnimationFrame(() => {
-        mobileInputRef.current?.focus();
-      });
+      try {
+        // Focus immediately - mobile browsers require this to be synchronous
+        mobileInputRef.current.focus();
+        // Also try click to ensure it's triggered
+        mobileInputRef.current.click();
+      } catch (e) {
+        console.error('Error focusing mobile input:', e);
+      }
     }
   }, [livesManagerRef, setSelectedCell, isMobile, mobileInputRef]);
 

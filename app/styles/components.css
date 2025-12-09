@@ -184,8 +184,8 @@
 
 .mobile-number-input {
     position: fixed;
-    top: -1000px;
-    left: -1000px;
+    top: 0;
+    left: 0;
     width: 1px;
     height: 1px;
     opacity: 0;
@@ -193,5 +193,7 @@
     padding: 0;
     margin: 0;
     font-size: 1px;
+    z-index: -1;
     /* Keep pointer-events enabled so it can be focused */
+    /* Position at top-left corner but make it focusable */
 }
