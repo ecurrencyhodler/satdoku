@@ -53,29 +53,6 @@ npm run dev
    - This allows the server to verify payments and grant lives securely
 5. Deploy!
 
-## Project Structure
-
-```
-satdoku/
-├── app/                    # Next.js App Router
-│   ├── page.js            # Main game page
-│   ├── layout.js          # Root layout
-│   ├── checkout/[id]/     # MDK checkout page
-│   ├── purchase-success/  # Payment success handler
-│   └── api/mdk/           # MDK API endpoint
-├── components/            # React components
-│   ├── GameBoard.jsx
-│   ├── StatsBar.jsx
-│   ├── GameControls.jsx
-│   ├── PurchaseLifeModal.jsx
-│   └── Modals/
-├── lib/                   # Utility modules
-└── src/js/                # Game logic (unchanged)
-    ├── core/              # Core game logic
-    ├── system/            # Utilities
-    └── ui/                # UI helpers
-```
-
 ## How It Works
 
 1. Player starts with 1 free life
