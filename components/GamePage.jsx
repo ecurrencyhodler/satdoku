@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -18,6 +18,8 @@ export default function GamePage() {
   const [gameState, setGameState] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [pendingDifficultyChange, setPendingDifficultyChange] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const mobileInputRef = useRef(null);
 
   // Modal state hook - must come first so setShowPurchaseModal is available
   const {
@@ -113,13 +115,73 @@ export default function GamePage() {
     startNewGame
   );
 
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(isTouchDevice && isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Focus mobile input when cell is selected (mobile only)
+  useEffect(() => {
+    if (isMobile && selectedCell && mobileInputRef.current && gameState?.gameInProgress) {
+      // Small delay to ensure the input is ready
+      const timer = setTimeout(() => {
+        mobileInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (isMobile && !selectedCell && mobileInputRef.current) {
+      mobileInputRef.current.blur();
+    }
+  }, [selectedCell, isMobile, gameState?.gameInProgress]);
+
+  // Handle mobile input
+  const handleMobileInput = useCallback((e) => {
+    const value = e.target.value;
+    if (value === '') {
+      handleCellInput(0);
+      return;
+    }
+    
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num >= 1 && num <= 9) {
+      handleCellInput(num);
+      // Clear the input after processing
+      e.target.value = '';
+    } else {
+      // Invalid input, clear it
+      e.target.value = '';
+    }
+  }, [handleCellInput]);
+
+  // Handle mobile input keydown (for backspace/delete)
+  const handleMobileKeyDown = useCallback((e) => {
+    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+      e.preventDefault();
+      handleCellInput(0);
+      e.target.value = '';
+    } else if (e.key >= '1' && e.key <= '9') {
+      // Let the input event handle it
+    } else if (e.key !== 'Enter' && e.key !== 'Tab') {
+      // Prevent other keys
+      e.preventDefault();
+    }
+  }, [handleCellInput]);
+
   // Click outside to deselect
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!e.target.closest('#game-board') && 
           !e.target.closest('.modal') &&
           e.target.id !== 'new-game-btn' &&
-          e.target.id !== 'difficulty') {
+          e.target.id !== 'difficulty' &&
+          e.target.id !== 'mobile-number-input') {
         setSelectedCell(null);
       }
     };
@@ -162,6 +224,22 @@ export default function GamePage() {
         onCellClick={handleCellClick}
         hasLives={gameState.lives > 0}
       />
+
+      {/* Hidden input for mobile native keyboard */}
+      {isMobile && (
+        <input
+          id="mobile-number-input"
+          ref={mobileInputRef}
+          type="number"
+          inputMode="numeric"
+          min="1"
+          max="9"
+          className="mobile-number-input"
+          onChange={handleMobileInput}
+          onKeyDown={handleMobileKeyDown}
+          aria-label="Enter number"
+        />
+      )}
 
       <div className="github-link-container">
         <a 

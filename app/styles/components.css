@@ -123,3 +123,73 @@
 .github-link svg {
     display: block;
 }
+
+.number-pad {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    padding: 0 20px;
+}
+
+.number-pad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 300px;
+    width: 100%;
+}
+
+.number-pad-button {
+    padding: 15px;
+    font-size: 20px;
+    font-weight: 600;
+    border: 2px solid #4299e1;
+    border-radius: 8px;
+    background: white;
+    color: #4299e1;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.number-pad-button:active {
+    background: #4299e1;
+    color: white;
+    transform: scale(0.95);
+}
+
+.number-pad-button:hover {
+    background: #bee3f8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.number-pad-clear {
+    grid-column: span 3;
+    background: #e2e8f0;
+    color: #4a5568;
+    border-color: #cbd5e0;
+}
+
+.number-pad-clear:hover {
+    background: #cbd5e0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.number-pad-clear:active {
+    background: #a0aec0;
+    color: white;
+}
+
+.mobile-number-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+}
