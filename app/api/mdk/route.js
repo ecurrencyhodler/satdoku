@@ -67,6 +67,9 @@ export async function POST(request) {
       );
     }
     
+    // Debug: Log the event structure to understand what we're receiving
+    console.log('[webhook] Event data structure:', JSON.stringify(eventData, null, 2));
+    
     // Step 6: Store as PROCESSED with idempotency
     const idempotencyKey = generateIdempotencyKey(eventData);
     const processedKey = `webhook:processed:${idempotencyKey}`;
