@@ -3,12 +3,58 @@ import { NextResponse } from 'next/server';
 import { storePayment, storeLightningPayment } from '../../../lib/redis.js';
 
 /**
+ * Parse PaymentReceived event from MDK's log string
+ * Example log: "[lightning-js] Event: PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
+ */
+function parsePaymentReceivedFromLog(logMessage) {
+  try {
+    // Check if this log contains PaymentReceived
+    if (!logMessage.includes('PaymentReceived')) {
+      return null;
+    }
+
+    // Try to match the PaymentReceived event structure
+    const match = logMessage.match(/PaymentReceived\s*\{([^}]+)\}/);
+    if (!match) return null;
+
+    const content = match[1];
+    const result = {};
+
+    // Extract payment_id (handles Some(...) wrapper or direct value)
+    const paymentIdMatch = content.match(/payment_id:\s*Some\(([^)]+)\)|payment_id:\s*([^,}]+)/);
+    if (paymentIdMatch) {
+      result.paymentId = (paymentIdMatch[1] || paymentIdMatch[2]).trim();
+    }
+
+    // Extract payment_hash
+    const paymentHashMatch = content.match(/payment_hash:\s*([a-f0-9]+)/);
+    if (paymentHashMatch) {
+      result.paymentHash = paymentHashMatch[1].trim();
+    }
+
+    // Extract amount_msat
+    const amountMsatMatch = content.match(/amount_msat:\s*(\d+)/);
+    if (amountMsatMatch) {
+      result.amountMsat = parseInt(amountMsatMatch[1], 10);
+    }
+
+    // Only return if we have at least payment_hash
+    return result.paymentHash ? result : null;
+  } catch (error) {
+    console.error('[webhook] Error parsing PaymentReceived from log:', error);
+    return null;
+  }
+}
+
+/**
  * Money Dev Kit webhook endpoint
  * Uses MDK's default handler for signature verification
  */
 export async function POST(request) {
   // Clone request BEFORE mdkPost consumes it
   let eventData = null;
+  const capturedPayments = [];
+
   try {
     const clonedRequest = request.clone();
     const bodyText = await clonedRequest.text();
@@ -18,8 +64,73 @@ export async function POST(request) {
     console.error('[webhook] Error reading request body:', error);
   }
 
-  // Let MDK handle signature verification and webhook processing
-  const mdkResponse = await mdkPost(request);
+  // Intercept console.log to capture PaymentReceived events from MDK's logs
+  const originalLog = console.log;
+  const originalError = console.error;
+  
+  const logInterceptor = (...args) => {
+    // Call original log FIRST - ensures logs still appear in Vercel
+    originalLog(...args);
+    
+    // Check if this is a PaymentReceived log and capture the data
+    const logMessage = args.map(arg => 
+      typeof arg === 'string' ? arg : JSON.stringify(arg)
+    ).join(' ');
+    
+    if (logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]')) {
+      const paymentData = parsePaymentReceivedFromLog(logMessage);
+      if (paymentData && paymentData.paymentHash) {
+        capturedPayments.push(paymentData);
+        originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
+      }
+    }
+  };
+
+  // Temporarily override console.log during MDK processing
+  console.log = logInterceptor;
+
+  let mdkResponse;
+  try {
+    // Let MDK handle signature verification and webhook processing
+    // During this call, MDK will log PaymentReceived events which we'll capture
+    mdkResponse = await mdkPost(request);
+  } finally {
+    // Always restore original console.log, even if there's an error
+    console.log = originalLog;
+    console.error = originalError;
+  }
+
+  // Process captured PaymentReceived events and store in Redis
+  for (const payment of capturedPayments) {
+    try {
+      const redisKey = `lightning:payment:${payment.paymentHash}`;
+      const lightningPaymentData = {
+        paymentId: payment.paymentId || payment.paymentHash,
+        paymentHash: payment.paymentHash,
+        amountMsat: payment.amountMsat,
+        eventType: 'PaymentReceived',
+        source: 'log_interception',
+        capturedAt: new Date().toISOString(),
+      };
+
+      const stored = await storeLightningPayment(payment.paymentHash, lightningPaymentData);
+      
+      if (stored) {
+        console.log(`[webhook] ✅ PaymentReceived stored in Redis from log`, {
+          redisKey,
+          paymentHash: payment.paymentHash,
+          paymentId: payment.paymentId,
+          amountMsat: payment.amountMsat,
+        });
+      } else {
+        console.warn(`[webhook] ❌ Failed to store captured PaymentReceived in Redis`, {
+          paymentHash: payment.paymentHash,
+        });
+      }
+    } catch (error) {
+      console.error('[webhook] Error storing captured PaymentReceived:', error);
+    }
+  }
   
   // Store successful payment events in Redis
   if (mdkResponse.ok && eventData) {
