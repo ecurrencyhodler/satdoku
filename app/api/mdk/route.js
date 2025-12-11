@@ -78,13 +78,43 @@ export async function POST(request) {
     console.error('[webhook] Error reading request body:', error);
   }
 
-  // Intercept console.log and console.error to capture PaymentReceived events from MDK's logs
+  // Intercept console.log, console.error, and process.stdout/stderr.write to capture PaymentReceived events
+  // MDK may write directly to process streams, bypassing console methods
   const originalLog = console.log;
   const originalError = console.error;
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+  const originalStderrWrite = process.stderr.write.bind(process.stderr);
   
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:67',message:'Setting up console interceptors',data:{eventType:eventData?.event,hasEventData:!!eventData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:67',message:'Setting up console and stream interceptors',data:{eventType:eventData?.event,hasEventData:!!eventData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
+  
+  // Shared function to process log messages and extract payment data
+  const processLogMessage = (logMessage, source) => {
+    if (!logMessage || typeof logMessage !== 'string') return;
+    
+    const isPaymentRelated = logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]');
+    if (isPaymentRelated) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:90',message:'Payment-related log detected',data:{source,logMessage:logMessage.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      const paymentData = parsePaymentReceivedFromLog(logMessage);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:95',message:'Parsed payment data',data:{source,paymentData,hasPaymentHash:!!paymentData?.paymentHash},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      if (paymentData && paymentData.paymentHash) {
+        capturedPayments.push(paymentData);
+        originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:100',message:'Payment added to capturedPayments',data:{source,paymentHash:paymentData.paymentHash,amountMsat:paymentData.amountMsat,capturedCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+      }
+    }
+  };
   
   // Shared interceptor function for both log and error
   const createInterceptor = (originalFn, interceptorType) => {
@@ -97,39 +127,40 @@ export async function POST(request) {
         typeof arg === 'string' ? arg : JSON.stringify(arg)
       ).join(' ');
       const isPaymentRelated = logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]');
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:75',message:'Console interceptor called',data:{type:interceptorType,isPaymentRelated,logMessage:logMessage.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'Console interceptor called',data:{type:interceptorType,isPaymentRelated,logMessage:logMessage.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       
-      // Check if this is a PaymentReceived log and capture the data
-      if (isPaymentRelated) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:82',message:'Payment-related log detected',data:{logMessage:logMessage.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        
-        const paymentData = parsePaymentReceivedFromLog(logMessage);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:84',message:'Parsed payment data',data:{paymentData,hasPaymentHash:!!paymentData?.paymentHash},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        
-        if (paymentData && paymentData.paymentHash) {
-          capturedPayments.push(paymentData);
-          originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:88',message:'Payment added to capturedPayments',data:{paymentHash:paymentData.paymentHash,amountMsat:paymentData.amountMsat,capturedCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-        }
-      }
+      processLogMessage(logMessage, `console.${interceptorType}`);
     };
   };
 
   const logInterceptor = createInterceptor(originalLog, 'log');
   const errorInterceptor = createInterceptor(originalError, 'error');
 
-  // Temporarily override both console.log and console.error during MDK processing
+  // Intercept process.stdout.write and process.stderr.write (MDK may write directly to streams)
+  const stdoutInterceptor = (chunk, encoding, callback) => {
+    const result = originalStdoutWrite(chunk, encoding, callback);
+    if (typeof chunk === 'string' || Buffer.isBuffer(chunk)) {
+      const logMessage = chunk.toString();
+      processLogMessage(logMessage, 'process.stdout');
+    }
+    return result;
+  };
+
+  const stderrInterceptor = (chunk, encoding, callback) => {
+    const result = originalStderrWrite(chunk, encoding, callback);
+    if (typeof chunk === 'string' || Buffer.isBuffer(chunk)) {
+      const logMessage = chunk.toString();
+      processLogMessage(logMessage, 'process.stderr');
+    }
+    return result;
+  };
+
+  // Temporarily override console methods and process streams during MDK processing
   console.log = logInterceptor;
   console.error = errorInterceptor;
+  process.stdout.write = stdoutInterceptor;
+  process.stderr.write = stderrInterceptor;
 
   // #region agent log
   fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:103',message:'About to call mdkPost',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
@@ -153,12 +184,14 @@ export async function POST(request) {
     fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:115',message:'After delay, before restoring interceptors',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
   } finally {
-    // Always restore original console functions, even if there's an error
+    // Always restore original console functions and process streams, even if there's an error
     console.log = originalLog;
     console.error = originalError;
+    process.stdout.write = originalStdoutWrite;
+    process.stderr.write = originalStderrWrite;
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:121',message:'Console interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:165',message:'Console and stream interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
   }
 
