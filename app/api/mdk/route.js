@@ -144,13 +144,21 @@ export async function POST(request) {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'mdkPost completed',data:{capturedPaymentsCount:capturedPayments.length,responseOk:mdkResponse?.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
+    
+    // Keep interceptors active for a short delay to catch async PaymentReceived logs
+    // MDK logs these events asynchronously after mdkPost completes
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:115',message:'After delay, before restoring interceptors',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   } finally {
     // Always restore original console functions, even if there's an error
     console.log = originalLog;
     console.error = originalError;
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:116',message:'Console interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:121',message:'Console interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
   }
 
