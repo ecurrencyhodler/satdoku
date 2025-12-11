@@ -30,6 +30,7 @@ npm install
 MDK_ACCESS_TOKEN=your_api_key_here
 MDK_WEBHOOK_SECRET=your_webhook_key_here
 MDK_MNEMONIC=your_mnemonic_here
+REDIS_URL=redis://localhost:6379
 ```
 
 3. Run the development server:
@@ -47,6 +48,7 @@ npm run dev
    - `MDK_ACCESS_TOKEN`
    - `MDK_WEBHOOK_SECRET`
    - `MDK_MNEMONIC`
+   - `REDIS_URL` (e.g., `redis://default:password@host:port` or Redis Cloud URL)
 4. Configure webhook in MoneyDevKit dashboard:
    - Go to your MoneyDevKit dashboard
    - Set webhook URL to: `https://your-domain.com` (root URL)
