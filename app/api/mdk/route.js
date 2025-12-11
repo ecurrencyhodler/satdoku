@@ -7,16 +7,23 @@ import { storePayment } from '../../../lib/redis.js';
  * Uses MDK's default handler for signature verification
  */
 export async function POST(request) {
+  // Clone request BEFORE mdkPost consumes it
+  let eventData = null;
+  try {
+    const clonedRequest = request.clone();
+    const bodyText = await clonedRequest.text();
+    eventData = JSON.parse(bodyText);
+    console.log('[webhook] Event data structure:', eventData);
+  } catch (error) {
+    console.error('[webhook] Error reading request body:', error);
+  }
+
   // Let MDK handle signature verification and webhook processing
   const mdkResponse = await mdkPost(request);
   
   // Store successful payment events in Redis
-  if (mdkResponse.ok) {
+  if (mdkResponse.ok && eventData) {
     try {
-      const clonedRequest = request.clone();
-      const bodyText = await clonedRequest.text();
-      const eventData = JSON.parse(bodyText);
-      
       if (eventData?.type === 'checkout.session.completed') {
         const session = eventData.data?.object;
         if (session?.metadata?.type === 'life_purchase' && session.id) {
