@@ -1,6 +1,6 @@
 import { POST as mdkPost } from '@moneydevkit/nextjs/server/route';
 import { NextResponse } from 'next/server';
-import { storePayment } from '../../../lib/redis.js';
+import { storePayment, storeLightningPayment } from '../../../lib/redis.js';
 
 /**
  * Money Dev Kit webhook endpoint
@@ -24,6 +24,7 @@ export async function POST(request) {
   // Store successful payment events in Redis
   if (mdkResponse.ok && eventData) {
     try {
+      // Handle checkout.session.completed events (has full checkout session data)
       if (eventData?.type === 'checkout.session.completed') {
         const session = eventData.data?.object;
         if (session?.metadata?.type === 'life_purchase' && session.id) {
@@ -70,6 +71,71 @@ export async function POST(request) {
           } else {
             console.warn(`[webhook] Failed to store payment in Redis for checkout: ${checkoutId}`);
           }
+        }
+      }
+      // Handle incoming-payment events (Lightning notifications)
+      else if (eventData?.event === 'incoming-payment' || eventData?.type === 'payment_received') {
+        console.log('[webhook] Received incoming-payment/payment_received event');
+        
+        // Extract payment data from the event
+        // The structure may vary, so we'll check multiple possible locations
+        const paymentData = eventData.data?.object || eventData.data || eventData;
+        
+        // Extract the fields we need: payment_id, payment_hash, amount_msat
+        // Handle payment_id which might be wrapped in Some() or be a direct value
+        let paymentId = paymentData.payment_id;
+        if (paymentId && typeof paymentId === 'object') {
+          // Handle Rust Option type serialization (Some(value) or None)
+          paymentId = paymentId.value || paymentId.Some || paymentId;
+        }
+        
+        const paymentHash = paymentData.payment_hash;
+        const amountMsat = paymentData.amount_msat;
+        
+        // Log extracted fields for verification
+        console.log('[webhook] Extracted payment fields:', {
+          paymentId: paymentId || '(not provided)',
+          paymentHash: paymentHash || '(missing)',
+          amountMsat: amountMsat || '(not provided)',
+        });
+        
+        // Only store if we have at least payment_hash (required unique identifier)
+        if (paymentHash) {
+          const redisKey = `lightning:payment:${paymentHash}`;
+          console.log(`[webhook] Preparing to store in Redis with key: ${redisKey}`);
+          
+          const lightningPaymentData = {
+            paymentId: paymentId || paymentHash, // Use payment_hash as fallback
+            paymentHash: paymentHash,
+            amountMsat: amountMsat,
+            // Store the full event data for reference
+            rawEvent: eventData,
+            // Webhook event info
+            eventType: eventData.event || eventData.type || 'incoming-payment',
+            eventId: eventData.id,
+            webhookReceivedAt: new Date().toISOString(),
+          };
+
+          const stored = await storeLightningPayment(paymentHash, lightningPaymentData);
+          
+          if (stored) {
+            console.log(`[webhook] ✅ Lightning payment successfully stored in Redis`, {
+              redisKey: redisKey,
+              paymentHash,
+              paymentId: paymentId || paymentHash,
+              amountMsat,
+              storedAt: new Date().toISOString(),
+            });
+          } else {
+            console.warn(`[webhook] ❌ Failed to store lightning payment in Redis`, {
+              redisKey: redisKey,
+              paymentHash,
+              paymentId,
+              amountMsat,
+            });
+          }
+        } else {
+          console.warn('[webhook] incoming-payment event missing payment_hash, cannot store');
         }
       }
     } catch (error) {
