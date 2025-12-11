@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCheckoutSuccess } from '@moneydevkit/nextjs';
 import { useLifeGranting } from './useLifeGranting';
-import { isLifeGranted, markLifeGranted, clearLifeGranted } from '../../../lib/purchaseSessionStorage';
+import { isLifeGranted, markLifeGranted, clearLifeGranted } from '../../lib/purchaseSessionStorage';
 
 /**
  * Hook for processing purchase and granting life
