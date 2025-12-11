@@ -29,8 +29,8 @@ export function useLifeGranting() {
       setIsGranting(true);
       setError(null);
       
-      // Add life to game state
-      const saved = StateManager.loadGameState();
+      // Load current state to get current lives
+      const saved = await StateManager.loadGameState();
       console.log('[grantLife] Loaded game state:', {
         lives: saved?.lives,
         livesPurchased: saved?.livesPurchased
@@ -57,14 +57,63 @@ export function useLifeGranting() {
           livesPurchased: livesManager.getLivesPurchased()
         });
         
-        // Update saved state
-        saved.lives = livesManager.getLives();
-        saved.livesPurchased = livesManager.getLivesPurchased();
-        StateManager.saveGameState(saved);
+        // Use mergeGameState to prevent race conditions - only update lives fields
+        // This ensures we don't overwrite concurrent game moves
+        const partialUpdate = {
+          lives: livesManager.getLives(),
+          livesPurchased: livesManager.getLivesPurchased()
+        };
+        
+        let retryCount = 0;
+        const maxRetries = 3;
+        let mergeResult;
+        const initialPurchased = beforePurchased; // Track initial value to detect if already added
+        
+        // Retry on version conflicts
+        while (retryCount < maxRetries) {
+          mergeResult = await StateManager.mergeGameState(partialUpdate);
+          
+          if (mergeResult.success || !mergeResult.conflict) {
+            break;
+          }
+          
+          // Version conflict - reload and check if life was already added
+          console.log(`[grantLife] Version conflict, retry ${retryCount + 1}/${maxRetries}`);
+          const updatedState = await StateManager.loadGameState();
+          if (updatedState) {
+            const updatedPurchased = updatedState.livesPurchased ?? 0;
+            
+            // Check if life was already added by another concurrent purchase
+            if (updatedPurchased > initialPurchased) {
+              console.log('[grantLife] Life was already added by concurrent purchase, skipping');
+              // Life was already added, return success without adding again
+              setLifeAdded(true);
+              setIsGranting(false);
+              isProcessingRef.current = false;
+              return { success: true, lifeAdded: true };
+            }
+            
+            // Recalculate with updated state
+            const updatedLivesManager = new LivesManager();
+            updatedLivesManager.lives = updatedState.lives ?? INITIAL_LIVES;
+            updatedLivesManager.livesPurchased = updatedPurchased;
+            updatedLivesManager.addLife();
+            partialUpdate.lives = updatedLivesManager.getLives();
+            partialUpdate.livesPurchased = updatedLivesManager.getLivesPurchased();
+          }
+          retryCount++;
+        }
+        
+        if (!mergeResult.success) {
+          throw new Error(mergeResult.conflict 
+            ? 'Failed to update game state due to concurrent modifications. Please try again.'
+            : 'Failed to save game state');
+        }
         
         console.log('[grantLife] Saved game state:', {
-          lives: saved.lives,
-          livesPurchased: saved.livesPurchased
+          lives: partialUpdate.lives,
+          livesPurchased: partialUpdate.livesPurchased,
+          version: mergeResult.version
         });
         
         setLifeAdded(true);

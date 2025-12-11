@@ -10,12 +10,20 @@ export class GameState {
         this.currentDifficulty = 'beginner';
         this.mistakes = 0;
         this.gameInProgress = false;
+        this.currentVersion = null; // Track version for optimistic locking
     }
 
-    // Load game state from localStorage
-    loadState(scoringEngine, livesManager) {
-        const saved = StateManager.loadGameState();
-        if (saved && saved.currentBoard && saved.currentSolution) {
+    // Load game state from Redis (with localStorage fallback)
+    async loadState(scoringEngine, livesManager) {
+        const saved = await StateManager.loadGameState();
+        // Validate all required fields are present
+        if (saved && 
+            saved.currentBoard && 
+            saved.currentSolution && 
+            saved.currentPuzzle &&
+            Array.isArray(saved.currentBoard) &&
+            Array.isArray(saved.currentSolution) &&
+            Array.isArray(saved.currentPuzzle)) {
             this.currentPuzzle = saved.currentPuzzle;
             this.currentSolution = saved.currentSolution;
             this.currentBoard = saved.currentBoard;
@@ -28,25 +36,34 @@ export class GameState {
             scoringEngine.moves = saved.moves || 0;
             if (saved.completedRows) {
                 scoringEngine.completedRows = new Set(saved.completedRows);
+            } else {
+                scoringEngine.completedRows = new Set();
             }
             if (saved.completedColumns) {
                 scoringEngine.completedColumns = new Set(saved.completedColumns);
+            } else {
+                scoringEngine.completedColumns = new Set();
             }
             if (saved.completedBoxes) {
                 scoringEngine.completedBoxes = new Set(saved.completedBoxes);
+            } else {
+                scoringEngine.completedBoxes = new Set();
             }
             
             // Restore lives manager state
             livesManager.lives = saved.lives || 1;
             livesManager.livesPurchased = saved.livesPurchased || 0;
             
+            // Store version for optimistic locking
+            this.currentVersion = saved.version ?? null;
+            
             return true;
         }
         return false;
     }
 
-    // Save game state to localStorage
-    saveState(scoringEngine, livesManager) {
+    // Save game state to Redis (with localStorage fallback)
+    async saveState(scoringEngine, livesManager) {
         const state = {
             currentPuzzle: this.currentPuzzle,
             currentSolution: this.currentSolution,
@@ -61,7 +78,14 @@ export class GameState {
             completedColumns: Array.from(scoringEngine.completedColumns),
             completedBoxes: Array.from(scoringEngine.completedBoxes)
         };
-        StateManager.saveGameState(state);
+        const result = await StateManager.saveGameState(state, this.currentVersion);
+        
+        // Update version if save was successful
+        if (result.success && result.version !== undefined) {
+            this.currentVersion = result.version;
+        }
+        
+        return result;
     }
 
     // Initialize new game state
@@ -72,6 +96,7 @@ export class GameState {
         this.currentDifficulty = difficulty;
         this.mistakes = 0;
         this.gameInProgress = true;
+        this.currentVersion = null; // Reset version for new game
     }
 
     // Reset game state

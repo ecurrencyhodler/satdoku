@@ -1,25 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
 import { useModalState } from './hooks/useModalState';
 import { useGamePageHandlers } from './hooks/useGamePageHandlers';
+import { useMobileDetection } from './hooks/useMobileDetection';
+import { useMobileInput } from './hooks/useMobileInput';
 import GameBoard from './GameBoard';
 import StatsBar from './StatsBar';
 import GameControls from './GameControls';
-import WinModal from './Modals/WinModal';
-import GameOverModal from './Modals/GameOverModal';
-import NewGameModal from './Modals/NewGameModal';
-import PurchaseLifeModal from './PurchaseLifeModal';
+import GameModals from './GameModals';
 
 export default function GamePage() {
   const [gameState, setGameState] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [pendingDifficultyChange, setPendingDifficultyChange] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const mobileInputRef = useRef(null);
+  
+  // Mobile detection
+  const isMobile = useMobileDetection();
 
   // Modal state hook - must come first so setShowPurchaseModal is available
   const {
@@ -49,6 +49,7 @@ export default function GamePage() {
     startNewGame: startNewGameFromHook,
     saveGameState,
     updateGameState,
+    isLoadingState,
   } = useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal);
 
   // Wrapper for startNewGame that handles pending difficulty change
@@ -84,7 +85,8 @@ export default function GamePage() {
     saveGameState,
     handleWin,
     handleGameOver,
-    handlePurchaseLife
+    handlePurchaseLife,
+    isLoadingState
   );
 
   // Keyboard input hook
@@ -93,6 +95,13 @@ export default function GamePage() {
     selectedCell,
     setSelectedCell,
     gameStateRef,
+    handleCellInput
+  );
+
+  // Mobile input handling (must come before useGamePageHandlers)
+  const { mobileInputRef, handleMobileInput, handleMobileKeyDown } = useMobileInput(
+    isMobile,
+    selectedCell,
     handleCellInput
   );
 
@@ -116,63 +125,6 @@ export default function GamePage() {
     isMobile,
     mobileInputRef
   );
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      // Check user agent for better mobile detection
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-      // More lenient: just check if it's a touch device OR mobile UA
-      setIsMobile(isTouchDevice || isMobileUA);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Handle mobile input
-  const handleMobileInput = useCallback((e) => {
-    const value = e.target.value;
-    if (value === '') {
-      handleCellInput(0);
-      return;
-    }
-    
-    const num = parseInt(value, 10);
-    if (!isNaN(num) && num >= 1 && num <= 9) {
-      handleCellInput(num);
-      // Clear the input after processing
-      e.target.value = '';
-    } else {
-      // Invalid input, clear it
-      e.target.value = '';
-    }
-  }, [handleCellInput]);
-
-  // Handle mobile input keydown (for backspace/delete)
-  const handleMobileKeyDown = useCallback((e) => {
-    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-      e.preventDefault();
-      handleCellInput(0);
-      e.target.value = '';
-    } else if (e.key >= '1' && e.key <= '9') {
-      // Let the input event handle it
-    } else if (e.key !== 'Enter' && e.key !== 'Tab') {
-      // Prevent other keys
-      e.preventDefault();
-    }
-  }, [handleCellInput]);
-
-  // Blur mobile input when cell is deselected
-  useEffect(() => {
-    if (isMobile && !selectedCell && mobileInputRef.current) {
-      mobileInputRef.current.blur();
-      mobileInputRef.current.value = '';
-    }
-  }, [selectedCell, isMobile]);
 
   // Click outside to deselect
   useEffect(() => {
@@ -264,50 +216,22 @@ export default function GamePage() {
         </a>
       </div>
 
-      <WinModal
-        isOpen={showWinModal}
-        onClose={() => setShowWinModal(false)}
-        onPlayAgain={() => {
-          setShowWinModal(false);
-          startNewGame();
-        }}
-        onChangeDifficulty={() => {
-          setShowWinModal(false);
-          startNewGame();
-        }}
-        stats={winStats || { score: 0, moves: 0, mistakes: 0, livesPurchased: 0 }}
-      />
-
-      <GameOverModal
-        isOpen={showGameOverModal}
-        onClose={() => setShowGameOverModal(false)}
-        onRestart={() => {
-          setShowGameOverModal(false);
-          startNewGame();
-        }}
-        onChangeDifficulty={() => {
-          setShowGameOverModal(false);
-          startNewGame();
-        }}
-        stats={gameOverStats || { score: 0, moves: 0, mistakes: 0 }}
-      />
-
-      <NewGameModal
-        isOpen={showNewGameModal}
-        onClose={() => {
-          setShowNewGameModal(false);
-          setPendingDifficultyChange(null);
-        }}
-        onConfirm={() => {
-          setShowNewGameModal(false);
-          startNewGame();
-        }}
-      />
-
-      <PurchaseLifeModal
-        isOpen={showPurchaseModal}
-        onClose={() => handlePurchaseClose(closePurchaseModal)}
-        onSuccess={handlePurchaseSuccess}
+      <GameModals
+        showWinModal={showWinModal}
+        showGameOverModal={showGameOverModal}
+        showNewGameModal={showNewGameModal}
+        showPurchaseModal={showPurchaseModal}
+        winStats={winStats}
+        gameOverStats={gameOverStats}
+        setShowWinModal={setShowWinModal}
+        setShowGameOverModal={setShowGameOverModal}
+        setShowNewGameModal={setShowNewGameModal}
+        startNewGame={startNewGame}
+        pendingDifficultyChange={pendingDifficultyChange}
+        setPendingDifficultyChange={setPendingDifficultyChange}
+        handlePurchaseClose={handlePurchaseClose}
+        handlePurchaseSuccess={handlePurchaseSuccess}
+        closePurchaseModal={closePurchaseModal}
       />
     </div>
   );

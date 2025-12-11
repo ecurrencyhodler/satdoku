@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getPayment, hasPayment } from '../../../../lib/redis.js';
 
 /**
- * Check if a payment exists in Redis
+ * Check if a payment exists
  * GET /api/payment/check?checkout-id=xxx
+ * Note: Payment data is no longer stored in Redis
  */
 export async function GET(request) {
   try {
@@ -17,18 +17,11 @@ export async function GET(request) {
       );
     }
 
-    const payment = await getPayment(checkoutId);
-    
-    if (payment) {
-      return NextResponse.json({
-        exists: true,
-        payment,
-      });
-    } else {
-      return NextResponse.json({
-        exists: false,
-      });
-    }
+    // Payment data is no longer stored in Redis
+    return NextResponse.json({
+      exists: false,
+      message: 'Payment data is no longer stored in Redis',
+    });
   } catch (error) {
     console.error('[payment/check] Error:', error);
     return NextResponse.json(

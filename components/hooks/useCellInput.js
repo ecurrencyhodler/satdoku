@@ -12,9 +12,16 @@ export function useCellInput(
   saveGameState,
   onWin,
   onGameOver,
-  onPurchaseLife
+  onPurchaseLife,
+  isLoadingState
 ) {
   const handleCellInput = useCallback((value) => {
+    // Prevent input during state reload (e.g., after purchase)
+    if (isLoadingState?.current) {
+      console.warn('[useCellInput] Input blocked - state is currently loading');
+      return;
+    }
+    
     if (!selectedCell || !gameControllerRef.current) return;
 
     const row = selectedCell.row;
@@ -26,9 +33,14 @@ export function useCellInput(
     };
 
     // Wrap callbacks to include state updates
-    const onStateChange = () => {
+    const onStateChange = async () => {
       updateGameState();
-      saveGameState();
+      // Await save to ensure it completes and handle errors
+      try {
+        await saveGameState();
+      } catch (error) {
+        console.error('[useCellInput] Failed to save game state:', error);
+      }
     };
 
     const onWinWithStats = () => {
@@ -49,7 +61,7 @@ export function useCellInput(
       onPurchaseLife,
       getCellElement
     );
-  }, [selectedCell, gameStateRef, gameControllerRef, updateGameState, saveGameState, onWin, onGameOver, onPurchaseLife]);
+  }, [selectedCell, gameStateRef, gameControllerRef, updateGameState, saveGameState, onWin, onGameOver, onPurchaseLife, isLoadingState]);
 
   return { handleCellInput };
 }
