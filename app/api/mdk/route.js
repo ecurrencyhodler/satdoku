@@ -4,7 +4,9 @@ import { storePayment, storeLightningPayment } from '../../../lib/redis.js';
 
 /**
  * Parse PaymentReceived event from MDK's log string
- * Example log: "[lightning-js] Event: PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
+ * Handles multiple formats:
+ * 1. "[lightning-js] PaymentReceived payment_hash=... amount_msat=..."
+ * 2. "[lightning-js] Event: PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
  */
 function parsePaymentReceivedFromLog(logMessage) {
   try {
@@ -13,33 +15,45 @@ function parsePaymentReceivedFromLog(logMessage) {
       return null;
     }
 
-    // Try to match the PaymentReceived event structure
-    const match = logMessage.match(/PaymentReceived\s*\{([^}]+)\}/);
-    if (!match) return null;
-
-    const content = match[1];
     const result = {};
 
-    // Extract payment_id (handles Some(...) wrapper or direct value)
-    const paymentIdMatch = content.match(/payment_id:\s*Some\(([^)]+)\)|payment_id:\s*([^,}]+)/);
-    if (paymentIdMatch) {
-      result.paymentId = (paymentIdMatch[1] || paymentIdMatch[2]).trim();
+    // Format 1: Simple format "PaymentReceived payment_hash=... amount_msat=..."
+    // Example: "[lightning-js] PaymentReceived payment_hash=5749aee6174b4e62beb72345eb024c941f1d9974a4b9f6259ac6ec7df0a56382 amount_msat=10780"
+    const simpleFormatMatch = logMessage.match(/PaymentReceived\s+payment_hash=([a-f0-9]+)\s+amount_msat=(\d+)/);
+    if (simpleFormatMatch) {
+      result.paymentHash = simpleFormatMatch[1].trim();
+      result.amountMsat = parseInt(simpleFormatMatch[2], 10);
+      return result;
     }
 
-    // Extract payment_hash
-    const paymentHashMatch = content.match(/payment_hash:\s*([a-f0-9]+)/);
-    if (paymentHashMatch) {
-      result.paymentHash = paymentHashMatch[1].trim();
+    // Format 2: Struct format "PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
+    const structMatch = logMessage.match(/PaymentReceived\s*\{([^}]+)\}/);
+    if (structMatch) {
+      const content = structMatch[1];
+
+      // Extract payment_id (handles Some(...) wrapper or direct value)
+      const paymentIdMatch = content.match(/payment_id:\s*Some\(([^)]+)\)|payment_id:\s*([^,}]+)/);
+      if (paymentIdMatch) {
+        result.paymentId = (paymentIdMatch[1] || paymentIdMatch[2]).trim();
+      }
+
+      // Extract payment_hash
+      const paymentHashMatch = content.match(/payment_hash:\s*([a-f0-9]+)/);
+      if (paymentHashMatch) {
+        result.paymentHash = paymentHashMatch[1].trim();
+      }
+
+      // Extract amount_msat
+      const amountMsatMatch = content.match(/amount_msat:\s*(\d+)/);
+      if (amountMsatMatch) {
+        result.amountMsat = parseInt(amountMsatMatch[1], 10);
+      }
+
+      // Only return if we have at least payment_hash
+      return result.paymentHash ? result : null;
     }
 
-    // Extract amount_msat
-    const amountMsatMatch = content.match(/amount_msat:\s*(\d+)/);
-    if (amountMsatMatch) {
-      result.amountMsat = parseInt(amountMsatMatch[1], 10);
-    }
-
-    // Only return if we have at least payment_hash
-    return result.paymentHash ? result : null;
+    return null;
   } catch (error) {
     console.error('[webhook] Error parsing PaymentReceived from log:', error);
     return null;
@@ -68,44 +82,81 @@ export async function POST(request) {
   const originalLog = console.log;
   const originalError = console.error;
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:67',message:'Setting up console interceptors',data:{eventType:eventData?.event,hasEventData:!!eventData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   // Shared interceptor function for both log and error
-  const createInterceptor = (originalFn) => {
+  const createInterceptor = (originalFn, interceptorType) => {
     return (...args) => {
       // Call original function FIRST - ensures logs still appear in Vercel
       originalFn(...args);
       
-      // Check if this is a PaymentReceived log and capture the data
+      // #region agent log
       const logMessage = args.map(arg => 
         typeof arg === 'string' ? arg : JSON.stringify(arg)
       ).join(' ');
+      const isPaymentRelated = logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]');
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:75',message:'Console interceptor called',data:{type:interceptorType,isPaymentRelated,logMessage:logMessage.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
-      if (logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]')) {
+      // Check if this is a PaymentReceived log and capture the data
+      if (isPaymentRelated) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:82',message:'Payment-related log detected',data:{logMessage:logMessage.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
         const paymentData = parsePaymentReceivedFromLog(logMessage);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:84',message:'Parsed payment data',data:{paymentData,hasPaymentHash:!!paymentData?.paymentHash},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
         if (paymentData && paymentData.paymentHash) {
           capturedPayments.push(paymentData);
           originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:88',message:'Payment added to capturedPayments',data:{paymentHash:paymentData.paymentHash,amountMsat:paymentData.amountMsat,capturedCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
       }
     };
   };
 
-  const logInterceptor = createInterceptor(originalLog);
-  const errorInterceptor = createInterceptor(originalError);
+  const logInterceptor = createInterceptor(originalLog, 'log');
+  const errorInterceptor = createInterceptor(originalError, 'error');
 
   // Temporarily override both console.log and console.error during MDK processing
   console.log = logInterceptor;
   console.error = errorInterceptor;
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:103',message:'About to call mdkPost',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
 
   let mdkResponse;
   try {
     // Let MDK handle signature verification and webhook processing
     // During this call, MDK will log PaymentReceived events which we'll capture
     mdkResponse = await mdkPost(request);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'mdkPost completed',data:{capturedPaymentsCount:capturedPayments.length,responseOk:mdkResponse?.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   } finally {
     // Always restore original console functions, even if there's an error
     console.log = originalLog;
     console.error = originalError;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:116',message:'Console interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   }
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'Processing captured payments',data:{capturedPaymentsCount:capturedPayments.length,capturedPayments:capturedPayments},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
 
   // Process captured PaymentReceived events and store in Redis
   for (const payment of capturedPayments) {
@@ -195,9 +246,17 @@ export async function POST(request) {
       else if (eventData?.event === 'incoming-payment' || eventData?.type === 'payment_received') {
         console.log('[webhook] Received incoming-payment/payment_received event');
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:196',message:'Processing incoming-payment event',data:{eventData:JSON.stringify(eventData).substring(0,500),capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
         // Extract payment data from the event
         // The structure may vary, so we'll check multiple possible locations
         const paymentData = eventData.data?.object || eventData.data || eventData;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:202',message:'Extracted paymentData from event',data:{paymentDataKeys:Object.keys(paymentData),paymentDataStr:JSON.stringify(paymentData).substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         
         // Extract the fields we need: payment_id, payment_hash, amount_msat
         // Handle payment_id which might be wrapped in Some() or be a direct value
@@ -216,6 +275,10 @@ export async function POST(request) {
           paymentHash: paymentHash || '(missing)',
           amountMsat: amountMsat || '(not provided)',
         });
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:218',message:'Final extracted payment fields',data:{paymentId:paymentId||null,paymentHash:paymentHash||null,amountMsat:amountMsat||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         
         // Only store if we have at least payment_hash (required unique identifier)
         if (paymentHash) {
