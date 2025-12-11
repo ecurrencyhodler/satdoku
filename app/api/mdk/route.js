@@ -1,244 +1,53 @@
 import { POST as mdkPost } from '@moneydevkit/nextjs/server/route';
 import { NextResponse } from 'next/server';
-import { storePayment, storeLightningPayment } from '../../../lib/redis.js';
+import { storePayment } from '../../../lib/redis.js';
 
-/**
- * Parse PaymentReceived event from MDK's log string
- * Handles multiple formats:
- * 1. "[lightning-js] PaymentReceived payment_hash=... amount_msat=..."
- * 2. "[lightning-js] Event: PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
- */
-function parsePaymentReceivedFromLog(logMessage) {
-  try {
-    // Check if this log contains PaymentReceived
-    if (!logMessage.includes('PaymentReceived')) {
-      return null;
-    }
-
-    const result = {};
-
-    // Format 1: Simple format "PaymentReceived payment_hash=... amount_msat=..."
-    // Example: "[lightning-js] PaymentReceived payment_hash=5749aee6174b4e62beb72345eb024c941f1d9974a4b9f6259ac6ec7df0a56382 amount_msat=10780"
-    const simpleFormatMatch = logMessage.match(/PaymentReceived\s+payment_hash=([a-f0-9]+)\s+amount_msat=(\d+)/);
-    if (simpleFormatMatch) {
-      result.paymentHash = simpleFormatMatch[1].trim();
-      result.amountMsat = parseInt(simpleFormatMatch[2], 10);
-      return result;
-    }
-
-    // Format 2: Struct format "PaymentReceived { payment_id: Some(...), payment_hash: ..., amount_msat: ... }"
-    const structMatch = logMessage.match(/PaymentReceived\s*\{([^}]+)\}/);
-    if (structMatch) {
-      const content = structMatch[1];
-
-      // Extract payment_id (handles Some(...) wrapper or direct value)
-      const paymentIdMatch = content.match(/payment_id:\s*Some\(([^)]+)\)|payment_id:\s*([^,}]+)/);
-      if (paymentIdMatch) {
-        result.paymentId = (paymentIdMatch[1] || paymentIdMatch[2]).trim();
-      }
-
-      // Extract payment_hash
-      const paymentHashMatch = content.match(/payment_hash:\s*([a-f0-9]+)/);
-      if (paymentHashMatch) {
-        result.paymentHash = paymentHashMatch[1].trim();
-      }
-
-      // Extract amount_msat
-      const amountMsatMatch = content.match(/amount_msat:\s*(\d+)/);
-      if (amountMsatMatch) {
-        result.amountMsat = parseInt(amountMsatMatch[1], 10);
-      }
-
-      // Only return if we have at least payment_hash
-      return result.paymentHash ? result : null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('[webhook] Error parsing PaymentReceived from log:', error);
-    return null;
-  }
-}
-
-/**
- * Money Dev Kit webhook endpoint
- * Uses MDK's default handler for signature verification
- */
 export async function POST(request) {
   // Clone request BEFORE mdkPost consumes it
   let eventData = null;
-  const capturedPayments = [];
 
   try {
     const clonedRequest = request.clone();
     const bodyText = await clonedRequest.text();
     eventData = JSON.parse(bodyText);
-    console.log('[webhook] Event data structure:', eventData);
+    console.log('[webhook] Event data structure:', JSON.stringify(eventData, null, 2));
+    console.log('[webhook] Event type fields:', {
+      type: eventData?.type,
+      event: eventData?.event,
+      hasData: !!eventData?.data,
+      hasDataObject: !!eventData?.data?.object,
+      topLevelKeys: eventData ? Object.keys(eventData) : [],
+    });
   } catch (error) {
     console.error('[webhook] Error reading request body:', error);
   }
 
-  // Intercept console.log, console.error, and process.stdout/stderr.write to capture PaymentReceived events
-  // MDK may write directly to process streams, bypassing console methods
-  const originalLog = console.log;
-  const originalError = console.error;
-  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
-  const originalStderrWrite = process.stderr.write.bind(process.stderr);
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:67',message:'Setting up console and stream interceptors',data:{eventType:eventData?.event,hasEventData:!!eventData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
-  // Shared function to process log messages and extract payment data
-  const processLogMessage = (logMessage, source) => {
-    if (!logMessage || typeof logMessage !== 'string') return;
-    
-    const isPaymentRelated = logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]');
-    if (isPaymentRelated) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:90',message:'Payment-related log detected',data:{source,logMessage:logMessage.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
-      const paymentData = parsePaymentReceivedFromLog(logMessage);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:95',message:'Parsed payment data',data:{source,paymentData,hasPaymentHash:!!paymentData?.paymentHash},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
-      if (paymentData && paymentData.paymentHash) {
-        capturedPayments.push(paymentData);
-        originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:100',message:'Payment added to capturedPayments',data:{source,paymentHash:paymentData.paymentHash,amountMsat:paymentData.amountMsat,capturedCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-      }
-    }
-  };
-  
-  // Shared interceptor function for both log and error
-  const createInterceptor = (originalFn, interceptorType) => {
-    return (...args) => {
-      // Call original function FIRST - ensures logs still appear in Vercel
-      originalFn(...args);
-      
-      // #region agent log
-      const logMessage = args.map(arg => 
-        typeof arg === 'string' ? arg : JSON.stringify(arg)
-      ).join(' ');
-      const isPaymentRelated = logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]');
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'Console interceptor called',data:{type:interceptorType,isPaymentRelated,logMessage:logMessage.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
-      processLogMessage(logMessage, `console.${interceptorType}`);
-    };
-  };
-
-  const logInterceptor = createInterceptor(originalLog, 'log');
-  const errorInterceptor = createInterceptor(originalError, 'error');
-
-  // Intercept process.stdout.write and process.stderr.write (MDK may write directly to streams)
-  const stdoutInterceptor = (chunk, encoding, callback) => {
-    const result = originalStdoutWrite(chunk, encoding, callback);
-    if (typeof chunk === 'string' || Buffer.isBuffer(chunk)) {
-      const logMessage = chunk.toString();
-      processLogMessage(logMessage, 'process.stdout');
-    }
-    return result;
-  };
-
-  const stderrInterceptor = (chunk, encoding, callback) => {
-    const result = originalStderrWrite(chunk, encoding, callback);
-    if (typeof chunk === 'string' || Buffer.isBuffer(chunk)) {
-      const logMessage = chunk.toString();
-      processLogMessage(logMessage, 'process.stderr');
-    }
-    return result;
-  };
-
-  // Temporarily override console methods and process streams during MDK processing
-  console.log = logInterceptor;
-  console.error = errorInterceptor;
-  process.stdout.write = stdoutInterceptor;
-  process.stderr.write = stderrInterceptor;
-
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:103',message:'About to call mdkPost',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-
-  let mdkResponse;
-  try {
-    // Let MDK handle signature verification and webhook processing
-    // During this call, MDK will log PaymentReceived events which we'll capture
-    mdkResponse = await mdkPost(request);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'mdkPost completed',data:{capturedPaymentsCount:capturedPayments.length,responseOk:mdkResponse?.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
-    // Keep interceptors active for a short delay to catch async PaymentReceived logs
-    // MDK logs these events asynchronously after mdkPost completes
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:115',message:'After delay, before restoring interceptors',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-  } finally {
-    // Always restore original console functions and process streams, even if there's an error
-    console.log = originalLog;
-    console.error = originalError;
-    process.stdout.write = originalStdoutWrite;
-    process.stderr.write = originalStderrWrite;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:165',message:'Console and stream interceptors restored',data:{capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-  }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:110',message:'Processing captured payments',data:{capturedPaymentsCount:capturedPayments.length,capturedPayments:capturedPayments},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
-
-  // Process captured PaymentReceived events and store in Redis
-  for (const payment of capturedPayments) {
-    try {
-      const redisKey = `lightning:payment:${payment.paymentHash}`;
-      const lightningPaymentData = {
-        paymentId: payment.paymentId || payment.paymentHash,
-        paymentHash: payment.paymentHash,
-        amountMsat: payment.amountMsat,
-        eventType: 'PaymentReceived',
-        source: 'log_interception',
-        capturedAt: new Date().toISOString(),
-      };
-
-      const stored = await storeLightningPayment(payment.paymentHash, lightningPaymentData);
-      
-      if (stored) {
-        console.log(`[webhook] ✅ PaymentReceived stored in Redis from log`, {
-          redisKey,
-          paymentHash: payment.paymentHash,
-          paymentId: payment.paymentId,
-          amountMsat: payment.amountMsat,
-        });
-      } else {
-        console.warn(`[webhook] ❌ Failed to store captured PaymentReceived in Redis`, {
-          paymentHash: payment.paymentHash,
-        });
-      }
-    } catch (error) {
-      console.error('[webhook] Error storing captured PaymentReceived:', error);
-    }
-  }
+  // Let MDK handle signature verification and webhook processing
+  const mdkResponse = await mdkPost(request);
   
   // Store successful payment events in Redis
   if (mdkResponse.ok && eventData) {
     try {
+      console.log('[webhook] Processing event - checking conditions:', {
+        type: eventData?.type,
+        event: eventData?.event,
+        hasData: !!eventData?.data,
+      });
+      
       // Handle checkout.session.completed events (has full checkout session data)
       if (eventData?.type === 'checkout.session.completed') {
+        console.log('[webhook] ✅ Matched checkout.session.completed event');
         const session = eventData.data?.object;
+        console.log('[webhook] Session data:', {
+          hasSession: !!session,
+          sessionId: session?.id,
+          metadataType: session?.metadata?.type,
+          metadata: session?.metadata,
+        });
+        
         if (session?.metadata?.type === 'life_purchase' && session.id) {
           const checkoutId = session.id;
+          console.log('[webhook] ✅ Session matches life_purchase criteria');
           
           // Extract all relevant payment fields from the session
           const paymentData = {
@@ -256,10 +65,6 @@ export async function POST(request) {
             completedAt: session.completed_at ? new Date(session.completed_at * 1000).toISOString() : new Date().toISOString(),
             // Metadata
             metadata: session.metadata || {},
-            // Lightning payment details (if available)
-            paymentHash: session.payment_hash,
-            paymentId: session.payment_id,
-            invoice: session.invoice,
             // Additional fields
             customer: session.customer,
             successUrl: session.success_url,
@@ -281,89 +86,32 @@ export async function POST(request) {
           } else {
             console.warn(`[webhook] Failed to store payment in Redis for checkout: ${checkoutId}`);
           }
-        }
-      }
-      // Handle incoming-payment events (Lightning notifications)
-      else if (eventData?.event === 'incoming-payment' || eventData?.type === 'payment_received') {
-        console.log('[webhook] Received incoming-payment/payment_received event');
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:196',message:'Processing incoming-payment event',data:{eventData:JSON.stringify(eventData).substring(0,500),capturedPaymentsCount:capturedPayments.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
-        // Extract payment data from the event
-        // The structure may vary, so we'll check multiple possible locations
-        const paymentData = eventData.data?.object || eventData.data || eventData;
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:202',message:'Extracted paymentData from event',data:{paymentDataKeys:Object.keys(paymentData),paymentDataStr:JSON.stringify(paymentData).substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
-        // Extract the fields we need: payment_id, payment_hash, amount_msat
-        // Handle payment_id which might be wrapped in Some() or be a direct value
-        let paymentId = paymentData.payment_id;
-        if (paymentId && typeof paymentId === 'object') {
-          // Handle Rust Option type serialization (Some(value) or None)
-          paymentId = paymentId.value || paymentId.Some || paymentId;
-        }
-        
-        const paymentHash = paymentData.payment_hash;
-        const amountMsat = paymentData.amount_msat;
-        
-        // Log extracted fields for verification
-        console.log('[webhook] Extracted payment fields:', {
-          paymentId: paymentId || '(not provided)',
-          paymentHash: paymentHash || '(missing)',
-          amountMsat: amountMsat || '(not provided)',
-        });
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.js:218',message:'Final extracted payment fields',data:{paymentId:paymentId||null,paymentHash:paymentHash||null,amountMsat:amountMsat||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
-        // Only store if we have at least payment_hash (required unique identifier)
-        if (paymentHash) {
-          const redisKey = `lightning:payment:${paymentHash}`;
-          console.log(`[webhook] Preparing to store in Redis with key: ${redisKey}`);
-          
-          const lightningPaymentData = {
-            paymentId: paymentId || paymentHash, // Use payment_hash as fallback
-            paymentHash: paymentHash,
-            amountMsat: amountMsat,
-            // Store the full event data for reference
-            rawEvent: eventData,
-            // Webhook event info
-            eventType: eventData.event || eventData.type || 'incoming-payment',
-            eventId: eventData.id,
-            webhookReceivedAt: new Date().toISOString(),
-          };
-
-          const stored = await storeLightningPayment(paymentHash, lightningPaymentData);
-          
-          if (stored) {
-            console.log(`[webhook] ✅ Lightning payment successfully stored in Redis`, {
-              redisKey: redisKey,
-              paymentHash,
-              paymentId: paymentId || paymentHash,
-              amountMsat,
-              storedAt: new Date().toISOString(),
-            });
-          } else {
-            console.warn(`[webhook] ❌ Failed to store lightning payment in Redis`, {
-              redisKey: redisKey,
-              paymentHash,
-              paymentId,
-              amountMsat,
-            });
-          }
         } else {
-          console.warn('[webhook] incoming-payment event missing payment_hash, cannot store');
+          console.log('[webhook] ⚠️ Session does not match life_purchase criteria:', {
+            hasMetadata: !!session?.metadata,
+            metadataType: session?.metadata?.type,
+            hasSessionId: !!session?.id,
+          });
         }
+      } else {
+        console.log('[webhook] ⚠️ Event did not match any handler conditions:', {
+          type: eventData?.type,
+          event: eventData?.event,
+          topLevelKeys: eventData ? Object.keys(eventData) : [],
+        });
       }
     } catch (error) {
       // Logging is optional, don't fail on parse errors
       console.error('[webhook] Error processing payment event:', error);
+      console.error('[webhook] Error stack:', error.stack);
+      console.error('[webhook] Event data that caused error:', JSON.stringify(eventData, null, 2));
     }
+  } else {
+    console.log('[webhook] ⚠️ Skipping event processing:', {
+      mdkResponseOk: mdkResponse?.ok,
+      hasEventData: !!eventData,
+      mdkResponseStatus: mdkResponse?.status,
+    });
   }
   
   return mdkResponse;
