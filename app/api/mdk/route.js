@@ -64,30 +64,37 @@ export async function POST(request) {
     console.error('[webhook] Error reading request body:', error);
   }
 
-  // Intercept console.log to capture PaymentReceived events from MDK's logs
+  // Intercept console.log and console.error to capture PaymentReceived events from MDK's logs
   const originalLog = console.log;
   const originalError = console.error;
   
-  const logInterceptor = (...args) => {
-    // Call original log FIRST - ensures logs still appear in Vercel
-    originalLog(...args);
-    
-    // Check if this is a PaymentReceived log and capture the data
-    const logMessage = args.map(arg => 
-      typeof arg === 'string' ? arg : JSON.stringify(arg)
-    ).join(' ');
-    
-    if (logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]')) {
-      const paymentData = parsePaymentReceivedFromLog(logMessage);
-      if (paymentData && paymentData.paymentHash) {
-        capturedPayments.push(paymentData);
-        originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
+  // Shared interceptor function for both log and error
+  const createInterceptor = (originalFn) => {
+    return (...args) => {
+      // Call original function FIRST - ensures logs still appear in Vercel
+      originalFn(...args);
+      
+      // Check if this is a PaymentReceived log and capture the data
+      const logMessage = args.map(arg => 
+        typeof arg === 'string' ? arg : JSON.stringify(arg)
+      ).join(' ');
+      
+      if (logMessage.includes('PaymentReceived') || logMessage.includes('[lightning-js]')) {
+        const paymentData = parsePaymentReceivedFromLog(logMessage);
+        if (paymentData && paymentData.paymentHash) {
+          capturedPayments.push(paymentData);
+          originalLog('[webhook] ✅ Captured PaymentReceived event from log:', paymentData);
+        }
       }
-    }
+    };
   };
 
-  // Temporarily override console.log during MDK processing
+  const logInterceptor = createInterceptor(originalLog);
+  const errorInterceptor = createInterceptor(originalError);
+
+  // Temporarily override both console.log and console.error during MDK processing
   console.log = logInterceptor;
+  console.error = errorInterceptor;
 
   let mdkResponse;
   try {
@@ -95,7 +102,7 @@ export async function POST(request) {
     // During this call, MDK will log PaymentReceived events which we'll capture
     mdkResponse = await mdkPost(request);
   } finally {
-    // Always restore original console.log, even if there's an error
+    // Always restore original console functions, even if there's an error
     console.log = originalLog;
     console.error = originalError;
   }
