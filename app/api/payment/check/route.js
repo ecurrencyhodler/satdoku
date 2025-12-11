@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPayment, hasPayment } from '../../../lib/redis.js';
+import { getPayment, hasPayment } from '../../../../lib/redis.js';
 
 /**
  * Check if a payment exists in Redis
