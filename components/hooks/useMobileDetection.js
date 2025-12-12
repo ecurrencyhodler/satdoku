@@ -24,3 +24,5 @@ export function useMobileDetection() {
   return isMobile;
 }
 
+
+

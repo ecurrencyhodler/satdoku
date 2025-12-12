@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { getSessionId } from '../lib/sessionId';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -59,10 +60,36 @@ export default function GamePage() {
   };
 
   // Stable callbacks for game events
-  const handleWin = useCallback((stats) => {
+  const handleWin = useCallback(async (stats) => {
     openWinModal(stats);
     updateGameState();
-  }, [openWinModal, updateGameState]);
+    
+    // Save completion to Redis
+    try {
+      const sessionId = getSessionId();
+      const difficulty = gameStateRef.current?.currentDifficulty || gameState?.difficulty || 'beginner';
+      
+      if (sessionId) {
+        const response = await fetch('/api/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            score: stats.score,
+            difficulty,
+          }),
+        });
+        
+        if (!response.ok) {
+          console.error('[GamePage] Failed to save completion:', await response.text());
+        }
+      }
+    } catch (error) {
+      console.error('[GamePage] Error saving completion:', error);
+    }
+  }, [openWinModal, updateGameState, gameState]);
 
   const handleGameOver = useCallback(() => {
     const stats = gameControllerRef.current?.getGameStats();
