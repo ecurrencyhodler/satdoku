@@ -1,17 +1,19 @@
 'use client';
 
 import { useCheckout } from '@moneydevkit/nextjs';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LIFE_PURCHASE_PRICE_SATS } from '../src/js/system/constants.js';
 
 export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
   const { navigate, isNavigating } = useCheckout();
   const [isProcessing, setIsProcessing] = useState(false);
+  const hasInitiatedNavigation = useRef(false);
 
   // Reset processing state when modal opens (handles case where user navigated back from checkout)
   useEffect(() => {
     if (isOpen) {
       setIsProcessing(false);
+      hasInitiatedNavigation.current = false;
     }
   }, [isOpen]);
 
@@ -19,6 +21,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
 
   const handlePurchase = () => {
     setIsProcessing(true);
+    hasInitiatedNavigation.current = true;
     navigate({
       title: 'Satdoku',
       description: 'Buy a life to keep playing',
@@ -31,6 +34,10 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
     });
   };
 
+  // Only disable if we've actually initiated navigation in this session
+  const isActuallyNavigating = isNavigating && hasInitiatedNavigation.current;
+  const isDisabled = isActuallyNavigating || isProcessing;
+
   return (
     <div className="modal show">
       <div className="modal-content">
@@ -40,9 +47,9 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
           <button
             onClick={handlePurchase}
             className="btn btn-primary"
-            disabled={isNavigating || isProcessing}
+            disabled={isDisabled}
           >
-            {isNavigating || isProcessing ? 'Creating checkout…' : `Keep Playing (${LIFE_PURCHASE_PRICE_SATS} sats)`}
+            {isDisabled ? 'Creating checkout…' : `Keep Playing (${LIFE_PURCHASE_PRICE_SATS} sats)`}
           </button>
           <button onClick={onClose} className="btn btn-secondary">
             End Game

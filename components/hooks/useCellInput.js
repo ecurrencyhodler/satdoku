@@ -15,7 +15,7 @@ export function useCellInput(
   onPurchaseLife,
   isLoadingState
 ) {
-  const handleCellInput = useCallback((value) => {
+  const handleCellInput = useCallback(async (value) => {
     // Prevent input during state reload (e.g., after purchase)
     if (isLoadingState?.current) {
       console.warn('[useCellInput] Input blocked - state is currently loading');
@@ -50,8 +50,8 @@ export function useCellInput(
       updateGameState();
     };
 
-    // Delegate to gameController
-    gameControllerRef.current.processCellInputByCoords(
+    // Delegate to gameController and await the save
+    await gameControllerRef.current.processCellInputByCoords(
       row,
       col,
       value,

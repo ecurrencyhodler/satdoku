@@ -14,7 +14,7 @@ export class GameController {
     }
 
     // Process a cell input by coordinates (for React usage)
-    processCellInputByCoords(row, col, value, onStateChange, onWin, onGameOver, onPurchaseLife, getCellElement) {
+    async processCellInputByCoords(row, col, value, onStateChange, onWin, onGameOver, onPurchaseLife, getCellElement) {
         // Don't allow input if no lives remaining
         if (!this.livesManager.hasLives()) {
             return;
@@ -28,7 +28,7 @@ export class GameController {
         // Clear cell if value is 0
         if (value === 0) {
             this.gameState.currentBoard[row][col] = 0;
-            onStateChange();
+            await onStateChange();
             return;
         }
         
@@ -38,14 +38,14 @@ export class GameController {
         const cellElement = getCellElement ? getCellElement(row, col) : null;
         
         if (isValid) {
-            this.handleCorrectMove(cellElement, row, col, value, onStateChange, onWin);
+            await this.handleCorrectMove(cellElement, row, col, value, onStateChange, onWin);
         } else {
-            this.handleIncorrectMove(cellElement, onStateChange, onGameOver, onPurchaseLife);
+            await this.handleIncorrectMove(cellElement, onStateChange, onGameOver, onPurchaseLife);
         }
     }
 
     // Handle a correct move
-    handleCorrectMove(cellElement, row, col, value, onStateChange, onWin) {
+    async handleCorrectMove(cellElement, row, col, value, onStateChange, onWin) {
         // Update board
         this.gameState.currentBoard[row][col] = value;
         
@@ -57,7 +57,7 @@ export class GameController {
             ScoreAnimationHandler.showScoreAnimations(scoreEvents, cellElement);
         }
         
-        onStateChange();
+        await onStateChange();
         
         // Check for win condition
         if (this.isPuzzleComplete()) {
@@ -66,7 +66,7 @@ export class GameController {
     }
 
     // Handle an incorrect move
-    handleIncorrectMove(cellElement, onStateChange, onGameOver, onPurchaseLife) {
+    async handleIncorrectMove(cellElement, onStateChange, onGameOver, onPurchaseLife) {
         // Flash error if cell element is available
         if (cellElement) {
             UIAnimations.flashError(cellElement);
@@ -74,7 +74,7 @@ export class GameController {
         this.gameState.mistakes++;
         const remainingLives = this.livesManager.loseLife();
         
-        onStateChange();
+        await onStateChange();
         
         // When lives reach 0, show purchase modal (only once)
         if (remainingLives === 0 && !this.purchaseModalTriggered) {
