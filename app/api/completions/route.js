@@ -4,12 +4,12 @@ import { saveCompletion } from '../../../lib/redis.js';
 /**
  * POST /api/completions
  * Save a game completion to Redis
- * Body: { sessionId: string, score: number, difficulty: string }
+ * Body: { sessionId: string, score: number, difficulty: string, mistakes: number }
  */
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { sessionId, score, difficulty } = body;
+    const { sessionId, score, difficulty, mistakes } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -32,7 +32,14 @@ export async function POST(request) {
       );
     }
 
-    const success = await saveCompletion(sessionId, score, difficulty);
+    if (mistakes === undefined || mistakes === null) {
+      return NextResponse.json(
+        { error: 'mistakes is required' },
+        { status: 400 }
+      );
+    }
+
+    const success = await saveCompletion(sessionId, score, difficulty, mistakes);
     
     if (success) {
       return NextResponse.json({ success: true });

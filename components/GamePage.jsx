@@ -79,6 +79,7 @@ export default function GamePage() {
             sessionId,
             score: stats.score,
             difficulty,
+            mistakes: stats.mistakes,
           }),
         });
         
