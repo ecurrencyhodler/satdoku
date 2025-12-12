@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getSessionId } from '../lib/sessionId';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -9,6 +8,7 @@ import { useModalState } from './hooks/useModalState';
 import { useGamePageHandlers } from './hooks/useGamePageHandlers';
 import { useMobileDetection } from './hooks/useMobileDetection';
 import { useMobileInput } from './hooks/useMobileInput';
+import { useGameCompletion } from './hooks/useGameCompletion';
 import GameBoard from './GameBoard';
 import StatsBar from './StatsBar';
 import GameControls from './GameControls';
@@ -59,38 +59,34 @@ export default function GamePage() {
     setPendingDifficultyChange(null);
   };
 
+  // Game completion hook
+  const { saveCompletion } = useGameCompletion(gameStateRef, gameState);
+
   // Stable callbacks for game events
   const handleWin = useCallback(async (stats) => {
     openWinModal(stats);
     updateGameState();
+    // Save completion to API with retry logic
+    let retryCount = 0;
+    const maxRetries = 3;
+    let saved = false;
     
-    // Save completion to Redis
-    try {
-      const sessionId = getSessionId();
-      const difficulty = gameStateRef.current?.currentDifficulty || gameState?.difficulty || 'beginner';
-      
-      if (sessionId) {
-        const response = await fetch('/api/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId,
-            score: stats.score,
-            difficulty,
-            mistakes: stats.mistakes,
-          }),
-        });
-        
-        if (!response.ok) {
-          console.error('[GamePage] Failed to save completion:', await response.text());
+    while (retryCount < maxRetries && !saved) {
+      try {
+        await saveCompletion(stats);
+        saved = true;
+      } catch (error) {
+        retryCount++;
+        console.error(`[GamePage] Failed to save completion (attempt ${retryCount}/${maxRetries}):`, error);
+        if (retryCount < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        } else {
+          console.error('[GamePage] Failed to save completion after all retries - completion data may be lost');
         }
       }
-    } catch (error) {
-      console.error('[GamePage] Error saving completion:', error);
     }
-  }, [openWinModal, updateGameState, gameState]);
+  }, [openWinModal, updateGameState, saveCompletion]);
 
   const handleGameOver = useCallback(() => {
     const stats = gameControllerRef.current?.getGameStats();

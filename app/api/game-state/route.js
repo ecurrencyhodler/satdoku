@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { storeGameState, getGameState, deleteGameState } from '../../../lib/redis.js';
+import { storeGameState, getGameState, deleteGameState } from '../../../lib/redis/gameState.js';
 
 /**
  * GET /api/game-state?session-id=xxx
