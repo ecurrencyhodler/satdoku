@@ -17,6 +17,7 @@ node_modules/
 .DS_Store
 *.pem
 prd.md
+.cursor/
 
 # Debug
 npm-debug.log*
