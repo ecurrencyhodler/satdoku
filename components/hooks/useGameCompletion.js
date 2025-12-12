@@ -18,9 +18,9 @@ export function useGameCompletion(gameStateRef, gameState) {
           },
           body: JSON.stringify({
             sessionId,
-            score: stats.score,
+            score: stats.score ?? 0,
             difficulty,
-            mistakes: stats.mistakes,
+            mistakes: stats.mistakes ?? 0,
           }),
         });
         
