@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
 
       <div style={{ marginBottom: '20px', textAlign: 'center' }}>
         <Link href="/" className="btn btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>
-          ← Back to Game
+          Back to Game
         </Link>
       </div>
 
@@ -66,9 +66,8 @@ export default function LeaderboardPage() {
                 <thead>
                   <tr style={{ background: '#f7fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#4a5568' }}>Rank</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#4a5568' }}>Username</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#4a5568' }}>Name</th>
                     <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#4a5568' }}>Score</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#4a5568' }}>Mistakes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -83,14 +82,14 @@ export default function LeaderboardPage() {
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <td style={{ padding: '12px', fontWeight: '600', color: '#2d3748' }}>
-                        {index === 0 && '🥇'}
-                        {index === 1 && '🥈'}
-                        {index === 2 && '🥉'}
-                        {index > 2 && `${index + 1}`}
+                        {index + 1}
                       </td>
-                      <td style={{ padding: '12px', color: '#4a5568' }}>{entry.username}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#2d3748' }}>{entry.score.toLocaleString()}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: '#718096' }}>{entry.mistakes}</td>
+                      <td style={{ padding: '12px', color: '#4a5568', fontSize: '14px' }}>
+                        {entry.username || entry.sessionId}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#2d3748' }}>
+                        {entry.score.toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

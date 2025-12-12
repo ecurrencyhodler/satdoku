@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -14,6 +13,8 @@ import GameBoard from './GameBoard';
 import StatsBar from './StatsBar';
 import GameControls from './GameControls';
 import GameModals from './GameModals';
+import GamePageHeader from './GamePageHeader';
+import GamePageLayout from './GamePageLayout';
 
 export default function GamePage() {
   const [gameState, setGameState] = useState(null);
@@ -29,15 +30,25 @@ export default function GamePage() {
     showGameOverModal,
     showNewGameModal,
     showPurchaseModal,
+    showScoreSubmissionSuccessModal,
+    showNameInputModal,
+    showKeepPlayingModal,
     winStats,
     gameOverStats,
+    pendingScoreData,
     setShowWinModal,
     setShowGameOverModal,
     setShowNewGameModal,
     setShowPurchaseModal,
+    setShowScoreSubmissionSuccessModal,
+    setShowNameInputModal,
+    setShowKeepPlayingModal,
     openWinModal,
     openGameOverModal,
     openPurchaseModal,
+    openScoreSubmissionSuccessModal,
+    openNameInputModal,
+    closeNameInputModal,
     closePurchaseModal,
   } = useModalState();
 
@@ -100,6 +111,16 @@ export default function GamePage() {
     console.log('Opening purchase modal');
     openPurchaseModal();
   }, [openPurchaseModal]);
+
+  const handleKeepPlaying = useCallback(() => {
+    // Close the modal
+    setShowWinModal(false);
+    // Set gameInProgress back to true so player can continue making moves
+    if (gameStateRef.current) {
+      gameStateRef.current.gameInProgress = true;
+      updateGameState();
+    }
+  }, [setShowWinModal, gameStateRef, updateGameState]);
 
   // Cell input hook
   const { handleCellInput } = useCellInput(
@@ -172,26 +193,12 @@ export default function GamePage() {
   }
 
   return (
-    <div className="container">
-      <header>
-        <h1>Satdoku</h1>
-        <div style={{ marginTop: '10px' }}>
-          <Link 
-            href="/leaderboard" 
-            style={{ 
-              color: '#4299e1', 
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'color 0.2s'
-            }}
-            onMouseEnter={(e) => e.target.style.color = '#3182ce'}
-            onMouseLeave={(e) => e.target.style.color = '#4299e1'}
-          >
-            View Leaderboard →
-          </Link>
-        </div>
-      </header>
+    <GamePageLayout>
+      <GamePageHeader
+        gameControllerRef={gameControllerRef}
+        gameState={gameState}
+        openWinModal={openWinModal}
+      />
 
       <GameControls
         difficulty={gameState.difficulty}
@@ -262,19 +269,30 @@ export default function GamePage() {
         showGameOverModal={showGameOverModal}
         showNewGameModal={showNewGameModal}
         showPurchaseModal={showPurchaseModal}
+        showScoreSubmissionSuccessModal={showScoreSubmissionSuccessModal}
+        showNameInputModal={showNameInputModal}
+        showKeepPlayingModal={showKeepPlayingModal}
         winStats={winStats}
         gameOverStats={gameOverStats}
+        pendingScoreData={pendingScoreData}
         setShowWinModal={setShowWinModal}
         setShowGameOverModal={setShowGameOverModal}
         setShowNewGameModal={setShowNewGameModal}
+        setShowScoreSubmissionSuccessModal={setShowScoreSubmissionSuccessModal}
+        setShowNameInputModal={setShowNameInputModal}
+        setShowKeepPlayingModal={setShowKeepPlayingModal}
         startNewGame={startNewGame}
+        onKeepPlaying={handleKeepPlaying}
         pendingDifficultyChange={pendingDifficultyChange}
         setPendingDifficultyChange={setPendingDifficultyChange}
         handlePurchaseClose={handlePurchaseClose}
         handlePurchaseSuccess={handlePurchaseSuccess}
         closePurchaseModal={closePurchaseModal}
+        openScoreSubmissionSuccessModal={openScoreSubmissionSuccessModal}
+        openNameInputModal={openNameInputModal}
+        closeNameInputModal={closeNameInputModal}
       />
-    </div>
+    </GamePageLayout>
   );
 }
 

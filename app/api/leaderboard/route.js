@@ -20,31 +20,29 @@ export async function GET() {
 
 /**
  * POST /api/leaderboard
- * Adds a new leaderboard entry if it qualifies
- * Body: { username, score, mistakes }
+ * Submit a score to the leaderboard
+ * Body: { sessionId: string, score: number, username?: string }
+ * Returns: { success: boolean, qualifies: boolean, message?: string }
+ * 
+ * If username is not provided, only checks if score qualifies.
+ * If username is provided, adds entry to leaderboard with username.
  */
 export async function POST(request) {
   try {
-    const { username, score, mistakes } = await request.json();
+    const body = await request.json();
+    const { sessionId, score, username } = body;
     
     // Validate input
-    if (!username || typeof username !== 'string' || username.trim().length === 0) {
+    if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json(
-        { error: 'Username is required' },
+        { error: 'sessionId is required', success: false },
         { status: 400 }
       );
     }
     
     if (typeof score !== 'number' || score < 0) {
       return NextResponse.json(
-        { error: 'Valid score is required' },
-        { status: 400 }
-      );
-    }
-    
-    if (typeof mistakes !== 'number' || mistakes < 0) {
-      return NextResponse.json(
-        { error: 'Valid mistakes count is required' },
+        { error: 'Valid score is required', success: false },
         { status: 400 }
       );
     }
@@ -53,27 +51,62 @@ export async function POST(request) {
     const qualifies = await checkScoreQualifies(score);
     
     if (!qualifies) {
+      return NextResponse.json({
+        success: false,
+        qualifies: false,
+        message: 'Your score is not high enough to make it to the leaderboard.'
+      });
+    }
+    
+    // If username is not provided, just return qualification status
+    if (!username) {
+      return NextResponse.json({
+        success: true,
+        qualifies: true,
+        message: 'Your score qualifies for the leaderboard!'
+      });
+    }
+    
+    // Validate username if provided
+    if (typeof username !== 'string' || username.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Score does not qualify for leaderboard', qualifies: false },
+        { error: 'Valid username is required', success: false },
         { status: 400 }
       );
     }
     
-    // Add entry and get updated leaderboard
-    const updatedLeaderboard = await addLeaderboardEntry(
-      username.trim(),
-      score,
-      mistakes
-    );
+    if (username.length > 20) {
+      return NextResponse.json(
+        { error: 'Username must be 20 characters or less', success: false },
+        { status: 400 }
+      );
+    }
     
-    return NextResponse.json({
-      success: true,
-      leaderboard: updatedLeaderboard
-    });
+    // Add entry to leaderboard with username
+    try {
+      await addLeaderboardEntry(sessionId, score, username.trim());
+      
+      return NextResponse.json({
+        success: true,
+        qualifies: true,
+        message: 'Congratulations! Your score has been added to the leaderboard!'
+      });
+    } catch (error) {
+      // Handle case where score doesn't qualify
+      if (error.message && error.message.includes('does not qualify')) {
+        return NextResponse.json({
+          success: false,
+          qualifies: false,
+          message: 'Your score is not high enough to make it to the leaderboard.'
+        });
+      }
+      // Re-throw other errors to be handled by outer catch
+      throw error;
+    }
   } catch (error) {
-    console.error('Error adding leaderboard entry:', error);
+    console.error('Error submitting score to leaderboard:', error);
     return NextResponse.json(
-      { error: 'Failed to add leaderboard entry' },
+      { error: 'Failed to submit score to leaderboard', success: false },
       { status: 500 }
     );
   }

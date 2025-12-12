@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { saveCompletion } from '../../../lib/redis/completions.js';
+import { addLeaderboardEntry } from '../../../lib/redis/leaderboard.js';
 
 /**
  * POST /api/completions
@@ -91,6 +92,15 @@ export async function POST(request) {
     const success = await saveCompletion(sessionId, score, difficulty, mistakes);
     
     if (success) {
+      // Automatically add to leaderboard
+      try {
+        await addLeaderboardEntry(sessionId, score);
+        console.log(`[completions] Added to leaderboard: sessionId=${sessionId}, score=${score}`);
+      } catch (leaderboardError) {
+        // Log error but don't fail the request - completion is saved
+        console.error('[completions] Error adding to leaderboard (completion still saved):', leaderboardError);
+      }
+      
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

@@ -4,6 +4,10 @@ import WinModal from './Modals/WinModal';
 import GameOverModal from './Modals/GameOverModal';
 import NewGameModal from './Modals/NewGameModal';
 import PurchaseLifeModal from './PurchaseLifeModal';
+import ScoreSubmissionSuccessModal from './Modals/ScoreSubmissionSuccessModal';
+import NameInputModal from './Modals/NameInputModal';
+import KeepPlayingModal from './Modals/KeepPlayingModal';
+import { StateManager } from '../src/js/system/localState.js';
 
 /**
  * Component that renders all game modals
@@ -13,17 +17,28 @@ export default function GameModals({
   showGameOverModal,
   showNewGameModal,
   showPurchaseModal,
+  showScoreSubmissionSuccessModal,
+  showNameInputModal,
+  showKeepPlayingModal,
   winStats,
   gameOverStats,
+  pendingScoreData,
   setShowWinModal,
   setShowGameOverModal,
   setShowNewGameModal,
+  setShowScoreSubmissionSuccessModal,
+  setShowNameInputModal,
+  setShowKeepPlayingModal,
   startNewGame,
+  onKeepPlaying,
   pendingDifficultyChange,
   setPendingDifficultyChange,
   handlePurchaseClose,
   handlePurchaseSuccess,
   closePurchaseModal,
+  openScoreSubmissionSuccessModal,
+  openNameInputModal,
+  closeNameInputModal,
 }) {
   return (
     <>
@@ -34,10 +49,18 @@ export default function GameModals({
           setShowWinModal(false);
           startNewGame();
         }}
+        onKeepPlaying={onKeepPlaying}
         onChangeDifficulty={() => {
           setShowWinModal(false);
           startNewGame();
         }}
+        onEndGame={() => {
+          setShowWinModal(false);
+          startNewGame();
+        }}
+        onScoreSubmitted={openScoreSubmissionSuccessModal}
+        onOpenNameInput={openNameInputModal}
+        onScoreNotHighEnough={() => setShowKeepPlayingModal(true)}
         stats={winStats || { score: 0, moves: 0, mistakes: 0, livesPurchased: 0 }}
       />
 
@@ -71,6 +94,59 @@ export default function GameModals({
         isOpen={showPurchaseModal}
         onClose={() => handlePurchaseClose(closePurchaseModal)}
         onSuccess={handlePurchaseSuccess}
+      />
+
+      <ScoreSubmissionSuccessModal
+        isOpen={showScoreSubmissionSuccessModal}
+        onClose={() => setShowScoreSubmissionSuccessModal(false)}
+        onViewLeaderboard={() => {
+          window.open('/leaderboard', '_blank');
+        }}
+      />
+
+      <NameInputModal
+        isOpen={showNameInputModal}
+        onClose={closeNameInputModal}
+        onSubmit={async (username, sessionId, score) => {
+          try {
+            const response = await fetch('/api/leaderboard', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ sessionId, score, username }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to submit score');
+            }
+
+            if (data.success) {
+              // Clear game state after successful score submission so refresh starts new game
+              await StateManager.clearGameState();
+              closeNameInputModal();
+              openScoreSubmissionSuccessModal();
+            } else {
+              throw new Error(data.message || 'Failed to submit score');
+            }
+          } catch (error) {
+            throw error;
+          }
+        }}
+        sessionId={pendingScoreData?.sessionId}
+        score={pendingScoreData?.score}
+      />
+
+      <KeepPlayingModal
+        isOpen={showKeepPlayingModal}
+        onClose={() => setShowKeepPlayingModal(false)}
+        onKeepPlaying={onKeepPlaying}
+        onEndGame={() => {
+          setShowKeepPlayingModal(false);
+          startNewGame();
+        }}
       />
     </>
   );
