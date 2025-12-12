@@ -197,6 +197,7 @@ export default function GamePage() {
       <GamePageHeader
         gameControllerRef={gameControllerRef}
         gameState={gameState}
+        openWinModal={openWinModal}
       />
 
       <GameControls
