@@ -87,6 +87,13 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           livesManagerRef.current
         );
         updateGameState();
+        
+        // Check if lives are 0 after loading state and trigger purchase modal if needed
+        if (!livesManagerRef.current.hasLives() && gameControllerRef.current && !gameControllerRef.current.purchaseModalTriggered) {
+          gameControllerRef.current.purchaseModalTriggered = true;
+          setShowPurchaseModal(true);
+        }
+        
         isLoadingStateRef.current = false;
         return true;
       } else {

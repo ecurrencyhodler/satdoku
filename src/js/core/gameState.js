@@ -1,5 +1,5 @@
 import { StateManager } from '../system/localState.js';
-import { DIFFICULTY_LEVELS } from '../system/constants.js';
+import { DIFFICULTY_LEVELS, INITIAL_LIVES } from '../system/constants.js';
 
 // Game state management
 export class GameState {
@@ -51,7 +51,7 @@ export class GameState {
             }
             
             // Restore lives manager state
-            livesManager.lives = saved.lives || 1;
+            livesManager.lives = saved.lives ?? INITIAL_LIVES;
             livesManager.livesPurchased = saved.livesPurchased || 0;
             
             // Store version for optimistic locking
