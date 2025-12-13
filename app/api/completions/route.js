@@ -94,18 +94,9 @@ export async function POST(request) {
     if (success) {
       // Automatically add to leaderboard
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/completions/route.js:96',message:'About to call addLeaderboardEntry from completions',data:{sessionId,score,hasUsername:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         await addLeaderboardEntry(sessionId, score);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/completions/route.js:99',message:'Successfully called addLeaderboardEntry from completions',data:{sessionId,score,hasUsername:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.log(`[completions] Added to leaderboard: sessionId=${sessionId}, score=${score}`);
       } catch (leaderboardError) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/completions/route.js:102',message:'Error adding to leaderboard from completions',data:{sessionId,score,error:leaderboardError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // Log error but don't fail the request - completion is saved
         console.error('[completions] Error adding to leaderboard (completion still saved):', leaderboardError);
       }
