@@ -8,7 +8,6 @@ import { useModalState } from './hooks/useModalState';
 import { useGamePageHandlers } from './hooks/useGamePageHandlers';
 import { useMobileDetection } from './hooks/useMobileDetection';
 import { useMobileInput } from './hooks/useMobileInput';
-import { useGameCompletion } from './hooks/useGameCompletion';
 import GameBoard from './GameBoard';
 import StatsBar from './StatsBar';
 import GameControls from './GameControls';
@@ -70,9 +69,6 @@ export default function GamePage() {
     setCompletionId(null);
     setQualifiedForLeaderboard(false);
   }, [startNewGameFromHook, pendingDifficultyChange, setPendingDifficultyChange]);
-
-  // Game completion hook (no longer needed for saving, but kept for compatibility)
-  useGameCompletion();
 
   // Stable callbacks for game events
   const handleWin = useCallback((stats) => {
