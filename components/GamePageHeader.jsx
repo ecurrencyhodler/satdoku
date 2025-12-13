@@ -2,15 +2,17 @@
 
 import Link from 'next/link';
 
-export default function GamePageHeader({ gameControllerRef, gameState, openWinModal }) {
+export default function GamePageHeader({ gameControllerRef, gameState }) {
   return (
     <header>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-        <h1 style={{ flex: 1, textAlign: 'center', margin: 0 }}>Satdoku</h1>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <h1 style={{ margin: 0 }}>Satdoku</h1>
       </div>
       <div style={{ marginTop: '10px' }}>
         <Link 
           href="/leaderboard" 
+          target="_blank"
+          rel="noopener noreferrer"
           style={{ 
             color: '#4299e1', 
             textDecoration: 'none',
