@@ -60,6 +60,7 @@ export default function GamePage() {
     validatorRef,
     gameControllerRef,
     startNewGame: startNewGameFromHook,
+    resetBoardKeepStats,
     saveGameState,
     updateGameState,
     isLoadingState,
@@ -115,12 +116,9 @@ export default function GamePage() {
   const handleKeepPlaying = useCallback(() => {
     // Close the modal
     setShowWinModal(false);
-    // Set gameInProgress back to true so player can continue making moves
-    if (gameStateRef.current) {
-      gameStateRef.current.gameInProgress = true;
-      updateGameState();
-    }
-  }, [setShowWinModal, gameStateRef, updateGameState]);
+    // Reset the board while preserving stats
+    resetBoardKeepStats();
+  }, [setShowWinModal, resetBoardKeepStats]);
 
   // Cell input hook
   const { handleCellInput } = useCellInput(

@@ -70,6 +70,50 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     updateGameState();
   }, [setSelectedCell]);
 
+  // Reset board while preserving stats (for "Keep playing" feature)
+  const resetBoardKeepStats = useCallback(() => {
+    // Preserve current stats
+    const currentScore = scoringEngineRef.current.getScore();
+    const currentMoves = scoringEngineRef.current.getMoves();
+    const currentMistakes = gameStateRef.current.mistakes;
+    const currentLives = livesManagerRef.current.getLives();
+    const currentLivesPurchased = livesManagerRef.current.getLivesPurchased();
+
+    // Generate new puzzle/board
+    const difficulty = gameStateRef.current.getDifficultyConfig();
+    const { puzzle, solution } = boardGeneratorRef.current.generatePuzzle(difficulty);
+
+    // Initialize new board but preserve mistakes
+    gameStateRef.current.currentPuzzle = puzzle;
+    gameStateRef.current.currentSolution = solution;
+    gameStateRef.current.currentBoard = puzzle.map(row => [...row]);
+    gameStateRef.current.mistakes = currentMistakes;
+    gameStateRef.current.gameInProgress = true;
+
+    // Clear completed rows/columns/boxes (they're specific to the old board)
+    scoringEngineRef.current.completedRows.clear();
+    scoringEngineRef.current.completedColumns.clear();
+    scoringEngineRef.current.completedBoxes.clear();
+
+    // Restore preserved stats
+    scoringEngineRef.current.score = currentScore;
+    scoringEngineRef.current.moves = currentMoves;
+    livesManagerRef.current.lives = currentLives;
+    livesManagerRef.current.livesPurchased = currentLivesPurchased;
+
+    // Update validator and game controller with new board
+    validatorRef.current = new Validator(solution);
+    gameControllerRef.current = new GameController(
+      gameStateRef.current,
+      validatorRef.current,
+      scoringEngineRef.current,
+      livesManagerRef.current
+    );
+
+    setSelectedCell(null);
+    updateGameState();
+  }, [setSelectedCell]);
+
   const loadGameState = useCallback(async () => {
     try {
       isLoadingStateRef.current = true;
@@ -148,6 +192,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     validatorRef,
     gameControllerRef,
     startNewGame,
+    resetBoardKeepStats,
     saveGameState,
     updateGameState,
     isLoadingState: isLoadingStateRef,
