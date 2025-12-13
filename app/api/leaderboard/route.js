@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getLeaderboard, checkScoreQualifies, addLeaderboardEntry } from '@/lib/redis';
+import { getLeaderboard, checkScoreQualifies, addLeaderboardEntry, removeLastLeaderboardEntry } from '@/lib/redis';
 
 /**
  * GET /api/leaderboard
@@ -84,7 +84,13 @@ export async function POST(request) {
     
     // Add entry to leaderboard with username
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/leaderboard/route.js:87',message:'About to call addLeaderboardEntry from leaderboard endpoint',data:{sessionId,score,username:username.trim(),hasUsername:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       await addLeaderboardEntry(sessionId, score, username.trim());
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/leaderboard/route.js:90',message:'Successfully called addLeaderboardEntry from leaderboard endpoint',data:{sessionId,score,username:username.trim(),hasUsername:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       return NextResponse.json({
         success: true,
@@ -107,6 +113,38 @@ export async function POST(request) {
     console.error('Error submitting score to leaderboard:', error);
     return NextResponse.json(
       { error: 'Failed to submit score to leaderboard', success: false },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/leaderboard
+ * Remove the last (lowest-scoring) entry from the leaderboard
+ * Returns: { success: boolean, removed: boolean, entry?: object }
+ */
+export async function DELETE() {
+  try {
+    const result = await removeLastLeaderboardEntry();
+    
+    if (result.removed) {
+      return NextResponse.json({
+        success: true,
+        removed: true,
+        entry: result.entry,
+        message: 'Last leaderboard entry removed successfully'
+      });
+    } else {
+      return NextResponse.json({
+        success: true,
+        removed: false,
+        message: 'No entries found in leaderboard to remove'
+      });
+    }
+  } catch (error) {
+    console.error('Error removing last leaderboard entry:', error);
+    return NextResponse.json(
+      { error: 'Failed to remove last leaderboard entry', success: false },
       { status: 500 }
     );
   }
