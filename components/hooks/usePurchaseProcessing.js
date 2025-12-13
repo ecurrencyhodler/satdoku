@@ -42,8 +42,8 @@ export function usePurchaseProcessing() {
         markLifeGranted(checkoutId);
       }
       
-      // Grant life
-      grantLife().then((result) => {
+      // Grant life (pass checkoutId for tracking)
+      grantLife(checkoutId || null).then((result) => {
         if (result.success && result.lifeAdded) {
           setStatus('success');
           setTimeout(() => {
