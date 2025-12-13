@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
 import { storeGameState, getGameState, deleteGameState } from '../../../lib/redis/gameState.js';
+import { getSessionIdIfExists } from '../../../lib/session/cookieSession.js';
 
 /**
- * GET /api/game-state?session-id=xxx
- * Load game state from Redis
+ * GET /api/game-state
+ * Load game state from Redis (session derived from cookie)
  */
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('session-id');
+    const sessionId = await getSessionIdIfExists();
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: 'session-id parameter is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: true, state: null });
     }
 
     const gameState = await getGameState(sessionId);
@@ -40,20 +37,24 @@ export async function GET(request) {
 
 /**
  * POST /api/game-state
- * Save game state to Redis
- * Body: { sessionId: string, state: object, expectedVersion?: number }
+ * Save game state to Redis (deprecated - use /api/game-action instead)
+ * Body: { state: object, expectedVersion?: number }
+ * Session derived from cookie
  */
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { sessionId, state, expectedVersion } = body;
-
+    const { getSessionId } = await import('../../../lib/session/cookieSession.js');
+    const sessionId = await getSessionId();
+    
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'sessionId is required' },
-        { status: 400 }
+        { error: 'Session not found' },
+        { status: 401 }
       );
     }
+
+    const body = await request.json();
+    const { state, expectedVersion } = body;
 
     if (!state) {
       return NextResponse.json(
@@ -90,19 +91,16 @@ export async function POST(request) {
 }
 
 /**
- * DELETE /api/game-state?session-id=xxx
- * Delete game state from Redis
+ * DELETE /api/game-state
+ * Delete game state from Redis (session derived from cookie)
  */
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('session-id');
+    const { getSessionIdIfExists } = await import('../../../lib/session/cookieSession.js');
+    const sessionId = await getSessionIdIfExists();
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: 'session-id parameter is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: true });
     }
 
     const success = await deleteGameState(sessionId);
@@ -123,6 +121,8 @@ export async function DELETE(request) {
     );
   }
 }
+
+
 
 
 

@@ -1,26 +1,27 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { StateManager } from '../../src/js/system/localState.js';
 
 /**
  * Hook for managing GamePage event handlers
+ * Now uses server-authoritative actions
  */
 export function useGamePageHandlers(
-  gameStateRef,
-  livesManagerRef,
-  gameControllerRef,
+  gameState,
   pendingDifficultyChange,
   setPendingDifficultyChange,
   setSelectedCell,
   setShowNewGameModal,
-  updateGameState,
   startNewGame,
   isMobile,
-  mobileInputRef
+  mobileInputRef,
+  setGameState
 ) {
   const router = useRouter();
 
   const handleCellClick = useCallback((row, col) => {
-    if (!livesManagerRef.current.hasLives()) return;
+    // Check if player has lives
+    if (gameState && gameState.lives <= 0) return;
     setSelectedCell({ row, col });
     
     // Focus mobile input immediately on click (must be in user interaction handler)
@@ -35,25 +36,73 @@ export function useGamePageHandlers(
         console.error('Error focusing mobile input:', e);
       }
     }
-  }, [livesManagerRef, setSelectedCell, isMobile, mobileInputRef]);
+  }, [gameState, setSelectedCell, isMobile, mobileInputRef]);
 
   const handleDifficultyChange = useCallback((newDifficulty) => {
-    if (gameStateRef.current.gameInProgress) {
+    if (gameState && gameState.gameInProgress) {
       setPendingDifficultyChange(newDifficulty);
       setShowNewGameModal(true);
     } else {
-      gameStateRef.current.currentDifficulty = newDifficulty;
-      updateGameState();
+      // Start new game with new difficulty
+      startNewGame(newDifficulty);
     }
-  }, [gameStateRef, setPendingDifficultyChange, setShowNewGameModal, updateGameState]);
+  }, [gameState, setPendingDifficultyChange, setShowNewGameModal, startNewGame]);
 
   const handleNewGameClick = useCallback(() => {
-    if (gameStateRef.current.gameInProgress) {
+    if (gameState && gameState.gameInProgress) {
       setShowNewGameModal(true);
     } else {
       startNewGame();
     }
-  }, [gameStateRef, setShowNewGameModal, startNewGame]);
+  }, [gameState, setShowNewGameModal, startNewGame]);
+
+  const handleKeepPlaying = useCallback(async () => {
+    try {
+      const result = await StateManager.sendGameAction({ action: 'keepPlaying' }, gameState?.version);
+      
+      if (result.success) {
+        // Transform server state to client format
+        const transformedState = {
+          board: result.state.currentBoard,
+          puzzle: result.state.currentPuzzle,
+          difficulty: result.state.difficulty,
+          mistakes: result.state.mistakes,
+          gameInProgress: result.state.gameInProgress,
+          score: result.state.score,
+          moves: result.state.moves,
+          lives: result.state.lives,
+          livesPurchased: result.state.livesPurchased || 0,
+          completedRows: result.state.completedRows || [],
+          completedColumns: result.state.completedColumns || [],
+          completedBoxes: result.state.completedBoxes || [],
+          version: result.state.version
+        };
+        setGameState(transformedState);
+        setSelectedCell(null);
+      } else {
+        console.error('[useGamePageHandlers] Failed to keep playing:', result.error);
+      }
+    } catch (error) {
+      console.error('[useGamePageHandlers] Error keeping playing:', error);
+    }
+  }, [gameState, setGameState, setSelectedCell]);
+
+  const handlePurchaseLife = useCallback(async (paymentSessionId) => {
+    try {
+      const result = await StateManager.sendGameAction({ 
+        action: 'purchaseLife', 
+        paymentSessionId 
+      }, gameState?.version);
+      
+      if (result.success) {
+        setGameState(result.state);
+      } else {
+        console.error('[useGamePageHandlers] Failed to purchase life:', result.error);
+      }
+    } catch (error) {
+      console.error('[useGamePageHandlers] Error purchasing life:', error);
+    }
+  }, [gameState, setGameState]);
 
   const handlePurchaseSuccess = useCallback(() => {
     // Life will be added via URL param on return
@@ -63,19 +112,26 @@ export function useGamePageHandlers(
   const handlePurchaseClose = useCallback((closePurchaseModal) => {
     // Only show game over if user cancels and still has 0 lives
     // If they purchased a life, they should be able to continue playing
-    if (!livesManagerRef.current.hasLives()) {
-      const stats = gameControllerRef.current?.getGameStats();
+    if (gameState && gameState.lives <= 0) {
+      const stats = {
+        score: gameState.score,
+        moves: gameState.moves,
+        mistakes: gameState.mistakes,
+        livesPurchased: gameState.livesPurchased
+      };
       closePurchaseModal(true, stats);
     } else {
       // User has lives, just close the purchase modal without showing game over
       closePurchaseModal(false);
     }
-  }, [gameControllerRef, livesManagerRef]);
+  }, [gameState]);
 
   return {
     handleCellClick,
     handleDifficultyChange,
     handleNewGameClick,
+    handleKeepPlaying,
+    handlePurchaseLife,
     handlePurchaseSuccess,
     handlePurchaseClose,
   };

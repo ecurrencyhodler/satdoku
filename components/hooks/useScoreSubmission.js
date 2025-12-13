@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
-import { getSessionId } from '../../lib/sessionId';
 
 /**
  * Hook for handling score submission to leaderboard
+ * Now uses completionId-based submission
  */
-export function useScoreSubmission(stats, onOpenNameInput, onClose, onScoreNotHighEnough) {
+export function useScoreSubmission(completionId, qualifiedForLeaderboard, onOpenNameInput, onClose, onScoreNotHighEnough) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
@@ -17,8 +17,34 @@ export function useScoreSubmission(stats, onOpenNameInput, onClose, onScoreNotHi
   }, []);
 
   const handleSubmitScore = useCallback(async () => {
-    if (!stats || !stats.score) {
-      setError('No score to submit');
+    if (!completionId) {
+      setError('No completion ID available');
+      return;
+    }
+
+    // If not qualified, show keep playing modal
+    if (!qualifiedForLeaderboard) {
+      if (onScoreNotHighEnough) {
+        setTimeout(() => {
+          onClose();
+          onScoreNotHighEnough();
+        }, 100);
+      }
+      return;
+    }
+
+    // Qualified - open name input modal
+    if (onOpenNameInput) {
+      setTimeout(() => {
+        onClose();
+        onOpenNameInput(completionId);
+      }, 100);
+    }
+  }, [completionId, qualifiedForLeaderboard, onOpenNameInput, onClose, onScoreNotHighEnough]);
+
+  const handleSubmitWithUsername = useCallback(async (username) => {
+    if (!completionId || !username) {
+      setError('Completion ID and username are required');
       return;
     }
 
@@ -26,19 +52,13 @@ export function useScoreSubmission(stats, onOpenNameInput, onClose, onScoreNotHi
     setError(null);
 
     try {
-      const sessionId = getSessionId();
-      if (!sessionId) {
-        throw new Error('Session ID not found');
-      }
-
-      // First check if score qualifies (without username)
-      const requestBody = { sessionId, score: stats.score };
       const response = await fetch('/api/leaderboard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        credentials: 'include', // Include cookies
+        body: JSON.stringify({ completionId, username }),
       });
 
       const data = await response.json();
@@ -47,32 +67,16 @@ export function useScoreSubmission(stats, onOpenNameInput, onClose, onScoreNotHi
         throw new Error(data.error || 'Failed to submit score');
       }
 
-      // If score qualifies, open name input modal instead of immediately submitting
-      if (data.qualifies && onOpenNameInput) {
-        setTimeout(() => {
-          onClose();
-          onOpenNameInput(sessionId, stats.score);
-        }, 100);
-        return; // Don't set submitted state since we're opening name input modal
-      }
-      
-      // Score doesn't qualify - close win modal and show keep playing modal
       setSubmitted(true);
       setSubmissionResult(data);
-      if (onScoreNotHighEnough) {
-        setTimeout(() => {
-          onClose();
-          onScoreNotHighEnough();
-        }, 100);
-      }
     } catch (err) {
       console.error('Error submitting score:', err);
       setError(err.message || 'Failed to submit score. Please try again.');
-      setSubmissionResult({ success: false, qualifies: false });
+      setSubmissionResult({ success: false });
     } finally {
       setSubmitting(false);
     }
-  }, [stats, onOpenNameInput, onClose, onScoreNotHighEnough]);
+  }, [completionId]);
 
   return {
     submitting,
@@ -80,6 +84,9 @@ export function useScoreSubmission(stats, onOpenNameInput, onClose, onScoreNotHi
     submissionResult,
     error,
     handleSubmitScore,
+    handleSubmitWithUsername,
     resetSubmissionState,
   };
 }
+
+

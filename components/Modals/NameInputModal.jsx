@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function NameInputModal({ isOpen, onClose, onSubmit, sessionId, score }) {
+export default function NameInputModal({ isOpen, onClose, onSubmit, completionId }) {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,7 +45,7 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, sessionId, s
     setError('');
 
     try {
-      await onSubmit(trimmedUsername, sessionId, score);
+      await onSubmit(trimmedUsername, completionId);
     } catch (err) {
       console.error('Error submitting name:', err);
       setError(err.message || 'Failed to submit name. Please try again.');
@@ -149,3 +149,5 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, sessionId, s
     </div>
   );
 }
+
+

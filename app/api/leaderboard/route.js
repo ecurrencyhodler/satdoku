@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getLeaderboard, checkScoreQualifies, addLeaderboardEntry } from '@/lib/redis';
+import { getLeaderboard, addLeaderboardEntry } from '@/lib/redis';
+import { getSessionId } from '@/lib/session/cookieSession';
+import { validateCompletionForLeaderboard, markCompletionSubmitted } from '@/lib/redis/completions';
 
 /**
  * GET /api/leaderboard
@@ -20,54 +22,71 @@ export async function GET() {
 
 /**
  * POST /api/leaderboard
- * If username is provided: Adds a new leaderboard entry if it qualifies
- * If username is not provided: Checks if score qualifies and returns { qualifies: true/false }
- * Body: { sessionId, score, username? }
+ * Submit a completion to the leaderboard
+ * Body: { completionId: string, username: string }
+ * Session derived from cookie
  */
 export async function POST(request) {
   try {
-    const { sessionId, score, username } = await request.json();
+    // Get session ID from cookie
+    const sessionId = await getSessionId();
     
-    // Validate score (required for both check and submit)
-    if (typeof score !== 'number' || score < 0) {
+    if (!sessionId) {
       return NextResponse.json(
-        { error: 'Valid score is required' },
+        { error: 'Session not found' },
+        { status: 401 }
+      );
+    }
+
+    const { completionId, username } = await request.json();
+    
+    // Validate completionId
+    if (!completionId || typeof completionId !== 'string') {
+      return NextResponse.json(
+        { error: 'completionId is required' },
         { status: 400 }
       );
     }
     
-    // Validate sessionId (required for both check and submit)
-    if (!sessionId || typeof sessionId !== 'string') {
-      return NextResponse.json(
-        { error: 'Session ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Check if score qualifies
-    const qualifies = await checkScoreQualifies(score);
-    
-    // If no username provided, just return qualification status
+    // Validate username
     if (!username || typeof username !== 'string' || username.trim().length === 0) {
-      return NextResponse.json({
-        qualifies: qualifies
-      });
-    }
-    
-    // Username provided - proceed with submission
-    
-    if (!qualifies) {
       return NextResponse.json(
-        { error: 'Score does not qualify for leaderboard', qualifies: false },
+        { error: 'username is required' },
         { status: 400 }
       );
     }
     
-    // Add entry and get updated leaderboard
+    // Validate username length and charset
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length > 50) {
+      return NextResponse.json(
+        { error: 'username must be 50 characters or less' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate completion
+    const validation = await validateCompletionForLeaderboard(completionId, sessionId);
+    
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error || 'Completion validation failed' },
+        { status: 400 }
+      );
+    }
+    
+    const completion = validation.completion;
+    
+    // Mark completion as submitted
+    await markCompletionSubmitted(completionId);
+    
+    // Add entry to leaderboard using server-derived data only
+    // Note: addLeaderboardEntry currently only accepts sessionId, score, username
+    // The score is server-derived from the completion record
     const updatedLeaderboard = await addLeaderboardEntry(
-      sessionId,
-      score,
-      username.trim()
+      completion.sessionId,
+      completion.score,
+      trimmedUsername
     );
     
     return NextResponse.json({

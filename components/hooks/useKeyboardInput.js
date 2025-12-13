@@ -23,7 +23,7 @@ export function useKeyboardInput(
           // Select first editable cell
           for (let row = 0; row < 9; row++) {
             for (let col = 0; col < 9; col++) {
-              if (gameStateRef.current.currentPuzzle[row][col] === 0) {
+              if (gameState?.puzzle && gameState.puzzle[row][col] === 0) {
                 setSelectedCell({ row, col });
                 return;
               }
@@ -56,5 +56,5 @@ export function useKeyboardInput(
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, selectedCell, setSelectedCell, gameStateRef, handleCellInput]);
+  }, [gameState, selectedCell, setSelectedCell, handleCellInput]);
 }

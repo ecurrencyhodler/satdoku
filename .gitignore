@@ -16,7 +16,7 @@ node_modules/
 # Misc
 .DS_Store
 *.pem
-prd.md
+docs/
 .cursor/*
 !.cursor/debug.log
 

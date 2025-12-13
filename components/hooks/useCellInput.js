@@ -1,67 +1,128 @@
 import { useCallback } from 'react';
+import { StateManager } from '../../src/js/system/localState.js';
+import { ScoreAnimationHandler } from '../../src/js/ui/scoreAnimationHandler.js';
+import { UIAnimations } from '../../src/js/ui/uiAnimations.js';
 
 /**
  * Hook for handling cell input processing logic
- * Delegates to GameController to avoid duplicating logic
+ * Sends actions to server and processes server responses
  */
 export function useCellInput(
   selectedCell,
-  gameStateRef,
-  gameControllerRef,
-  updateGameState,
-  saveGameState,
+  gameState,
+  setGameState,
   onWin,
   onGameOver,
   onPurchaseLife,
+  setCompletionId,
+  setQualifiedForLeaderboard,
   isLoadingState
 ) {
   const handleCellInput = useCallback(async (value) => {
-    // Prevent input during state reload (e.g., after purchase)
+    // Prevent input during state reload
     if (isLoadingState?.current) {
       console.warn('[useCellInput] Input blocked - state is currently loading');
       return;
     }
     
-    if (!selectedCell || !gameControllerRef.current) return;
+    if (!selectedCell || !gameState) return;
 
     const row = selectedCell.row;
     const col = selectedCell.col;
 
-    // Helper to get cell element for animations
-    const getCellElement = (r, c) => {
-      return document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-    };
+    // Create action
+    const action = value === 0
+      ? { action: 'clearCell', row, col }
+      : { action: 'placeNumber', row, col, value };
 
-    // Wrap callbacks to include state updates
-    const onStateChange = async () => {
-      updateGameState();
-      // Await save to ensure it completes and handle errors
-      try {
-        await saveGameState();
-      } catch (error) {
-        console.error('[useCellInput] Failed to save game state:', error);
+    try {
+      const result = await StateManager.sendGameAction(action, gameState?.version);
+
+      if (result.success) {
+        // Transform server state to client format
+        const transformedState = {
+          board: result.state.currentBoard,
+          puzzle: result.state.currentPuzzle,
+          difficulty: result.state.difficulty,
+          mistakes: result.state.mistakes,
+          gameInProgress: result.state.gameInProgress,
+          score: result.state.score,
+          moves: result.state.moves,
+          lives: result.state.lives,
+          livesPurchased: result.state.livesPurchased || 0,
+          completedRows: result.state.completedRows || [],
+          completedColumns: result.state.completedColumns || [],
+          completedBoxes: result.state.completedBoxes || [],
+          version: result.state.version
+        };
+        setGameState(transformedState);
+
+        // Show score animations or error animations
+        if (result.scoreDelta?.events && result.scoreDelta.events.length > 0) {
+          const cellElement = document.querySelector(
+            `[data-row="${row}"][data-col="${col}"]`
+          );
+          if (cellElement) {
+            // Check if there's an error event
+            const hasError = result.scoreDelta.events.some(e => e.type === 'error');
+            if (hasError) {
+              // Show error animation (flash red)
+              UIAnimations.flashError(cellElement);
+            } else {
+              // Show score animations
+              ScoreAnimationHandler.showScoreAnimations(result.scoreDelta.events, cellElement);
+            }
+          }
+        }
+
+        // Handle modals
+        if (result.modals?.win) {
+          const stats = {
+            score: result.state.score,
+            moves: result.state.moves,
+            mistakes: result.state.mistakes,
+            livesPurchased: result.state.livesPurchased
+          };
+          onWin(stats);
+        }
+        
+        if (result.modals?.gameOver) {
+          const stats = {
+            score: result.state.score,
+            moves: result.state.moves,
+            mistakes: result.state.mistakes,
+            livesPurchased: result.state.livesPurchased
+          };
+          onGameOver(stats);
+        }
+        
+        if (result.modals?.purchaseLife) {
+          onPurchaseLife();
+        }
+
+        // Store completionId if win
+        if (result.completed && result.completionId) {
+          setCompletionId(result.completionId);
+          setQualifiedForLeaderboard(result.qualifiedForLeaderboard || false);
+        }
+      } else if (result.conflict) {
+        // Version conflict - reload state
+        console.warn('[useCellInput] Version conflict, reloading state');
+        const currentState = await StateManager.loadGameState();
+        if (currentState) {
+          setGameState(currentState);
+        }
+        // Optionally show error to user
+      } else {
+        // Other error - show to user
+        console.error('[useCellInput] Action failed:', result.error);
+        // TODO: Show error message to user
       }
-    };
-
-    const onWinWithStats = () => {
-      const stats = gameControllerRef.current.getGameStats();
-      gameControllerRef.current.endGame();
-      onWin(stats);
-      updateGameState();
-    };
-
-    // Delegate to gameController and await the save
-    await gameControllerRef.current.processCellInputByCoords(
-      row,
-      col,
-      value,
-      onStateChange,
-      onWinWithStats,
-      onGameOver,
-      onPurchaseLife,
-      getCellElement
-    );
-  }, [selectedCell, gameStateRef, gameControllerRef, updateGameState, saveGameState, onWin, onGameOver, onPurchaseLife, isLoadingState]);
+    } catch (error) {
+      console.error('[useCellInput] Error sending action:', error);
+      // TODO: Show error message to user
+    }
+  }, [selectedCell, gameState, setGameState, onWin, onGameOver, onPurchaseLife, setCompletionId, setQualifiedForLeaderboard, isLoadingState]);
 
   return { handleCellInput };
 }

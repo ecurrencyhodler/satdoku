@@ -39,6 +39,8 @@ export default function GameModals({
   openScoreSubmissionSuccessModal,
   openNameInputModal,
   closeNameInputModal,
+  completionId,
+  qualifiedForLeaderboard,
 }) {
   return (
     <>
@@ -62,6 +64,8 @@ export default function GameModals({
         onOpenNameInput={openNameInputModal}
         onScoreNotHighEnough={() => setShowKeepPlayingModal(true)}
         stats={winStats || { score: 0, moves: 0, mistakes: 0, livesPurchased: 0 }}
+        completionId={completionId}
+        qualifiedForLeaderboard={qualifiedForLeaderboard}
       />
 
       <GameOverModal
@@ -107,14 +111,15 @@ export default function GameModals({
       <NameInputModal
         isOpen={showNameInputModal}
         onClose={closeNameInputModal}
-        onSubmit={async (username, sessionId, score) => {
+        onSubmit={async (username, completionId) => {
           try {
             const response = await fetch('/api/leaderboard', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ sessionId, score, username }),
+              credentials: 'include', // Include cookies
+              body: JSON.stringify({ completionId, username }),
             });
 
             const data = await response.json();
@@ -135,8 +140,7 @@ export default function GameModals({
             throw error;
           }
         }}
-        sessionId={pendingScoreData?.sessionId}
-        score={pendingScoreData?.score}
+        completionId={pendingScoreData?.completionId}
       />
 
       <KeepPlayingModal
@@ -151,6 +155,8 @@ export default function GameModals({
     </>
   );
 }
+
+
 
 
 

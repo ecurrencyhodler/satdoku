@@ -52,84 +52,62 @@ export default function GamePage() {
     closePurchaseModal,
   } = useModalState();
 
+  // Store completionId and qualification status
+  const [completionId, setCompletionId] = useState(null);
+  const [qualifiedForLeaderboard, setQualifiedForLeaderboard] = useState(false);
+
   // Game initialization hook
   const {
-    gameStateRef,
-    scoringEngineRef,
-    livesManagerRef,
-    validatorRef,
-    gameControllerRef,
     startNewGame: startNewGameFromHook,
     resetBoardKeepStats,
-    saveGameState,
-    updateGameState,
     isLoadingState,
   } = useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal);
 
   // Wrapper for startNewGame that handles pending difficulty change
-  const startNewGame = () => {
+  const startNewGame = useCallback(() => {
     startNewGameFromHook(pendingDifficultyChange);
     setPendingDifficultyChange(null);
-  };
+    setCompletionId(null);
+    setQualifiedForLeaderboard(false);
+  }, [startNewGameFromHook, pendingDifficultyChange, setPendingDifficultyChange]);
 
-  // Game completion hook
-  const { saveCompletion } = useGameCompletion(gameStateRef, gameState);
+  // Game completion hook (no longer needed for saving, but kept for compatibility)
+  useGameCompletion();
 
   // Stable callbacks for game events
-  const handleWin = useCallback(async (stats) => {
+  const handleWin = useCallback((stats) => {
     openWinModal(stats);
-    updateGameState();
-    // Save completion to API with retry logic
-    let retryCount = 0;
-    const maxRetries = 3;
-    let saved = false;
-    
-    while (retryCount < maxRetries && !saved) {
-      try {
-        await saveCompletion(stats);
-        saved = true;
-      } catch (error) {
-        retryCount++;
-        console.error(`[GamePage] Failed to save completion (attempt ${retryCount}/${maxRetries}):`, error);
-        if (retryCount < maxRetries) {
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        } else {
-          console.error('[GamePage] Failed to save completion after all retries - completion data may be lost');
-        }
-      }
-    }
-  }, [openWinModal, updateGameState, saveCompletion]);
+    // Completion is now handled server-side, no need to save here
+  }, [openWinModal]);
 
-  const handleGameOver = useCallback(() => {
-    const stats = gameControllerRef.current?.getGameStats();
+  const handleGameOver = useCallback((stats) => {
     if (stats) {
       openGameOverModal(stats);
     }
-  }, [openGameOverModal, gameControllerRef]);
+  }, [openGameOverModal]);
 
   const handlePurchaseLife = useCallback(() => {
     console.log('Opening purchase modal');
     openPurchaseModal();
   }, [openPurchaseModal]);
 
-  const handleKeepPlaying = useCallback(() => {
+  const handleKeepPlaying = useCallback(async () => {
     // Close the modal
     setShowWinModal(false);
-    // Reset the board while preserving stats
-    resetBoardKeepStats();
+    // Reset the board while preserving stats (server action)
+    await resetBoardKeepStats();
   }, [setShowWinModal, resetBoardKeepStats]);
 
   // Cell input hook
   const { handleCellInput } = useCellInput(
     selectedCell,
-    gameStateRef,
-    gameControllerRef,
-    updateGameState,
-    saveGameState,
+    gameState,
+    setGameState,
     handleWin,
     handleGameOver,
     handlePurchaseLife,
+    setCompletionId,
+    setQualifiedForLeaderboard,
     isLoadingState
   );
 
@@ -138,7 +116,7 @@ export default function GamePage() {
     gameState,
     selectedCell,
     setSelectedCell,
-    gameStateRef,
+    null, // gameStateRef no longer needed
     handleCellInput
   );
 
@@ -154,20 +132,20 @@ export default function GamePage() {
     handleCellClick,
     handleDifficultyChange,
     handleNewGameClick,
+    handleKeepPlaying: handleKeepPlayingFromHandler,
+    handlePurchaseLife: handlePurchaseLifeFromHandler,
     handlePurchaseSuccess,
     handlePurchaseClose,
   } = useGamePageHandlers(
-    gameStateRef,
-    livesManagerRef,
-    gameControllerRef,
+    gameState,
     pendingDifficultyChange,
     setPendingDifficultyChange,
     setSelectedCell,
     setShowNewGameModal,
-    updateGameState,
     startNewGame,
     isMobile,
-    mobileInputRef
+    mobileInputRef,
+    setGameState
   );
 
   // Click outside to deselect
@@ -193,7 +171,6 @@ export default function GamePage() {
   return (
     <GamePageLayout>
       <GamePageHeader
-        gameControllerRef={gameControllerRef}
         gameState={gameState}
       />
 
@@ -271,7 +248,7 @@ export default function GamePage() {
         showKeepPlayingModal={showKeepPlayingModal}
         winStats={winStats}
         gameOverStats={gameOverStats}
-        pendingScoreData={pendingScoreData}
+        pendingScoreData={{ completionId }}
         setShowWinModal={setShowWinModal}
         setShowGameOverModal={setShowGameOverModal}
         setShowNewGameModal={setShowNewGameModal}
@@ -288,6 +265,8 @@ export default function GamePage() {
         openScoreSubmissionSuccessModal={openScoreSubmissionSuccessModal}
         openNameInputModal={openNameInputModal}
         closeNameInputModal={closeNameInputModal}
+        completionId={completionId}
+        qualifiedForLeaderboard={qualifiedForLeaderboard}
       />
     </GamePageLayout>
   );

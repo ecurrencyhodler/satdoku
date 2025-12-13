@@ -1,177 +1,148 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { BoardGenerator } from '../../src/js/core/boardGenerator.js';
-import { Validator } from '../../src/js/core/validator.js';
-import { ScoringEngine } from '../../src/js/core/scoringEngine.js';
-import { LivesManager } from '../../src/js/system/livesManager.js';
 import { StateManager } from '../../src/js/system/localState.js';
-import { GameState } from '../../src/js/core/gameState.js';
-import { GameController } from '../../src/js/core/gameController.js';
-import { useGameStateSaving } from './useGameStateSaving.js';
 import { usePaymentSuccessHandler } from './usePaymentSuccessHandler.js';
 
 /**
- * Hook for managing game initialization, state loading, and new game creation
+ * Hook for managing game initialization and state loading
+ * Now uses server-authoritative actions
  */
 export function useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal) {
-  const boardGeneratorRef = useRef(new BoardGenerator());
-  const scoringEngineRef = useRef(new ScoringEngine());
-  const livesManagerRef = useRef(new LivesManager());
-  const gameStateRef = useRef(new GameState());
-  const validatorRef = useRef(null);
-  const gameControllerRef = useRef(null);
   const hasInitialized = useRef(false);
   const isLoadingStateRef = useRef(false); // Prevent moves during state reload
 
-  // Internal function to update React state from refs
-  const updateGameState = () => {
-    setGameState({
-      board: gameStateRef.current.currentBoard.map(row => [...row]),
-      puzzle: gameStateRef.current.currentPuzzle.map(row => [...row]),
-      difficulty: gameStateRef.current.currentDifficulty,
-      mistakes: gameStateRef.current.mistakes,
-      gameInProgress: gameStateRef.current.gameInProgress,
-      score: scoringEngineRef.current.getScore(),
-      moves: scoringEngineRef.current.getMoves(),
-      lives: livesManagerRef.current.getLives(),
-      completedRows: Array.from(scoringEngineRef.current.completedRows),
-      completedColumns: Array.from(scoringEngineRef.current.completedColumns),
-      completedBoxes: Array.from(scoringEngineRef.current.completedBoxes),
-    });
-  };
+  const startNewGame = useCallback(async (pendingDifficultyChange = null) => {
+    try {
+      isLoadingStateRef.current = true;
+      const difficulty = pendingDifficultyChange || 'beginner';
+      
+      const result = await StateManager.sendGameAction({ 
+        action: 'startNewGame', 
+        difficulty 
+      });
 
-  const startNewGame = useCallback((pendingDifficultyChange = null) => {
-    if (pendingDifficultyChange) {
-      gameStateRef.current.currentDifficulty = pendingDifficultyChange;
+      if (result.success) {
+        // Transform server state to client format
+        const transformedState = {
+          board: result.state.currentBoard,
+          puzzle: result.state.currentPuzzle,
+          difficulty: result.state.difficulty,
+          mistakes: result.state.mistakes,
+          gameInProgress: result.state.gameInProgress,
+          score: result.state.score,
+          moves: result.state.moves,
+          lives: result.state.lives,
+          livesPurchased: result.state.livesPurchased || 0,
+          completedRows: result.state.completedRows || [],
+          completedColumns: result.state.completedColumns || [],
+          completedBoxes: result.state.completedBoxes || [],
+          version: result.state.version
+        };
+        setGameState(transformedState);
+        setSelectedCell(null);
+      } else {
+        console.error('[useGameInitialization] Failed to start new game:', result.error);
+      }
+    } catch (error) {
+      console.error('[useGameInitialization] Error starting new game:', error);
+    } finally {
+      isLoadingStateRef.current = false;
     }
-
-    const difficulty = gameStateRef.current.getDifficultyConfig();
-    const { puzzle, solution } = boardGeneratorRef.current.generatePuzzle(difficulty);
-
-    gameStateRef.current.initializeNewGame(puzzle, solution, gameStateRef.current.currentDifficulty);
-    validatorRef.current = new Validator(solution);
-    gameControllerRef.current = new GameController(
-      gameStateRef.current,
-      validatorRef.current,
-      scoringEngineRef.current,
-      livesManagerRef.current
-    );
-
-    scoringEngineRef.current.reset();
-    livesManagerRef.current.reset();
-    setSelectedCell(null);
-    // Note: Completion styling is cleared automatically by React when state updates
-
-    // Reset purchase modal trigger flag when starting new game
-    if (gameControllerRef.current) {
-      gameControllerRef.current.resetPurchaseModalTrigger();
-    }
-
-    StateManager.clearGameState();
-    updateGameState();
-  }, [setSelectedCell]);
+  }, [setGameState, setSelectedCell]);
 
   // Reset board while preserving stats (for "Keep playing" feature)
-  const resetBoardKeepStats = useCallback(() => {
-    // Preserve current stats
-    const currentScore = scoringEngineRef.current.getScore();
-    const currentMoves = scoringEngineRef.current.getMoves();
-    const currentMistakes = gameStateRef.current.mistakes;
-    const currentLives = livesManagerRef.current.getLives();
-    const currentLivesPurchased = livesManagerRef.current.getLivesPurchased();
+  const resetBoardKeepStats = useCallback(async () => {
+    try {
+      isLoadingStateRef.current = true;
+      
+      const result = await StateManager.sendGameAction({ 
+        action: 'keepPlaying' 
+      });
 
-    // Generate new puzzle/board
-    const difficulty = gameStateRef.current.getDifficultyConfig();
-    const { puzzle, solution } = boardGeneratorRef.current.generatePuzzle(difficulty);
-
-    // Initialize new board but preserve mistakes
-    gameStateRef.current.currentPuzzle = puzzle;
-    gameStateRef.current.currentSolution = solution;
-    gameStateRef.current.currentBoard = puzzle.map(row => [...row]);
-    gameStateRef.current.mistakes = currentMistakes;
-    gameStateRef.current.gameInProgress = true;
-
-    // Clear completed rows/columns/boxes (they're specific to the old board)
-    scoringEngineRef.current.completedRows.clear();
-    scoringEngineRef.current.completedColumns.clear();
-    scoringEngineRef.current.completedBoxes.clear();
-
-    // Restore preserved stats
-    scoringEngineRef.current.score = currentScore;
-    scoringEngineRef.current.moves = currentMoves;
-    livesManagerRef.current.lives = currentLives;
-    livesManagerRef.current.livesPurchased = currentLivesPurchased;
-
-    // Update validator and game controller with new board
-    validatorRef.current = new Validator(solution);
-    gameControllerRef.current = new GameController(
-      gameStateRef.current,
-      validatorRef.current,
-      scoringEngineRef.current,
-      livesManagerRef.current
-    );
-
-    setSelectedCell(null);
-    updateGameState();
-  }, [setSelectedCell]);
+      if (result.success) {
+        // Transform server state to client format
+        const transformedState = {
+          board: result.state.currentBoard,
+          puzzle: result.state.currentPuzzle,
+          difficulty: result.state.difficulty,
+          mistakes: result.state.mistakes,
+          gameInProgress: result.state.gameInProgress,
+          score: result.state.score,
+          moves: result.state.moves,
+          lives: result.state.lives,
+          livesPurchased: result.state.livesPurchased || 0,
+          completedRows: result.state.completedRows || [],
+          completedColumns: result.state.completedColumns || [],
+          completedBoxes: result.state.completedBoxes || [],
+          version: result.state.version
+        };
+        setGameState(transformedState);
+        setSelectedCell(null);
+      } else {
+        console.error('[useGameInitialization] Failed to keep playing:', result.error);
+      }
+    } catch (error) {
+      console.error('[useGameInitialization] Error keeping playing:', error);
+    } finally {
+      isLoadingStateRef.current = false;
+    }
+  }, [setGameState, setSelectedCell]);
 
   const loadGameState = useCallback(async () => {
     try {
       isLoadingStateRef.current = true;
-      const loaded = await gameStateRef.current.loadState(
-        scoringEngineRef.current,
-        livesManagerRef.current
-      );
+      const state = await StateManager.loadGameState();
 
-      if (loaded) {
-        validatorRef.current = new Validator(gameStateRef.current.currentSolution);
-        gameControllerRef.current = new GameController(
-          gameStateRef.current,
-          validatorRef.current,
-          scoringEngineRef.current,
-          livesManagerRef.current
-        );
-        updateGameState();
+      if (state) {
+        // Transform server state to client format
+        const transformedState = {
+          board: state.currentBoard,
+          puzzle: state.currentPuzzle,
+          difficulty: state.difficulty,
+          mistakes: state.mistakes,
+          gameInProgress: state.gameInProgress,
+          score: state.score,
+          moves: state.moves,
+          lives: state.lives,
+          livesPurchased: state.livesPurchased || 0,
+          completedRows: state.completedRows || [],
+          completedColumns: state.completedColumns || [],
+          completedBoxes: state.completedBoxes || [],
+          version: state.version
+        };
+        setGameState(transformedState);
         
-        // Check if lives are 0 after loading state and trigger purchase modal if needed
-        if (!livesManagerRef.current.hasLives() && gameControllerRef.current && !gameControllerRef.current.purchaseModalTriggered) {
-          gameControllerRef.current.purchaseModalTriggered = true;
+        // Check if lives are 0 and trigger purchase modal if needed
+        if (state.lives === 0 && state.gameInProgress) {
           setShowPurchaseModal(true);
         }
         
         isLoadingStateRef.current = false;
         return true;
       } else {
-        startNewGame();
+        // No state exists, start new game
+        await startNewGame();
         isLoadingStateRef.current = false;
         return false;
       }
     } catch (error) {
       console.error('[useGameInitialization] Failed to load game state:', error);
       // Fallback to new game on error
-      startNewGame();
+      await startNewGame();
       isLoadingStateRef.current = false;
       return false;
     }
-  }, [startNewGame]);
-
-  // Use game state saving hook for conflict resolution
-  const { saveGameState } = useGameStateSaving(
-    gameStateRef,
-    scoringEngineRef,
-    livesManagerRef,
-    isLoadingStateRef,
-    updateGameState
-  );
+  }, [setGameState, setShowPurchaseModal, startNewGame]);
 
   // Handle payment success (separate hook)
+  // Note: This hook may need updates to work with server-authoritative actions
   usePaymentSuccessHandler(
-    gameStateRef,
-    gameControllerRef,
+    null, // gameStateRef - no longer needed
+    null, // gameControllerRef - no longer needed
     isLoadingStateRef,
     setShowPurchaseModal,
     loadGameState,
-    saveGameState,
-    updateGameState
+    null, // saveGameState - no longer needed
+    null  // updateGameState - no longer needed
   );
 
   // Initialize game on mount
@@ -179,6 +150,10 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     if (!hasInitialized.current) {
       // Only load initial state once
       hasInitialized.current = true;
+      
+      // Clean up old localStorage sessionID (migration cleanup)
+      StateManager.cleanupOldSessionStorage();
+      
       loadGameState().catch((error) => {
         console.error('[useGameInitialization] Error loading initial game state:', error);
       });
@@ -186,15 +161,8 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
   }, [loadGameState]);
 
   return {
-    gameStateRef,
-    scoringEngineRef,
-    livesManagerRef,
-    validatorRef,
-    gameControllerRef,
     startNewGame,
     resetBoardKeepStats,
-    saveGameState,
-    updateGameState,
     isLoadingState: isLoadingStateRef,
   };
 }
