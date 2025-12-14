@@ -19,9 +19,11 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     setIsProcessing(true);
     hasInitiatedNavigation.current = true;
+    
+    // Navigate to checkout - MDK will generate checkoutId and redirect
     navigate({
       title: 'Satdoku',
       description: 'Buy a life to keep playing',
@@ -32,6 +34,11 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
         successUrl: '/purchase-success?checkout-id={CHECKOUT_ID}',
       },
     });
+    
+    // Note: We can't get checkoutId here synchronously from navigate()
+    // The checkoutId will be in the URL after redirect, so we'll store
+    // the mapping when the user lands on the checkout or purchase-success page
+    // This is handled in the purchase-success page component
   };
 
   // Only disable if we've actually initiated navigation in this session
@@ -42,7 +49,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
     <div className="modal show">
       <div className="modal-content">
         <h2>Out of Lives!</h2>
-        <p>Purchase a life to continue playing.</p>
+        <p>Buy a life to keep playing. Use any Bitcoin Lightning wallet such as <a href="https://cash.app/app/6QMN217" target="_blank" rel="noopener noreferrer">Cash App</a> or <a href="https://coinbase.com/join/KGMXH42" target="_blank" rel="noopener noreferrer">Coinbase</a>.</p>
         <div className="modal-actions">
           <button
             onClick={handlePurchase}

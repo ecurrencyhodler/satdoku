@@ -1,77 +1,128 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCheckoutSuccess } from '@moneydevkit/nextjs';
-import { useLifeGranting } from './useLifeGranting';
-import { isLifeGranted, markLifeGranted, clearLifeGranted } from '../../lib/purchaseSessionStorage';
+import { StateManager } from '../../src/js/system/localState.js';
+import { isLifeGranted, markLifeGranted } from '../../lib/purchaseSessionStorage';
 
 /**
- * Hook for processing purchase and granting life
+ * Hook for processing purchase and polling for life grant
+ * Lives are now granted by webhook handler, so we poll game state to detect when life is added
  */
 export function usePurchaseProcessing() {
   const { isCheckoutPaidLoading, isCheckoutPaid } = useCheckoutSuccess();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState('granting'); // 'granting', 'success', 'error'
+  const [status, setStatus] = useState('waiting'); // 'waiting', 'granting', 'success', 'error'
   const [error, setError] = useState(null);
   const hasProcessed = useRef(false);
-  const { grantLife, error: grantError } = useLifeGranting();
+  const pollingIntervalRef = useRef(null);
+  const initialLivesRef = useRef(null);
+  const pollStartTimeRef = useRef(null);
+  const MAX_POLL_TIME = 60000; // 60 seconds max polling time
+  const POLL_INTERVAL = 1000; // Poll every 1 second
 
+  // Initialize initial lives count when payment is confirmed
   useEffect(() => {
-    // Prevent multiple calls with ref guard
-    if (hasProcessed.current) {
-      return;
+    if (!isCheckoutPaidLoading && isCheckoutPaid && initialLivesRef.current === null) {
+      // Load initial state to get starting lives count
+      StateManager.loadGameState().then((state) => {
+        if (state) {
+          initialLivesRef.current = state.lives || 0;
+          pollStartTimeRef.current = Date.now();
+          setStatus('granting');
+        }
+      });
     }
-    
+  }, [isCheckoutPaid, isCheckoutPaidLoading]);
+
+  // Poll for life grant when payment is confirmed
+  useEffect(() => {
     const checkoutId = searchParams?.get('checkout-id');
     
-    // Check if life was already granted for this checkout
+    // Don't poll if already processed or if payment not confirmed
+    if (hasProcessed.current || isCheckoutPaidLoading || !isCheckoutPaid || initialLivesRef.current === null) {
+      return;
+    }
+
+    // Check if already granted (client-side cache)
     if (checkoutId && isLifeGranted(checkoutId)) {
       setStatus('success');
+      hasProcessed.current = true;
       setTimeout(() => {
         router.push('/?payment_success=true');
       }, 500);
       return;
     }
-    
-    // When payment is confirmed by MoneyDevKit, grant life
-    if (!isCheckoutPaidLoading && isCheckoutPaid && status === 'granting') {
-      hasProcessed.current = true;
-      
-      // Set sessionStorage flag IMMEDIATELY to prevent race condition
-      if (checkoutId) {
-        markLifeGranted(checkoutId);
-      }
-      
-      // Grant life (pass checkoutId for tracking)
-      grantLife(checkoutId || null).then((result) => {
-        if (result.success && result.lifeAdded) {
-          setStatus('success');
-          setTimeout(() => {
-            router.push('/?payment_success=true');
-          }, 500);
-        } else {
-          // Remove sessionStorage flag on error to allow retry
-          if (checkoutId) {
-            clearLifeGranted(checkoutId);
-          }
-          const errorMessage = grantError || 'Failed to add life to your game. Please contact support.';
-          setError(errorMessage);
-          setStatus('error');
-          hasProcessed.current = false; // Allow retry on error
-        }
-      }).catch((err) => {
-        // Remove sessionStorage flag on error to allow retry
-        if (checkoutId) {
-          clearLifeGranted(checkoutId);
-        }
-        console.error('Unexpected error during purchase processing:', err);
-        setError('An unexpected error occurred. Please contact support.');
+
+    // Start polling for life grant
+    const pollForLife = async () => {
+      // Check if we've exceeded max poll time
+      if (pollStartTimeRef.current && Date.now() - pollStartTimeRef.current > MAX_POLL_TIME) {
+        console.warn('[usePurchaseProcessing] Poll timeout - life not granted within time limit');
+        setError('Life grant is taking longer than expected. Please refresh the page.');
         setStatus('error');
-        hasProcessed.current = false; // Allow retry on error
-      });
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        return;
+      }
+
+      try {
+        const currentState = await StateManager.loadGameState();
+        
+        if (currentState) {
+          const currentLives = currentState.lives || 0;
+          
+          // Check if life was added (webhook granted it)
+          if (currentLives > initialLivesRef.current) {
+            // Life was granted!
+            console.log('[usePurchaseProcessing] Life granted detected!', {
+              initial: initialLivesRef.current,
+              current: currentLives
+            });
+            
+            // Mark as granted in sessionStorage
+            if (checkoutId) {
+              markLifeGranted(checkoutId);
+            }
+            
+            setStatus('success');
+            hasProcessed.current = true;
+            
+            // Clear polling interval
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            
+            // Redirect to game
+            setTimeout(() => {
+              router.push('/?payment_success=true');
+            }, 500);
+          }
+        }
+      } catch (err) {
+        console.error('[usePurchaseProcessing] Error polling for life:', err);
+        // Continue polling on error (might be transient)
+      }
+    };
+
+    // Start polling
+    if (!pollingIntervalRef.current) {
+      pollingIntervalRef.current = setInterval(pollForLife, POLL_INTERVAL);
+      // Also poll immediately
+      pollForLife();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCheckoutPaid, isCheckoutPaidLoading]);
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isCheckoutPaid, isCheckoutPaidLoading, router, searchParams]);
 
   return {
     status,
