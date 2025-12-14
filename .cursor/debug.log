@@ -1,4 +1,0 @@
-{"location":"gameController.js:13","message":"GameController constructor","data":{"lives":0,"hasLives":false,"purchaseModalTriggered":false},"timestamp":1765549445800,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
-{"location":"gameController.js:13","message":"GameController constructor","data":{"lives":0,"hasLives":false,"purchaseModalTriggered":false},"timestamp":1765549450842,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
-{"location":"useGameInitialization.js:89","message":"After loading state","data":{"lives":0,"hasLives":false,"purchaseModalTriggered":false},"timestamp":1765549450842,"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A"}
-{"location":"useGameInitialization.js:95","message":"Triggering purchase modal after load","data":{"lives":0},"timestamp":1765549450843,"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A"}

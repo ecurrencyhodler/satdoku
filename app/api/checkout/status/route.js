@@ -19,12 +19,41 @@ export async function GET(request) {
 
     const processed = await isCheckoutProcessed(checkoutId);
     
+    // #region agent log
+    const fs = await import('fs');
+    const logPath = '/Users/andrewyang/code/satdoku/.cursor/debug.log';
+    const logEntry = JSON.stringify({
+      location: 'checkout/status/route.js:20',
+      message: 'Checkout status check',
+      data: { checkoutId, processed },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C'
+    }) + '\n';
+    try { fs.appendFileSync(logPath, logEntry); } catch (e) {}
+    // #endregion
+    
     return NextResponse.json({
       success: true,
       processed,
       checkoutId
     });
   } catch (error) {
+    // #region agent log
+    const fs = await import('fs');
+    const logPath = '/Users/andrewyang/code/satdoku/.cursor/debug.log';
+    const logEntry = JSON.stringify({
+      location: 'checkout/status/route.js:28',
+      message: 'Checkout status error',
+      data: { error: error.message },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C'
+    }) + '\n';
+    try { fs.appendFileSync(logPath, logEntry); } catch (e) {}
+    // #endregion
     console.error('[checkout/status] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
