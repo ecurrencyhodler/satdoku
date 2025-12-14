@@ -50,8 +50,11 @@ export async function POST(request) {
       const sessionId = await getCheckoutSession(checkoutId);
       
       if (!sessionId) {
-        console.warn('[webhook] No session mapping found for checkout:', checkoutId);
+        console.error('[webhook] CRITICAL: No session mapping found for checkout:', checkoutId);
+        console.error('[webhook] This means the checkout page did not store the mapping before payment completed.');
+        console.error('[webhook] The webhook will be retried by MDK, but the mapping must be stored first.');
         // Webhook was valid, we just can't grant a life without session mapping
+        // MDK will retry the webhook, so if the mapping gets stored later, it will work
         return mdkResponse;
       }
       
@@ -67,7 +70,7 @@ export async function POST(request) {
       const gameState = await getGameState(sessionId);
       
       if (!gameState) {
-        console.warn('[webhook] No game state found for session:', sessionId);
+        console.warn('[webhook] No game state found for session:', sessionId, 'checkout:', checkoutId);
         return mdkResponse;
       }
       
@@ -85,10 +88,10 @@ export async function POST(request) {
           await markCheckoutProcessed(checkoutId);
           console.log('[webhook] Successfully granted life for checkout:', checkoutId, 'session:', sessionId);
         } else {
-          console.error('[webhook] Failed to grant life:', result.error, 'checkout:', checkoutId);
+          console.error('[webhook] Failed to grant life:', result.error, 'checkout:', checkoutId, 'session:', sessionId);
         }
       } catch (error) {
-        console.error('[webhook] Error granting life:', error, 'checkout:', checkoutId);
+        console.error('[webhook] Error granting life:', error, 'checkout:', checkoutId, 'session:', sessionId);
       }
     }
     

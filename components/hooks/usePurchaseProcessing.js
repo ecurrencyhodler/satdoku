@@ -14,6 +14,7 @@ export function usePurchaseProcessing() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState('waiting'); // 'waiting', 'granting', 'success', 'error'
   const [error, setError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false); // Track when initial state is loaded
   const hasProcessed = useRef(false);
   const pollingIntervalRef = useRef(null);
   const initialLivesRef = useRef(null);
@@ -82,10 +83,14 @@ export function usePurchaseProcessing() {
           initialLivesPurchasedRef.current = state.livesPurchased || 0;
           pollStartTimeRef.current = Date.now();
           setStatus('granting');
+          setIsInitialized(true); // Mark initialization as complete
           // #region agent log
           console.log('[DEBUG] Initial state set, starting polling', { initialLives: initialLivesRef.current, initialLivesPurchased: initialLivesPurchasedRef.current, checkoutId });
           fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:65',message:'Initial state set, starting polling',data:{initialLives:initialLivesRef.current,initialLivesPurchased:initialLivesPurchasedRef.current,checkoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
           // #endregion
+        } else if (!state) {
+          // No state found - still mark as initialized so polling can handle the error case
+          setIsInitialized(true);
         }
       });
     }
@@ -95,11 +100,11 @@ export function usePurchaseProcessing() {
   useEffect(() => {
     const checkoutId = searchParams?.get('checkout-id');
     
-    // Don't poll if already processed or if payment not confirmed
-    if (hasProcessed.current || isCheckoutPaidLoading || !isCheckoutPaid || initialLivesRef.current === null) {
+    // Don't poll if already processed, payment not confirmed, or initialization not complete
+    if (hasProcessed.current || isCheckoutPaidLoading || !isCheckoutPaid || !isInitialized || initialLivesRef.current === null) {
       // #region agent log
-      console.log('[DEBUG] Polling skipped - conditions not met', { hasProcessed: hasProcessed.current, isCheckoutPaidLoading, isCheckoutPaid, initialLivesRef: initialLivesRef.current });
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:75',message:'Polling skipped - conditions not met',data:{hasProcessed:hasProcessed.current,isCheckoutPaidLoading,isCheckoutPaid,initialLivesRef:initialLivesRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      console.log('[DEBUG] Polling skipped - conditions not met', { hasProcessed: hasProcessed.current, isCheckoutPaidLoading, isCheckoutPaid, isInitialized, initialLivesRef: initialLivesRef.current });
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:75',message:'Polling skipped - conditions not met',data:{hasProcessed:hasProcessed.current,isCheckoutPaidLoading,isCheckoutPaid,isInitialized,initialLivesRef:initialLivesRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
       // #endregion
       return;
     }
@@ -188,8 +193,17 @@ export function usePurchaseProcessing() {
                   return;
                 } else {
                   // #region agent log
+                  console.log('[DEBUG] Checkout processed but life not increased', { checkoutId, currentLivesPurchased, initialLivesPurchased: initialLivesPurchasedRef.current });
                   fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:137',message:'Checkout processed but life not increased',data:{checkoutId,currentLivesPurchased,initialLivesPurchased:initialLivesPurchasedRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
                   // #endregion
+                  // This is a critical issue: checkout is marked processed but life wasn't granted
+                  // This could happen if webhook fired before session mapping was set up
+                  // Continue polling - the webhook might retry or we need to investigate
+                  console.error('[usePurchaseProcessing] CRITICAL: Checkout processed but life not granted!', {
+                    checkoutId,
+                    currentLivesPurchased,
+                    initialLivesPurchased: initialLivesPurchasedRef.current
+                  });
                 }
               } else {
                 // #region agent log
@@ -209,6 +223,7 @@ export function usePurchaseProcessing() {
         // Also check game state directly
         const currentState = await StateManager.loadGameState();
         // #region agent log
+        console.log('[DEBUG] Direct state poll result', { stateExists: !!currentState, currentLives: currentState?.lives, currentLivesPurchased: currentState?.livesPurchased, initialLives: initialLivesRef.current, initialLivesPurchased: initialLivesPurchasedRef.current });
         fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:147',message:'Direct state poll result',data:{stateExists:!!currentState,currentLives:currentState?.lives,currentLivesPurchased:currentState?.livesPurchased,initialLives:initialLivesRef.current,initialLivesPurchased:initialLivesPurchasedRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         
@@ -253,6 +268,7 @@ export function usePurchaseProcessing() {
             }, 500);
           } else {
             // #region agent log
+            console.log('[DEBUG] Life not yet granted - continuing poll', { checkoutId, currentLives, initialLives: initialLivesRef.current, currentLivesPurchased, initialLivesPurchased: initialLivesPurchasedRef.current });
             fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:183',message:'Life not yet granted - continuing poll',data:{checkoutId,currentLives,initialLives:initialLivesRef.current,currentLivesPurchased,initialLivesPurchased:initialLivesPurchasedRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
             // #endregion
           }
@@ -287,7 +303,7 @@ export function usePurchaseProcessing() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [isCheckoutPaid, isCheckoutPaidLoading, router, searchParams]);
+  }, [isCheckoutPaid, isCheckoutPaidLoading, isInitialized, router, searchParams]);
 
   return {
     status,

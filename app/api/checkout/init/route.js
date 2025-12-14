@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
-import { storeCheckoutSession } from '../../../../lib/redis/checkoutTracking.js';
+import { storeCheckoutSession, getCheckoutSession } from '../../../../lib/redis/checkoutTracking.js';
 
 /**
  * POST /api/checkout/init
  * Store checkoutId -> sessionId mapping when checkout is initiated
  * Body: { checkoutId: string }
+ * 
+ * This is idempotent - if the mapping already exists, it's fine.
+ * This MUST be called before payment completes to ensure webhook can find the mapping.
  */
 export async function POST(request) {
   try {
@@ -13,6 +16,7 @@ export async function POST(request) {
     const sessionId = await getSessionId();
     
     if (!sessionId) {
+      console.warn('[checkout/init] No session found - cannot store mapping');
       return NextResponse.json(
         { 
           success: false,
@@ -37,10 +41,35 @@ export async function POST(request) {
       );
     }
 
+    // Check if mapping already exists (idempotent)
+    const existingSessionId = await getCheckoutSession(checkoutId);
+    if (existingSessionId) {
+      if (existingSessionId === sessionId) {
+        // Same mapping already exists - that's fine
+        console.log('[checkout/init] Mapping already exists for checkout:', checkoutId);
+        return NextResponse.json({
+          success: true,
+          checkoutId,
+          sessionId,
+          alreadyExists: true
+        });
+      } else {
+        // Different session - this is unusual but not necessarily an error
+        // (could happen if user has multiple sessions)
+        console.warn('[checkout/init] Mapping exists with different sessionId:', {
+          checkoutId,
+          existingSessionId,
+          newSessionId: sessionId
+        });
+        // Still store the new mapping (overwrite)
+      }
+    }
+
     // Store the mapping
     const stored = await storeCheckoutSession(checkoutId, sessionId);
     
     if (!stored) {
+      console.error('[checkout/init] Failed to store checkout session mapping:', { checkoutId, sessionId });
       return NextResponse.json(
         {
           success: false,
@@ -51,6 +80,7 @@ export async function POST(request) {
       );
     }
 
+    console.log('[checkout/init] Successfully stored checkout session mapping:', { checkoutId, sessionId });
     return NextResponse.json({
       success: true,
       checkoutId,
