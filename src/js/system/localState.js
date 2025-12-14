@@ -78,35 +78,18 @@ export const StateManager = {
                 return null;
             }
 
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:75',message:'loadGameState called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             const response = await fetch('/api/game-state', {
                 credentials: 'include', // Include cookies
             });
 
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:82',message:'loadGameState response',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
-
             if (response.ok) {
                 const result = await response.json();
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:87',message:'loadGameState result',data:{success:result.success,stateExists:!!result.state,stateLives:result.state?.lives,stateLivesPurchased:result.state?.livesPurchased},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
                 
                 if (result.success && result.state) {
                     return result.state;
                 }
-            } else {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:92',message:'loadGameState response not ok',data:{status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
             }
         } catch (error) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:94',message:'loadGameState error',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             console.error('Failed to load game state:', error);
         }
 

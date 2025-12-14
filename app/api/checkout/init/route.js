@@ -7,8 +7,10 @@ import { storeCheckoutSession, getCheckoutSession } from '../../../../lib/redis/
  * Store checkoutId -> sessionId mapping when checkout is initiated
  * Body: { checkoutId: string }
  * 
- * This is idempotent - if the mapping already exists, it's fine.
- * This MUST be called before payment completes to ensure webhook can find the mapping.
+ * NOTE: This endpoint is no longer needed for life purchases since we removed webhook processing.
+ * Life purchases are now handled client-side via isCheckoutPaid from useCheckoutSuccess().
+ * 
+ * This endpoint is kept for backwards compatibility but may be removed in the future.
  */
 export async function POST(request) {
   try {
