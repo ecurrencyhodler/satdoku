@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSessionId } from '../../../lib/session/cookieSession.js';
-import { storeCheckoutSession } from '../../../lib/redis/checkoutTracking.js';
+import { getSessionId } from '../../../../lib/session/cookieSession.js';
+import { storeCheckoutSession } from '../../../../lib/redis/checkoutTracking.js';
 
 /**
  * POST /api/checkout/init
