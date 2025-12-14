@@ -17,23 +17,55 @@ export function usePurchaseProcessing() {
   const hasProcessed = useRef(false);
   const pollingIntervalRef = useRef(null);
   const initialLivesRef = useRef(null);
+  const initialLivesPurchasedRef = useRef(null);
   const pollStartTimeRef = useRef(null);
   const MAX_POLL_TIME = 60000; // 60 seconds max polling time
   const POLL_INTERVAL = 1000; // Poll every 1 second
 
-  // Initialize initial lives count when payment is confirmed
+  // Initialize initial state when payment is confirmed
   useEffect(() => {
     if (!isCheckoutPaidLoading && isCheckoutPaid && initialLivesRef.current === null) {
+      const checkoutId = searchParams?.get('checkout-id');
+      
+      // First check if checkout was already processed on server (life already granted)
+      if (checkoutId) {
+        fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.processed) {
+              // Checkout was already processed - life should already be granted
+              // Check current state to confirm
+              StateManager.loadGameState().then((state) => {
+                if (state) {
+                  // Life was already granted, mark as success
+                  markLifeGranted(checkoutId);
+                  setStatus('success');
+                  hasProcessed.current = true;
+                  setTimeout(() => {
+                    router.push('/?payment_success=true');
+                  }, 500);
+                }
+              });
+              return;
+            }
+          })
+          .catch(err => {
+            console.warn('[usePurchaseProcessing] Failed to check checkout status:', err);
+            // Continue with normal flow
+          });
+      }
+      
       // Load initial state to get starting lives count
       StateManager.loadGameState().then((state) => {
-        if (state) {
+        if (state && initialLivesRef.current === null) {
           initialLivesRef.current = state.lives || 0;
+          initialLivesPurchasedRef.current = state.livesPurchased || 0;
           pollStartTimeRef.current = Date.now();
           setStatus('granting');
         }
       });
     }
-  }, [isCheckoutPaid, isCheckoutPaidLoading]);
+  }, [isCheckoutPaid, isCheckoutPaidLoading, router, searchParams]);
 
   // Poll for life grant when payment is confirmed
   useEffect(() => {
@@ -69,17 +101,64 @@ export function usePurchaseProcessing() {
       }
 
       try {
+        // Check server-side if checkout was processed
+        if (checkoutId) {
+          try {
+            const statusRes = await fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`);
+            const statusData = await statusRes.json();
+            
+            if (statusData.success && statusData.processed) {
+              // Checkout was processed - verify life was added
+              const currentState = await StateManager.loadGameState();
+              
+              if (currentState) {
+                const currentLivesPurchased = currentState.livesPurchased || 0;
+                
+                // If livesPurchased increased, life was granted
+                if (currentLivesPurchased > initialLivesPurchasedRef.current) {
+                  console.log('[usePurchaseProcessing] Life granted detected via server status!', {
+                    initialPurchased: initialLivesPurchasedRef.current,
+                    currentPurchased: currentLivesPurchased
+                  });
+                  
+                  markLifeGranted(checkoutId);
+                  setStatus('success');
+                  hasProcessed.current = true;
+                  
+                  if (pollingIntervalRef.current) {
+                    clearInterval(pollingIntervalRef.current);
+                    pollingIntervalRef.current = null;
+                  }
+                  
+                  setTimeout(() => {
+                    router.push('/?payment_success=true');
+                  }, 500);
+                  return;
+                }
+              }
+            }
+          } catch (statusErr) {
+            console.warn('[usePurchaseProcessing] Error checking checkout status:', statusErr);
+            // Continue with state polling
+          }
+        }
+
+        // Also check game state directly
         const currentState = await StateManager.loadGameState();
         
         if (currentState) {
           const currentLives = currentState.lives || 0;
+          const currentLivesPurchased = currentState.livesPurchased || 0;
           
-          // Check if life was added (webhook granted it)
-          if (currentLives > initialLivesRef.current) {
+          // Check if life was added (either lives or livesPurchased increased)
+          if (currentLives > initialLivesRef.current || 
+              currentLivesPurchased > initialLivesPurchasedRef.current) {
             // Life was granted!
             console.log('[usePurchaseProcessing] Life granted detected!', {
-              initial: initialLivesRef.current,
-              current: currentLives
+              initialLives: initialLivesRef.current,
+              currentLives: currentLives,
+              initialPurchased: initialLivesPurchasedRef.current,
+              currentPurchased: currentLivesPurchased
             });
             
             // Mark as granted in sessionStorage
