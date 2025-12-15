@@ -59,19 +59,31 @@
     50% { background-color: #fc8181; }
 }
 
-/* Single color for all completed regions (row, column, or box) */
-.cell-completed-row,
-.cell-completed-column,
-.cell-completed-box {
+/* Highlighting styles for row and column when empty cell is selected */
+.cell-highlighted-row {
     background: #e6f3ff !important;
     transition: background 0.2s;
 }
 
-/* Ensure completed styles show even when selected */
-.cell-selected.cell-completed-row,
-.cell-selected.cell-completed-column,
-.cell-selected.cell-completed-box {
+.cell-highlighted-column {
     background: #e6f3ff !important;
+    transition: background 0.2s;
+}
+
+/* Highlighting style for same-number cells when filled cell is selected */
+.cell-highlighted-same-number {
+    background: #fff4e6 !important;
+    transition: background 0.2s;
+}
+
+/* Ensure highlighting styles show even when selected */
+.cell-selected.cell-highlighted-row,
+.cell-selected.cell-highlighted-column {
+    background: #bee3f8 !important;
+}
+
+.cell-selected.cell-highlighted-same-number {
+    background: #ffe0b3 !important;
 }
 
 /* Box borders for 3x3 sections */

@@ -7,18 +7,9 @@ export default function GameBoard({
   board, 
   puzzle, 
   selectedCell, 
-  completedRows, 
-  completedColumns,
-  completedBoxes,
   onCellClick,
   hasLives 
 }) {
-
-  const getBoxIndex = (row, col) => {
-    const boxRow = Math.floor(row / 3);
-    const boxCol = Math.floor(col / 3);
-    return boxRow * 3 + boxCol;
-  };
 
   return (
     <div className="game-board-container">
@@ -28,10 +19,25 @@ export default function GameBoard({
             const value = board[row][col];
             const isPrefilled = puzzle[row][col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
-            const completedRow = completedRows.includes(row);
-            const completedColumn = completedColumns.includes(col);
-            const boxIndex = getBoxIndex(row, col);
-            const completedBox = completedBoxes.includes(boxIndex);
+            
+            // Calculate highlighting based on selected cell
+            let isHighlightedRow = false;
+            let isHighlightedColumn = false;
+            let isHighlightedSameNumber = false;
+            
+            if (selectedCell) {
+              const selectedValue = board[selectedCell.row][selectedCell.col];
+              const isSelectedCellEmpty = selectedValue === 0;
+              
+              if (isSelectedCellEmpty) {
+                // Empty cell: highlight row and column
+                isHighlightedRow = row === selectedCell.row;
+                isHighlightedColumn = col === selectedCell.col;
+              } else {
+                // Filled cell: highlight all cells with the same number
+                isHighlightedSameNumber = value === selectedValue && value !== 0;
+              }
+            }
 
             return (
               <Cell
@@ -41,9 +47,9 @@ export default function GameBoard({
                 value={value}
                 isPrefilled={isPrefilled}
                 isSelected={isSelected}
-                completedRow={completedRow}
-                completedColumn={completedColumn}
-                completedBox={completedBox}
+                isHighlightedRow={isHighlightedRow}
+                isHighlightedColumn={isHighlightedColumn}
+                isHighlightedSameNumber={isHighlightedSameNumber}
                 onClick={onCellClick}
                 hasLives={hasLives}
               />

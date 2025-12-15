@@ -30,6 +30,12 @@
     width: 90%;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.3s;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.dark .modal-content {
+    background: #2d3748;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes slideUp {
@@ -47,6 +53,11 @@
     margin-bottom: 20px;
     color: #2d3748;
     text-align: center;
+    transition: color 0.2s;
+}
+
+.dark .modal-content h2 {
+    color: #e2e8f0;
 }
 
 .modal-content p {
@@ -54,6 +65,11 @@
     color: #4a5568;
     font-size: 16px;
     text-align: center;
+    transition: color 0.2s;
+}
+
+.dark .modal-content p {
+    color: #cbd5e0;
 }
 
 .win-message {
@@ -73,10 +89,20 @@
     font-size: 16px;
     color: #4a5568;
     text-align: left;
+    transition: color 0.2s;
+}
+
+.dark .modal-stats p {
+    color: #cbd5e0;
 }
 
 .modal-stats strong {
     color: #2d3748;
+    transition: color 0.2s;
+}
+
+.dark .modal-stats strong {
+    color: #e2e8f0;
 }
 
 .modal-actions {
