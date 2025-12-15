@@ -43,13 +43,13 @@ export default function LeaderboardPage() {
       </div>
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+        <div className="leaderboard-loading">
           Loading leaderboard...
         </div>
       )}
 
       {error && (
-        <div style={{ textAlign: 'center', padding: '20px', color: '#e53e3e', background: '#fed7d7', borderRadius: '6px', marginBottom: '20px' }}>
+        <div className="leaderboard-error">
           {error}
         </div>
       )}
@@ -57,39 +57,25 @@ export default function LeaderboardPage() {
       {!loading && !error && (
         <>
           {leaderboard.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+            <div className="leaderboard-empty">
               <p>No scores yet. Be the first to make it to the leaderboard!</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '20px', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="leaderboard-table-container">
+              <table className="leaderboard-table">
                 <thead>
-                  <tr style={{ background: '#f7fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#4a5568' }}>Rank</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#4a5568' }}>Name</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#4a5568' }}>Score</th>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Score</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaderboard.map((entry, index) => (
-                    <tr 
-                      key={index} 
-                      style={{ 
-                        borderBottom: '1px solid #e2e8f0',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '12px', fontWeight: '600', color: '#2d3748' }}>
-                        {index + 1}
-                      </td>
-                      <td style={{ padding: '12px', color: '#4a5568', fontSize: '14px' }}>
-                        {entry.username || entry.sessionId}
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#2d3748' }}>
-                        {entry.score.toLocaleString()}
-                      </td>
+                    <tr key={index}>
+                      <td>{index + 1}</td>
+                      <td>{entry.username || entry.sessionId}</td>
+                      <td>{entry.score.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

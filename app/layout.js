@@ -1,5 +1,7 @@
 import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
+import Navigation from '../components/Navigation';
+import { ThemeProvider } from '../components/ThemeProvider';
 
 export const metadata = {
   title: 'Satdoku',
@@ -8,10 +10,31 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const savedTheme = localStorage.getItem('theme');
+                const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>
-        {children}
-        <Analytics />
+        <ThemeProvider>
+          <Navigation />
+          <div className="main-content">
+            {children}
+          </div>
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

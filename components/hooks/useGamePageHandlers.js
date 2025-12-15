@@ -20,8 +20,8 @@ export function useGamePageHandlers(
   const router = useRouter();
 
   const handleCellClick = useCallback((row, col) => {
-    // Check if player has lives
-    if (gameState && gameState.lives <= 0) return;
+    // Allow clicking on any cell for highlighting
+    // Input processing will be handled by useCellInput hook
     setSelectedCell({ row, col });
     
     // Focus mobile input immediately on click (must be in user interaction handler)
@@ -36,7 +36,7 @@ export function useGamePageHandlers(
         console.error('Error focusing mobile input:', e);
       }
     }
-  }, [gameState, setSelectedCell, isMobile, mobileInputRef]);
+  }, [setSelectedCell, isMobile, mobileInputRef]);
 
   const handleDifficultyChange = useCallback((newDifficulty) => {
     if (gameState && gameState.gameInProgress) {

@@ -3,10 +3,24 @@ body {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+    color: #333;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dark body {
+    background: #1a202c;
+    color: #e2e8f0;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
-    color: #333;
 }
 
 .container {
@@ -16,6 +30,12 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     padding: 30px;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.dark .container {
+    background: #2d3748;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 header {
@@ -28,4 +48,9 @@ header h1 {
     color: #4a5568;
     font-weight: 300;
     letter-spacing: 2px;
+    transition: color 0.2s;
+}
+
+.dark header h1 {
+    color: #e2e8f0;
 }

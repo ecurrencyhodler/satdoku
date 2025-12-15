@@ -6,9 +6,9 @@ export default function Cell({
   value, 
   isPrefilled, 
   isSelected, 
-  completedRow, 
-  completedColumn,
-  completedBox, 
+  isHighlightedRow,
+  isHighlightedColumn,
+  isHighlightedSameNumber,
   onClick,
   hasLives 
 }) {
@@ -16,15 +16,14 @@ export default function Cell({
   const isLocked = isPrefilled || (value !== 0);
 
   const handleClick = () => {
-    // Only allow clicks on empty, non-locked cells when lives are available
-    if (hasLives && !isLocked) {
-      onClick(row, col);
-    }
+    // Allow clicks on any cell for highlighting
+    // Input processing will be handled by useCellInput hook which checks if cell is empty and has lives
+    onClick(row, col);
   };
 
   return (
     <div
-      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isSelected ? 'cell-selected' : ''} ${completedRow ? 'cell-completed-row' : ''} ${completedColumn ? 'cell-completed-column' : ''} ${completedBox ? 'cell-completed-box' : ''}`}
+      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isSelected ? 'cell-selected' : ''} ${isHighlightedRow ? 'cell-highlighted-row' : ''} ${isHighlightedColumn ? 'cell-highlighted-column' : ''} ${isHighlightedSameNumber ? 'cell-highlighted-same-number' : ''}`}
       data-row={row}
       data-col={col}
       onClick={handleClick}
