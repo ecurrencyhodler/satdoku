@@ -14,6 +14,12 @@
     width: 100%;
     max-width: 450px;
     aspect-ratio: 1;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.dark .game-board {
+    border-color: #4a5568;
+    background: #4a5568;
 }
 
 .cell {
@@ -26,12 +32,22 @@
     font-weight: 500;
     color: #2d3748;
     cursor: pointer;
-    transition: background-color 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     position: relative;
+}
+
+.dark .cell {
+    background: #374151;
+    border-color: #4a5568;
+    color: #e2e8f0;
 }
 
 .cell:hover:not(.cell-prefilled):not(.cell-locked) {
     background: #edf2f7;
+}
+
+.dark .cell:hover:not(.cell-prefilled):not(.cell-locked) {
+    background: #4a5568;
 }
 
 .cell-prefilled {
@@ -39,15 +55,41 @@
     color: #4a5568;
     cursor: default;
     font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.dark .cell-prefilled {
+    background: #2d3748;
+    color: #9ca3af;
 }
 
 .cell-locked {
+    background: #f7fafc;
     cursor: default;
     font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.dark .cell-locked {
+    background: #2d3748;
+    color: #9ca3af;
 }
 
 .cell-selected {
     background: #bee3f8 !important;
+}
+
+.dark .cell-selected {
+    background: #2c5282 !important;
+}
+
+/* Override selected background for locked (filled) cells when not selected and not highlighted */
+.cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number) {
+    background: #f7fafc !important;
+}
+
+.dark .cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number) {
+    background: #2d3748 !important;
 }
 
 .cell-error {
@@ -59,10 +101,23 @@
     50% { background-color: #fc8181; }
 }
 
-/* Highlighting styles for row and column when empty cell is selected */
+.dark .cell-error {
+    animation: redFlashDark 0.3s;
+}
+
+@keyframes redFlashDark {
+    0%, 100% { background-color: #374151; }
+    50% { background-color: #fc8181; }
+}
+
+/* Highlighting styles for row, column, and box when empty cell is selected */
 .cell-highlighted-row {
     background: #e6f3ff !important;
     transition: background 0.2s;
+}
+
+.dark .cell-highlighted-row {
+    background: #2c5282 !important;
 }
 
 .cell-highlighted-column {
@@ -70,28 +125,74 @@
     transition: background 0.2s;
 }
 
+.dark .cell-highlighted-column {
+    background: #2c5282 !important;
+}
+
+.cell-highlighted-box {
+    background: #e6f3ff !important;
+    transition: background 0.2s;
+}
+
+.dark .cell-highlighted-box {
+    background: #2c5282 !important;
+}
+
 /* Highlighting style for same-number cells when filled cell is selected */
 .cell-highlighted-same-number {
-    background: #fff4e6 !important;
+    background: #e6f3ff !important;
     transition: background 0.2s;
+}
+
+.dark .cell-highlighted-same-number {
+    background: #2c5282 !important;
 }
 
 /* Ensure highlighting styles show even when selected */
 .cell-selected.cell-highlighted-row,
-.cell-selected.cell-highlighted-column {
+.cell-selected.cell-highlighted-column,
+.cell-selected.cell-highlighted-box,
+.cell-selected.cell-highlighted-same-number {
     background: #bee3f8 !important;
 }
 
-.cell-selected.cell-highlighted-same-number {
-    background: #ffe0b3 !important;
+.dark .cell-selected.cell-highlighted-row,
+.dark .cell-selected.cell-highlighted-column,
+.dark .cell-selected.cell-highlighted-box,
+.dark .cell-selected.cell-highlighted-same-number {
+    background: #2c5282 !important;
+}
+
+/* Ensure highlighting styles show for locked (filled) cells too */
+.cell-locked.cell-highlighted-row,
+.cell-locked.cell-highlighted-column,
+.cell-locked.cell-highlighted-box,
+.cell-locked.cell-highlighted-same-number {
+    background: #e6f3ff !important;
+}
+
+.dark .cell-locked.cell-highlighted-row,
+.dark .cell-locked.cell-highlighted-column,
+.dark .cell-locked.cell-highlighted-box,
+.dark .cell-locked.cell-highlighted-same-number {
+    background: #2c5282 !important;
 }
 
 /* Box borders for 3x3 sections */
-.cell:nth-child(3n) {
-    border-right: 2px solid #2d3748;
+.cell:nth-child(3n):not([data-col="8"]) {
+    border-right: 2px solid #cbd5e0;
 }
 
-.cell:nth-child(n+19):nth-child(-n+27),
-.cell:nth-child(n+46):nth-child(-n+54) {
-    border-bottom: 2px solid #2d3748;
+.dark .cell:nth-child(3n):not([data-col="8"]) {
+    border-right-color: #4a5568;
+}
+
+.cell:nth-child(n+19):nth-child(-n+27):not([data-row="8"]),
+.cell:nth-child(n+46):nth-child(-n+54):not([data-row="8"]) {
+    border-bottom: 2px solid #cbd5e0;
+}
+
+.dark .cell:nth-child(n+19):nth-child(-n+27):not([data-row="8"]),
+.dark .cell:nth-child(n+46):nth-child(-n+54):not([data-row="8"]) {
+    border-bottom-color: #4a5568;
 }

@@ -11,6 +11,12 @@ export default function GameBoard({
   hasLives 
 }) {
 
+  const getBoxIndex = (row, col) => {
+    const boxRow = Math.floor(row / 3);
+    const boxCol = Math.floor(col / 3);
+    return boxRow * 3 + boxCol;
+  };
+
   return (
     <div className="game-board-container">
       <div id="game-board" className="game-board">
@@ -23,6 +29,7 @@ export default function GameBoard({
             // Calculate highlighting based on selected cell
             let isHighlightedRow = false;
             let isHighlightedColumn = false;
+            let isHighlightedBox = false;
             let isHighlightedSameNumber = false;
             
             if (selectedCell) {
@@ -30,9 +37,12 @@ export default function GameBoard({
               const isSelectedCellEmpty = selectedValue === 0;
               
               if (isSelectedCellEmpty) {
-                // Empty cell: highlight row and column
+                // Empty cell: highlight row, column, and box
                 isHighlightedRow = row === selectedCell.row;
                 isHighlightedColumn = col === selectedCell.col;
+                const selectedBoxIndex = getBoxIndex(selectedCell.row, selectedCell.col);
+                const currentBoxIndex = getBoxIndex(row, col);
+                isHighlightedBox = selectedBoxIndex === currentBoxIndex;
               } else {
                 // Filled cell: highlight all cells with the same number
                 isHighlightedSameNumber = value === selectedValue && value !== 0;
@@ -49,6 +59,7 @@ export default function GameBoard({
                 isSelected={isSelected}
                 isHighlightedRow={isHighlightedRow}
                 isHighlightedColumn={isHighlightedColumn}
+                isHighlightedBox={isHighlightedBox}
                 isHighlightedSameNumber={isHighlightedSameNumber}
                 onClick={onCellClick}
                 hasLives={hasLives}
