@@ -567,6 +567,21 @@
     transform: translateY(0);
 }
 
+.mobile-menu-content .mobile-menu-header {
+    display: block;
+    padding: 16px 24px;
+    border-bottom: 2px solid #4299e1;
+    width: 100%;
+    text-align: left;
+    font-weight: 600;
+    color: #4299e1;
+}
+
+.dark .mobile-menu-content .mobile-menu-header {
+    border-bottom-color: #4299e1;
+    color: #4299e1;
+}
+
 .mobile-menu-content .nav-link {
     display: block;
     padding: 16px 24px;
@@ -581,6 +596,15 @@
 
 .mobile-menu-content .nav-link:last-of-type {
     border-bottom: none;
+}
+
+.mobile-menu-content .nav-link.active {
+    color: white;
+    background-color: #4299e1;
+}
+
+.mobile-menu-content .nav-link.active::after {
+    display: none;
 }
 
 .mobile-menu-overlay {

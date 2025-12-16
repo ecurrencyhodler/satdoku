@@ -103,6 +103,7 @@ export default function Navigation() {
           </button>
           <div className={`mobile-menu ${isMenuOpen ? 'mobile-menu-open' : ''}`}>
             <div className="mobile-menu-content">
+              <div className="mobile-menu-header">Menu</div>
               {navLinks}
             </div>
             {isMenuOpen && (
