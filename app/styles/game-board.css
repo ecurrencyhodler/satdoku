@@ -80,7 +80,7 @@
 }
 
 .dark .cell-selected {
-    background: #2c5282 !important;
+    background: #3d6ba0 !important;
 }
 
 /* Override selected background for locked (filled) cells when not selected and not highlighted */
@@ -160,7 +160,7 @@
 .dark .cell-selected.cell-highlighted-column,
 .dark .cell-selected.cell-highlighted-box,
 .dark .cell-selected.cell-highlighted-same-number {
-    background: #2c5282 !important;
+    background: #3d6ba0 !important;
 }
 
 /* Ensure highlighting styles show for locked (filled) cells too */
