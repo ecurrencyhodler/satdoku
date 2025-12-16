@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
+import { useMobileDetection } from './hooks/useMobileDetection';
 
 const SunIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -23,36 +25,101 @@ const MoonIcon = () => (
   </svg>
 );
 
+const HamburgerIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
 export default function Navigation() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const isMobile = useMobileDetection();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
+  const navLinks = (
+    <>
+      <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
+        Game
+      </Link>
+      <a 
+        href="/leaderboard" 
+        target="_blank"
+        rel="noopener noreferrer"
+        className={pathname === '/leaderboard' ? 'nav-link active' : 'nav-link'}
+        onClick={closeMenu}
+      >
+        Leaderboard
+      </a>
+      <a 
+        href="https://github.com/ecurrencyhodler" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className={pathname === '/github' ? 'nav-link active' : 'nav-link'}
+        onClick={closeMenu}
+      >
+        Github
+      </a>
+      <a 
+        href="https://forms.gle/wzuHjAJAVb4PJK7d9" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="nav-link"
+        onClick={closeMenu}
+      >
+        Help
+      </a>
+    </>
+  );
 
   return (
     <nav className="navigation">
-      <div className="nav-links">
-        <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'}>
-          Game
-        </Link>
-        <a 
-          href="/leaderboard" 
-          target="_blank"
-          rel="noopener noreferrer"
-          className={pathname === '/leaderboard' ? 'nav-link active' : 'nav-link'}
-        >
-          Leaderboard
-        </a>
-        <a 
-          href="https://github.com/ecurrencyhodler" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className={pathname === '/github' ? 'nav-link active' : 'nav-link'}
-        >
-          Github
-        </a>
-      </div>
-      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle dark mode">
-        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      </button>
+      {isMobile ? (
+        <>
+          <button 
+            className="hamburger-menu" 
+            onClick={toggleMenu}
+            aria-label="Toggle menu"
+            aria-expanded={isMenuOpen}
+          >
+            {isMenuOpen ? <CloseIcon /> : <HamburgerIcon />}
+          </button>
+          <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle dark mode">
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
+          <div className={`mobile-menu ${isMenuOpen ? 'mobile-menu-open' : ''}`}>
+            <div className="mobile-menu-content">
+              {navLinks}
+            </div>
+            {isMenuOpen && (
+              <div className="mobile-menu-overlay" onClick={closeMenu} />
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="nav-links">
+            {navLinks}
+          </div>
+          <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle dark mode">
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
+        </>
+      )}
     </nav>
   );
 }

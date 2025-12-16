@@ -58,21 +58,33 @@ export function useCellInput(
         setGameState(transformedState);
 
         // Show score animations or error animations
+        // Defer DOM query until after React has rendered (fixes Brave browser on Android)
         if (result.scoreDelta?.events && result.scoreDelta.events.length > 0) {
-          const cellElement = document.querySelector(
-            `[data-row="${row}"][data-col="${col}"]`
-          );
-          if (cellElement) {
-            // Check if there's an error event
-            const hasError = result.scoreDelta.events.some(e => e.type === 'error');
-            if (hasError) {
-              // Show error animation (flash red)
-              UIAnimations.flashError(cellElement);
-            } else {
-              // Show score animations
-              ScoreAnimationHandler.showScoreAnimations(result.scoreDelta.events, cellElement);
-            }
-          }
+          // Use requestAnimationFrame to wait for React to render, then a small timeout
+          // to ensure DOM is fully updated (especially important for Brave browser on Android)
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              try {
+                const cellElement = document.querySelector(
+                  `[data-row="${row}"][data-col="${col}"]`
+                );
+                if (cellElement) {
+                  // Check if there's an error event
+                  const hasError = result.scoreDelta.events.some(e => e.type === 'error');
+                  if (hasError) {
+                    // Show error animation (flash red)
+                    UIAnimations.flashError(cellElement);
+                  } else {
+                    // Show score animations
+                    ScoreAnimationHandler.showScoreAnimations(result.scoreDelta.events, cellElement);
+                  }
+                }
+              } catch (error) {
+                // Silently handle DOM errors to prevent crashes (especially on Brave Android)
+                console.warn('[useCellInput] Error showing animations:', error);
+              }
+            }, 0);
+          });
         }
 
         // Handle modals
