@@ -66,7 +66,7 @@ export default function Navigation() {
         Leaderboard
       </a>
       <a 
-        href="https://github.com/ecurrencyhodler" 
+        href="https://github.com/ecurrencyhodler/satdoku" 
         target="_blank" 
         rel="noopener noreferrer"
         className={pathname === '/github' ? 'nav-link active' : 'nav-link'}
@@ -123,3 +123,4 @@ export default function Navigation() {
     </nav>
   );
 }
+
