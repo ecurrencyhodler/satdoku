@@ -1,0 +1,326 @@
+/* Howie Logo/Avatar - Fixed at bottom right */
+.howie-logo {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s ease;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.howie-logo:hover:not(.howie-logo-disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.howie-logo-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.howie-avatar {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 5px;
+  object-fit: contain;
+}
+
+.howie-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.howie-avatar-small {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  object-fit: contain;
+}
+
+/* Chat Panel - Draggable and Resizable */
+.tutor-chat-panel {
+  position: fixed;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+  min-width: 300px;
+  min-height: 300px;
+  max-width: 800px;
+  max-height: 800px;
+}
+
+/* Header - Draggable */
+.tutor-chat-header {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  user-select: none;
+  border-radius: 12px 12px 0 0;
+}
+
+.tutor-chat-header-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.tutor-chat-close-btn {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.tutor-chat-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Messages Area */
+.tutor-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tutor-chat-welcome {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tutor-chat-message {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.tutor-chat-message-user {
+  justify-content: flex-end;
+}
+
+.tutor-chat-message-assistant {
+  justify-content: flex-start;
+}
+
+.tutor-chat-message-content {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.tutor-chat-message-user .tutor-chat-message-content {
+  background: #4299e1;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.tutor-chat-message-assistant .tutor-chat-message-content {
+  background: white;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  border-bottom-left-radius: 4px;
+}
+
+.tutor-chat-typing {
+  color: #999;
+  font-style: italic;
+}
+
+.tutor-chat-error {
+  background: #fee;
+  color: #c33;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #fcc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.tutor-chat-error button {
+  background: none;
+  border: none;
+  color: #c33;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 8px;
+}
+
+.tutor-chat-closed {
+  background: #fff3cd;
+  color: #856404;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ffeaa7;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* Input Area */
+.tutor-chat-input-area {
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutor-chat-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.tutor-chat-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: none;
+  overflow-y: auto;
+  min-height: 42px;
+  max-height: 200px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.tutor-chat-input:focus {
+  border-color: #4299e1;
+}
+
+.tutor-chat-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.tutor-chat-send-btn {
+  padding: 10px 20px;
+  background: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  height: fit-content;
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+
+.tutor-chat-send-btn:hover:not(:disabled) {
+  background: #3182ce;
+}
+
+.tutor-chat-send-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.tutor-chat-help-btn {
+  width: 100%;
+  padding: 10px;
+  background: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tutor-chat-help-btn:hover:not(:disabled) {
+  background: #3182ce;
+}
+
+.tutor-chat-help-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Resize Handles - Bottom Corners */
+.tutor-chat-resize-handle {
+  position: absolute;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  background: transparent;
+}
+
+.tutor-chat-resize-handle-bottom-left {
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.tutor-chat-resize-handle-bottom-right {
+  right: 0;
+  cursor: nwse-resize;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .howie-logo {
+    bottom: 10px;
+    right: 10px;
+    padding: 8px;
+  }
+
+  .howie-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tutor-chat-panel {
+    width: calc(100vw - 20px) !important;
+    height: calc(100vh - 100px) !important;
+    left: 10px !important;
+    top: 10px !important;
+    max-width: none;
+    max-height: none;
+  }
+
+  .tutor-chat-message-content {
+    max-width: 85%;
+  }
+}

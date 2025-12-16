@@ -8,6 +8,7 @@ A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase ad
 - Lives system - start with 1 free life
 - Lightning payments to purchase additional lives (1,500 sats per life)
 - Score tracking with animations
+- AI-powered Sudoku tutor (Howie) - get guided help without revealing answers
 - LocalStorage persistence
 - Clean, minimal UI
 
@@ -25,12 +26,13 @@ A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase ad
 npm install
 ```
 
-2. Create `.env.local` file with your Money Dev Kit credentials:
+2. Create `.env.local` file with your Money Dev Kit credentials and OpenAI API key:
 ```env
 MDK_ACCESS_TOKEN=your_api_key_here
 MDK_WEBHOOK_SECRET=your_webhook_key_here
 MDK_MNEMONIC=your_mnemonic_here
 REDIS_URL=your_redis_url_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 **Note:** For local development, you can use a local Redis instance or a service like [Upstash](https://upstash.com/) for a free Redis database. The `REDIS_URL` is required for payment verification webhooks to work.
@@ -51,6 +53,7 @@ npm run dev
    - `MDK_WEBHOOK_SECRET`
    - `MDK_MNEMONIC`
    - `REDIS_URL` (required for payment verification - use Vercel Redis or Upstash)
+   - `OPENAI_API_KEY` (required for the Sudoku tutor chatbot feature)
 4. Configure webhook in MoneyDevKit dashboard:
    - Go to your MoneyDevKit dashboard
    - Set webhook URL to: `https://your-domain.com` (root URL)

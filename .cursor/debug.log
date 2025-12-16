@@ -1,0 +1,3 @@
+{"location":"TutorChat.jsx:187","message":"Chat header image onLoad event","data":{"src":"/howie.svg"},"timestamp":1765913316575,"sessionId":"debug-session","runId":"post-fix","hypothesisId":"C"}
+{"location":"TutorChat.jsx:186","message":"Howie avatar chat header image loaded","data":{"src":"http://localhost:3000/howie.svg"},"timestamp":1765913316576,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"TutorChat.jsx:194","message":"Button image onLoad event","data":{"src":"/howie.svg"},"timestamp":1765913371996,"sessionId":"debug-session","runId":"post-fix","hypothesisId":"A"}

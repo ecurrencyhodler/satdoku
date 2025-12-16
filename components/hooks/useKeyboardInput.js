@@ -14,23 +14,31 @@ export function useKeyboardInput(
     const handleKeyDown = (e) => {
       if (!gameState?.gameInProgress) return;
 
+      // Don't interfere with text input fields
+      const target = e.target;
+      const isInputElement = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+
       if (e.key >= '1' && e.key <= '9') {
-        handleCellInput(parseInt(e.key));
+        if (selectedCell && !isInputElement) {
+          e.preventDefault();
+          handleCellInput(parseInt(e.key));
+        }
       } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-        handleCellInput(0);
+        if (selectedCell && !isInputElement) {
+          e.preventDefault();
+          handleCellInput(0);
+        }
       } else if (e.key.startsWith('Arrow')) {
-        if (!selectedCell) {
-          // Select first editable cell
-          for (let row = 0; row < 9; row++) {
-            for (let col = 0; col < 9; col++) {
-              if (gameState?.puzzle && gameState.puzzle[row][col] === 0) {
-                setSelectedCell({ row, col });
-                return;
-              }
-            }
-          }
+        // Only handle arrow keys if a cell is already selected and not in an input field
+        if (!selectedCell || isInputElement) {
           return;
         }
+        
+        e.preventDefault();
 
         let newRow = selectedCell.row;
         let newCol = selectedCell.col;

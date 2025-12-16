@@ -14,6 +14,7 @@ import GameControls from './GameControls';
 import GameModals from './GameModals';
 import GamePageHeader from './GamePageHeader';
 import GamePageLayout from './GamePageLayout';
+import TutorChat from './TutorChat';
 
 export default function GamePage() {
   const [gameState, setGameState] = useState(null);
@@ -149,6 +150,8 @@ export default function GamePage() {
     const handleClickOutside = (e) => {
       if (!e.target.closest('#game-board') && 
           !e.target.closest('.modal') &&
+          !e.target.closest('.howie-logo') &&
+          !e.target.closest('.tutor-chat-panel') &&
           e.target.id !== 'new-game-btn' &&
           e.target.id !== 'difficulty' &&
           e.target.id !== 'mobile-number-input') {
@@ -190,6 +193,11 @@ export default function GamePage() {
         selectedCell={selectedCell}
         onCellClick={handleCellClick}
         hasLives={gameState.lives > 0}
+      />
+
+      <TutorChat
+        gameState={gameState}
+        selectedCell={selectedCell}
       />
 
       {/* Hidden input for mobile native keyboard - always render for mobile detection */}

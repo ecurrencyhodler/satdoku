@@ -4,37 +4,90 @@ import { useState, useRef, useEffect } from 'react';
 import { useTutorChat } from './hooks/useTutorChat';
 import TutorChatMessage from './TutorChatMessage';
 
+const MAX_CONVERSATIONS_PER_GAME = 5;
+
 export default function TutorChat({ gameState, selectedCell }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  // Initialize position to center-right of screen
-  const [position, setPosition] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return {
-        x: window.innerWidth - 450,
-        y: 50
-      };
-    }
-    return { x: 0, y: 0 };
-  });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({ width: 400, height: 500 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeCorner, setResizeCorner] = useState(null); // 'bottom-left' or 'bottom-right'
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, left: 0 });
   
   const chatPanelRef = useRef(null);
   const messagesEndRef = useRef(null);
   const headerRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // Helper function to calculate middle-right position
+  const getMiddleRightPosition = (width, height) => {
+    if (typeof window !== 'undefined') {
+      return {
+        x: window.innerWidth - width - 20,
+        y: (window.innerHeight - height) / 2
+      };
+    }
+    return { x: 0, y: 0 };
+  };
+
+  // Helper function to constrain position within viewport
+  const constrainPosition = (x, y, width, height) => {
+    if (typeof window === 'undefined') return { x, y };
+    
+    const maxX = window.innerWidth - width;
+    const maxY = window.innerHeight - height;
+    
+    return {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY))
+    };
+  };
+
+  // Track if chat was just opened to set initial position
+  const justOpenedRef = useRef(false);
+
+  // Keep panel within viewport when window is resized
+  const positionRef = useRef(position);
+  const sizeRef = useRef(size);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, left: 0 });
+  
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+  
+  useEffect(() => {
+    sizeRef.current = size;
+  }, [size]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen && typeof window !== 'undefined') {
+        const constrained = constrainPosition(
+          positionRef.current.x, 
+          positionRef.current.y, 
+          sizeRef.current.width, 
+          sizeRef.current.height
+        );
+        setPosition(constrained);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isOpen]);
+
   const {
     chatHistory,
     isLoading,
     error,
     isConversationClosed,
+    conversationCount,
+    canStartNewConversation,
     sendMessage,
+    startNewConversation,
+    endConversation,
     setError
   } = useTutorChat(gameState, selectedCell);
 
@@ -49,20 +102,20 @@ export default function TutorChat({ gameState, selectedCell }) {
   const handleMouseDown = (e) => {
     if (headerRef.current && headerRef.current.contains(e.target)) {
       setIsDragging(true);
-      setDragStart({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
+      dragStartRef.current = {
+        x: e.clientX - positionRef.current.x,
+        y: e.clientY - positionRef.current.y
+      };
     }
   };
 
   useEffect(() => {
     if (isDragging) {
       const handleMouseMove = (e) => {
-        setPosition({
-          x: e.clientX - dragStart.x,
-          y: e.clientY - dragStart.y
-        });
+        const newX = e.clientX - dragStartRef.current.x;
+        const newY = e.clientY - dragStartRef.current.y;
+        const constrained = constrainPosition(newX, newY, sizeRef.current.width, sizeRef.current.height);
+        setPosition(constrained);
       };
 
       const handleMouseUp = () => {
@@ -77,40 +130,47 @@ export default function TutorChat({ gameState, selectedCell }) {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, dragStart]);
+  }, [isDragging]);
 
   // Handle resize
   const handleResizeStart = (e, corner) => {
     e.preventDefault();
     setIsResizing(true);
     setResizeCorner(corner);
-    setResizeStart({
+    resizeStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      width: size.width,
-      height: size.height,
-      left: position.x
-    });
+      width: sizeRef.current.width,
+      height: sizeRef.current.height,
+      left: positionRef.current.x,
+      top: positionRef.current.y
+    };
   };
 
   useEffect(() => {
     if (isResizing) {
       const handleMouseMove = (e) => {
+        const resizeStart = resizeStartRef.current;
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
         
         if (resizeCorner === 'bottom-right') {
           // Resize from bottom-right corner
-          const newWidth = Math.max(300, Math.min(800, resizeStart.width + deltaX));
-          const newHeight = Math.max(300, Math.min(800, resizeStart.height + deltaY));
+          const maxWidth = typeof window !== 'undefined' ? window.innerWidth - resizeStart.left : 800;
+          const maxHeight = typeof window !== 'undefined' ? window.innerHeight - resizeStart.y : 800;
+          const newWidth = Math.max(300, Math.min(800, Math.min(resizeStart.width + deltaX, maxWidth)));
+          const newHeight = Math.max(300, Math.min(800, Math.min(resizeStart.height + deltaY, maxHeight)));
           setSize({ width: newWidth, height: newHeight });
         } else if (resizeCorner === 'bottom-left') {
           // Resize from bottom-left corner
-          const newWidth = Math.max(300, Math.min(800, resizeStart.width - deltaX));
-          const newHeight = Math.max(300, Math.min(800, resizeStart.height + deltaY));
-          const newLeft = Math.min(resizeStart.left + deltaX, resizeStart.left + resizeStart.width - 300);
+          const maxWidth = typeof window !== 'undefined' ? resizeStart.left + resizeStart.width : 800;
+          const maxHeight = typeof window !== 'undefined' ? window.innerHeight - resizeStart.top : 800;
+          const newWidth = Math.max(300, Math.min(800, Math.min(resizeStart.width - deltaX, maxWidth)));
+          const newHeight = Math.max(300, Math.min(800, Math.min(resizeStart.height + deltaY, maxHeight)));
+          const newLeft = resizeStart.left + (resizeStart.width - newWidth);
+          const constrained = constrainPosition(newLeft, resizeStart.top, newWidth, newHeight);
           setSize({ width: newWidth, height: newHeight });
-          setPosition({ ...position, x: newLeft });
+          setPosition(constrained);
         }
       };
 
@@ -127,7 +187,7 @@ export default function TutorChat({ gameState, selectedCell }) {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizing, resizeCorner, resizeStart, size, position]);
+  }, [isResizing, resizeCorner]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -158,17 +218,44 @@ export default function TutorChat({ gameState, selectedCell }) {
 
   const handleClose = () => {
     setIsOpen(false);
+    endConversation();
   };
 
-  const handleHowieClick = () => {
+  const handleHowieClick = async () => {
     if (!gameState) {
       setError('Please start a game first');
       return;
     }
+    
+    // If modal is already open, do nothing
+    if (isOpen) {
+      return;
+    }
+    
+    // Start a new conversation when opening modal
+    const started = await startNewConversation();
+    if (!started) {
+      // Failed to start conversation (e.g., max reached)
+      return;
+    }
+    
+    // Reset position to middle-right when opening
+    justOpenedRef.current = true;
+    const initialPos = getMiddleRightPosition(size.width, size.height);
+    setPosition(initialPos);
     setIsOpen(true);
   };
 
-  const isDisabled = !gameState || isConversationClosed;
+  // Set position when chat first opens
+  useEffect(() => {
+    if (isOpen && justOpenedRef.current) {
+      const initialPos = getMiddleRightPosition(size.width, size.height);
+      setPosition(initialPos);
+      justOpenedRef.current = false;
+    }
+  }, [isOpen, size.width, size.height]);
+
+  const isDisabled = !gameState || !canStartNewConversation;
 
   return (
     <>
@@ -176,7 +263,13 @@ export default function TutorChat({ gameState, selectedCell }) {
       <div 
         className={`howie-logo ${isDisabled ? 'howie-logo-disabled' : ''}`}
         onClick={handleHowieClick}
-        title={isDisabled ? 'Start a game to get help from Howie' : 'Click to chat with Howie'}
+        title={
+          !gameState 
+            ? 'Start a game to get help from Howie' 
+            : !canStartNewConversation
+            ? `You've used all ${conversationCount} conversations. Start a new game to chat again!`
+            : `Click to chat with Howie (${conversationCount}/${MAX_CONVERSATIONS_PER_GAME} conversations used)`
+        }
       >
         <img src="/howie.svg" alt="Howie" className="howie-avatar" />
         <div className="howie-name">Howie</div>
@@ -202,7 +295,7 @@ export default function TutorChat({ gameState, selectedCell }) {
           >
             <div className="tutor-chat-header-title">
               <img src="/howie.svg" alt="Howie" className="howie-avatar-small" />
-              <span>Howie - Your Sudoku Tutor</span>
+              <span>Howie - Your Sudoku Mentor</span>
             </div>
             <button
               className="tutor-chat-close-btn"
@@ -218,7 +311,7 @@ export default function TutorChat({ gameState, selectedCell }) {
             {chatHistory.length === 0 && (
               <TutorChatMessage
                 role="assistant"
-                content="Hi! I'm Howie. I'll teach you how to play Sudoku. Ask me a question!"
+                content="Hi! I'm Howie. I'll teach you how to solve Sudoku puzzles. Ask me a question!"
               />
             )}
             {chatHistory.map((msg, index) => (
@@ -243,7 +336,7 @@ export default function TutorChat({ gameState, selectedCell }) {
             )}
             {isConversationClosed && (
               <div className="tutor-chat-closed">
-                <p>Conversation limit reached. Start a new game to chat again!</p>
+                <p>This conversation has reached its limit. Close and reopen to start a new conversation!</p>
               </div>
             )}
             <div ref={messagesEndRef} />

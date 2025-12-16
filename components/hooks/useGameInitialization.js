@@ -21,9 +21,29 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       });
 
       if (result.success) {
+        // Clear chat history when starting new game
+        try {
+          await fetch('/api/tutor/chat-history', { method: 'DELETE' });
+        } catch (error) {
+          console.warn('[useGameInitialization] Failed to clear chat history:', error);
+        }
+
         // Transform server state to client format
+        // Validate board structure before setting state
+        if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
+          throw new Error('Invalid board structure received from server');
+        }
+        
+        // Ensure board is a proper 2D array (not sparse)
+        const validatedBoard = result.state.currentBoard.map((row) => {
+          if (!Array.isArray(row)) {
+            return Array(9).fill(0); // Return empty row as fallback
+          }
+          return row;
+        });
+        
         const transformedState = {
-          board: result.state.currentBoard,
+          board: validatedBoard,
           puzzle: result.state.currentPuzzle,
           difficulty: result.state.difficulty,
           mistakes: result.state.mistakes,
@@ -59,9 +79,22 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       });
 
       if (result.success) {
+        // Validate board structure before setting state
+        if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
+          throw new Error('Invalid board structure received from server');
+        }
+        
+        // Ensure board is a proper 2D array (not sparse)
+        const validatedBoard = result.state.currentBoard.map((row) => {
+          if (!Array.isArray(row)) {
+            return Array(9).fill(0); // Return empty row as fallback
+          }
+          return row;
+        });
+        
         // Transform server state to client format
         const transformedState = {
-          board: result.state.currentBoard,
+          board: validatedBoard,
           puzzle: result.state.currentPuzzle,
           difficulty: result.state.difficulty,
           mistakes: result.state.mistakes,
@@ -93,9 +126,25 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       const state = await StateManager.loadGameState();
 
       if (state) {
+        // Validate board structure before setting state
+        if (!state.currentBoard || !Array.isArray(state.currentBoard)) {
+          // Fallback to starting a new game if state is corrupted
+          await startNewGame();
+          isLoadingStateRef.current = false;
+          return false;
+        }
+        
+        // Ensure board is a proper 2D array (not sparse)
+        const validatedBoard = state.currentBoard.map((row) => {
+          if (!Array.isArray(row)) {
+            return Array(9).fill(0); // Return empty row as fallback
+          }
+          return row;
+        });
+        
         // Transform server state to client format
         const transformedState = {
-          board: state.currentBoard,
+          board: validatedBoard,
           puzzle: state.currentPuzzle,
           difficulty: state.difficulty,
           mistakes: state.mistakes,
