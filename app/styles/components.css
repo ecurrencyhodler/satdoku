@@ -445,6 +445,14 @@
     color: #a0aec0;
 }
 
+.nav-link:visited {
+    color: #718096;
+}
+
+.dark .nav-link:visited {
+    color: #a0aec0;
+}
+
 .nav-link:hover {
     color: #4299e1;
     background: rgba(66, 153, 225, 0.05);
@@ -592,6 +600,14 @@
 
 .dark .mobile-menu-content .nav-link {
     border-bottom-color: #4a5568;
+}
+
+.mobile-menu-content .nav-link:visited {
+    color: #718096;
+}
+
+.dark .mobile-menu-content .nav-link:visited {
+    color: #a0aec0;
 }
 
 .mobile-menu-content .nav-link:last-of-type {
