@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@moneydevkit/nextjs": "^0.2.0",
+    "@moneydevkit/nextjs": "^0.3.1",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "next": "^15.1.3",

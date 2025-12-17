@@ -29,7 +29,6 @@ npm install
 2. Create `.env.local` file with your Money Dev Kit credentials and OpenAI API key:
 ```env
 MDK_ACCESS_TOKEN=your_api_key_here
-MDK_WEBHOOK_SECRET=your_webhook_key_here
 MDK_MNEMONIC=your_mnemonic_here
 REDIS_URL=your_redis_url_here
 OPENAI_API_KEY=your_openai_api_key_here
@@ -50,7 +49,6 @@ npm run dev
 2. Import the project in Vercel
 3. Add environment variables in Vercel dashboard:
    - `MDK_ACCESS_TOKEN`
-   - `MDK_WEBHOOK_SECRET`
    - `MDK_MNEMONIC`
    - `REDIS_URL` (required for payment verification - use Vercel Redis or Upstash)
    - `OPENAI_API_KEY` (required for the Sudoku tutor chatbot feature)
