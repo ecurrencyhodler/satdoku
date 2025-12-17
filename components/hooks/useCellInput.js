@@ -43,6 +43,7 @@ export function useCellInput(
         const transformedState = {
           board: result.state.currentBoard,
           puzzle: result.state.currentPuzzle,
+          solution: result.state.currentSolution,
           difficulty: result.state.difficulty,
           mistakes: result.state.mistakes,
           gameInProgress: result.state.gameInProgress,

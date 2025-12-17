@@ -45,6 +45,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         const transformedState = {
           board: validatedBoard,
           puzzle: result.state.currentPuzzle,
+          solution: result.state.currentSolution,
           difficulty: result.state.difficulty,
           mistakes: result.state.mistakes,
           gameInProgress: result.state.gameInProgress,
@@ -96,6 +97,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         const transformedState = {
           board: validatedBoard,
           puzzle: result.state.currentPuzzle,
+          solution: result.state.currentSolution,
           difficulty: result.state.difficulty,
           mistakes: result.state.mistakes,
           gameInProgress: result.state.gameInProgress,
@@ -146,6 +148,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         const transformedState = {
           board: validatedBoard,
           puzzle: state.currentPuzzle,
+          solution: state.currentSolution,
           difficulty: state.difficulty,
           mistakes: state.mistakes,
           gameInProgress: state.gameInProgress,

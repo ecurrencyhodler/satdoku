@@ -18,7 +18,7 @@
 }
 
 .dark .game-board {
-    border-color: #4a5568;
+    border-color: #ffffff;
     background: #4a5568;
 }
 
@@ -110,6 +110,15 @@
     50% { background-color: #fc8181; }
 }
 
+/* Incorrect values displayed in red */
+.cell-incorrect {
+    color: #dc2626 !important;
+}
+
+.dark .cell-incorrect {
+    color: #f87171 !important;
+}
+
 /* Highlighting styles for row, column, and box when empty cell is selected */
 .cell-highlighted-row {
     background: #e6f3ff !important;
@@ -180,19 +189,19 @@
 
 /* Box borders for 3x3 sections */
 .cell:nth-child(3n):not([data-col="8"]) {
-    border-right: 2px solid #cbd5e0;
+    border-right: 2px solid #000000;
 }
 
 .dark .cell:nth-child(3n):not([data-col="8"]) {
-    border-right-color: #4a5568;
+    border-right-color: #ffffff;
 }
 
 .cell:nth-child(n+19):nth-child(-n+27):not([data-row="8"]),
 .cell:nth-child(n+46):nth-child(-n+54):not([data-row="8"]) {
-    border-bottom: 2px solid #cbd5e0;
+    border-bottom: 2px solid #000000;
 }
 
 .dark .cell:nth-child(n+19):nth-child(-n+27):not([data-row="8"]),
 .dark .cell:nth-child(n+46):nth-child(-n+54):not([data-row="8"]) {
-    border-bottom-color: #4a5568;
+    border-bottom-color: #ffffff;
 }

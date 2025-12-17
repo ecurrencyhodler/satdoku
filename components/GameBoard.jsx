@@ -6,6 +6,7 @@ import { BOARD_SIZE } from '../src/js/system/constants.js';
 export default function GameBoard({ 
   board, 
   puzzle, 
+  solution,
   selectedCell, 
   onCellClick,
   hasLives 
@@ -54,6 +55,9 @@ export default function GameBoard({
             const isPrefilled = puzzle?.[row]?.[col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
             
+            // Determine if the value is incorrect (user-entered but doesn't match solution)
+            const isIncorrect = !isPrefilled && value !== 0 && solution && solution[row]?.[col] !== 0 && value !== solution[row]?.[col];
+            
             // Calculate highlighting based on selected cell
             let isHighlightedRow = false;
             let isHighlightedColumn = false;
@@ -84,6 +88,7 @@ export default function GameBoard({
                 col={col}
                 value={value}
                 isPrefilled={isPrefilled}
+                isIncorrect={isIncorrect}
                 isSelected={isSelected}
                 isHighlightedRow={isHighlightedRow}
                 isHighlightedColumn={isHighlightedColumn}

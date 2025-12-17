@@ -190,6 +190,7 @@ export default function GamePage() {
       <GameBoard
         board={gameState.board}
         puzzle={gameState.puzzle}
+        solution={gameState.solution}
         selectedCell={selectedCell}
         onCellClick={handleCellClick}
         hasLives={gameState.lives > 0}

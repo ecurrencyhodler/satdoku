@@ -5,6 +5,7 @@ export default function Cell({
   col, 
   value, 
   isPrefilled, 
+  isIncorrect,
   isSelected, 
   isHighlightedRow,
   isHighlightedColumn,
@@ -14,7 +15,8 @@ export default function Cell({
   hasLives 
 }) {
   // Determine if cell is locked (prefilled or user-filled with a value)
-  const isLocked = isPrefilled || (value !== 0);
+  // Note: Cells with incorrect values should still be editable, so we don't consider them locked
+  const isLocked = isPrefilled || (value !== 0 && !isIncorrect);
 
   const handleClick = () => {
     // Allow clicks on any cell for highlighting
@@ -24,7 +26,7 @@ export default function Cell({
 
   return (
     <div
-      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isSelected ? 'cell-selected' : ''} ${isHighlightedRow ? 'cell-highlighted-row' : ''} ${isHighlightedColumn ? 'cell-highlighted-column' : ''} ${isHighlightedBox ? 'cell-highlighted-box' : ''} ${isHighlightedSameNumber ? 'cell-highlighted-same-number' : ''}`}
+      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isIncorrect ? 'cell-incorrect' : ''} ${isSelected ? 'cell-selected' : ''} ${isHighlightedRow ? 'cell-highlighted-row' : ''} ${isHighlightedColumn ? 'cell-highlighted-column' : ''} ${isHighlightedBox ? 'cell-highlighted-box' : ''} ${isHighlightedSameNumber ? 'cell-highlighted-same-number' : ''}`}
       data-row={row}
       data-col={col}
       onClick={handleClick}
