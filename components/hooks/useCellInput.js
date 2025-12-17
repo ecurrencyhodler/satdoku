@@ -24,7 +24,7 @@ export function useCellInput(
       console.warn('[useCellInput] Input blocked - state is currently loading');
       return;
     }
-    
+
     if (!selectedCell || !gameState) return;
 
     const row = selectedCell.row;
@@ -98,7 +98,7 @@ export function useCellInput(
           };
           onWin(stats);
         }
-        
+
         if (result.modals?.gameOver) {
           const stats = {
             score: result.state.score,
@@ -108,7 +108,7 @@ export function useCellInput(
           };
           onGameOver(stats);
         }
-        
+
         if (result.modals?.purchaseLife) {
           onPurchaseLife();
         }

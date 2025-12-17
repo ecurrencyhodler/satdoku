@@ -20,7 +20,7 @@ export function usePaymentSuccessHandler(
 
   useEffect(() => {
     const paymentSuccess = searchParams?.get('payment_success');
-    
+
     if (paymentSuccess === 'true') {
       // Life was already added via purchaseLife action in purchase-success page
       // Just reload state to get the updated lives
@@ -28,7 +28,7 @@ export function usePaymentSuccessHandler(
         try {
           console.log('[usePaymentSuccessHandler] Reloading state after purchase');
           await loadGameState();
-          
+
           // Close purchase modal if it's open
           if (setShowPurchaseModal) {
             setShowPurchaseModal(false);
@@ -46,11 +46,12 @@ export function usePaymentSuccessHandler(
           router.replace('/');
         }
       };
-      
+
       handlePaymentSuccess();
     }
   }, [searchParams, router, setShowPurchaseModal, loadGameState]);
 }
+
 
 
 

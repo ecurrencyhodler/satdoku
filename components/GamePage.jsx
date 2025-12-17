@@ -20,7 +20,7 @@ export default function GamePage() {
   const [gameState, setGameState] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [pendingDifficultyChange, setPendingDifficultyChange] = useState(null);
-  
+
   // Mobile detection
   const isMobile = useMobileDetection();
 
@@ -148,7 +148,7 @@ export default function GamePage() {
   // Click outside to deselect
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('#game-board') && 
+      if (!e.target.closest('#game-board') &&
           !e.target.closest('.modal') &&
           !e.target.closest('.howie-logo') &&
           !e.target.closest('.tutor-chat-panel') &&

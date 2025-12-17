@@ -66,18 +66,18 @@ export default function WinModal({ isOpen, onClose, onPlayAgain, onKeepPlaying, 
       <div className="modal-content">
         <h2>Congratulations!</h2>
         <p className="win-message">You solved the puzzle!</p>
-        
+
         {!submitted && error && (
-          <div style={{ 
-            background: '#fed7d7', 
-            padding: '15px', 
-            borderRadius: '8px', 
+          <div style={{
+            background: '#fed7d7',
+            padding: '15px',
+            borderRadius: '8px',
             marginBottom: '20px',
             border: '2px solid #e53e3e'
           }}>
-            <p style={{ 
-              textAlign: 'center', 
-              fontWeight: '600', 
+            <p style={{
+              textAlign: 'center',
+              fontWeight: '600',
               color: '#742a2a',
               fontSize: '16px'
             }}>
@@ -96,20 +96,20 @@ export default function WinModal({ isOpen, onClose, onPlayAgain, onKeepPlaying, 
         </div>
         {!submitted && (
           <div className="modal-actions">
-            <button 
+            <button
               onClick={() => {
                 if (onKeepPlaying) {
                   onKeepPlaying();
                 } else {
                   onPlayAgain();
                 }
-              }} 
+              }}
               className="btn btn-primary"
             >
               Keep playing
             </button>
-            <button 
-              onClick={handleSubmitScore} 
+            <button
+              onClick={handleSubmitScore}
               className="btn btn-secondary"
               disabled={submitting}
             >

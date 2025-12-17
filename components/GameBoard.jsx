@@ -3,13 +3,13 @@
 import Cell from './Cell';
 import { BOARD_SIZE } from '../src/js/system/constants.js';
 
-export default function GameBoard({ 
-  board, 
-  puzzle, 
+export default function GameBoard({
+  board,
+  puzzle,
   solution,
-  selectedCell, 
+  selectedCell,
   onCellClick,
-  hasLives 
+  hasLives
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -20,7 +20,7 @@ export default function GameBoard({
   if (!board || !Array.isArray(board)) {
     return <div>Error: Board is not properly initialized</div>;
   }
-  
+
   if (!puzzle || !Array.isArray(puzzle)) {
     return <div>Error: Puzzle is not properly initialized</div>;
   }
@@ -49,25 +49,25 @@ export default function GameBoard({
               />
             ));
           }
-          
+
           return Array.from({ length: BOARD_SIZE }, (_, col) => {
             const value = board[row]?.[col] ?? 0;
             const isPrefilled = puzzle?.[row]?.[col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
-            
+
             // Determine if the value is incorrect (user-entered but doesn't match solution)
             const isIncorrect = !isPrefilled && value !== 0 && solution && solution[row]?.[col] !== 0 && value !== solution[row]?.[col];
-            
+
             // Calculate highlighting based on selected cell
             let isHighlightedRow = false;
             let isHighlightedColumn = false;
             let isHighlightedBox = false;
             let isHighlightedSameNumber = false;
-            
+
             if (selectedCell) {
               const selectedValue = board[selectedCell.row]?.[selectedCell.col] ?? 0;
               const isSelectedCellEmpty = selectedValue === 0;
-              
+
               if (isSelectedCellEmpty) {
                 // Empty cell: highlight row, column, and box
                 isHighlightedRow = row === selectedCell.row;

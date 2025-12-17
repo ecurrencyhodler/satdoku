@@ -10,15 +10,15 @@ export class BoardGenerator {
     // Generate a complete valid Sudoku solution
     generateSolution() {
         const board = Array(this.size).fill(null).map(() => Array(this.size).fill(0));
-        
+
         // Fill diagonal boxes first (they are independent)
         for (let box = 0; box < this.size; box += this.boxSize) {
             this.fillBox(board, box, box);
         }
-        
+
         // Solve the rest
         this.solveSudoku(board);
-        
+
         return board;
     }
 
@@ -26,7 +26,7 @@ export class BoardGenerator {
     fillBox(board, row, col) {
         const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
         this.shuffle(numbers);
-        
+
         let index = 0;
         for (let i = 0; i < this.boxSize; i++) {
             for (let j = 0; j < this.boxSize; j++) {
@@ -42,15 +42,15 @@ export class BoardGenerator {
                 if (board[row][col] === 0) {
                     const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
                     this.shuffle(numbers);
-                    
+
                     for (const num of numbers) {
                         if (this.isValid(board, row, col, num)) {
                             board[row][col] = num;
-                            
+
                             if (this.solveSudoku(board)) {
                                 return true;
                             }
-                            
+
                             board[row][col] = 0;
                         }
                     }
@@ -67,22 +67,22 @@ export class BoardGenerator {
         for (let j = 0; j < this.size; j++) {
             if (board[row][j] === num) return false;
         }
-        
+
         // Check column
         for (let i = 0; i < this.size; i++) {
             if (board[i][col] === num) return false;
         }
-        
+
         // Check 3x3 box
         const boxRow = Math.floor(row / this.boxSize) * this.boxSize;
         const boxCol = Math.floor(col / this.boxSize) * this.boxSize;
-        
+
         for (let i = boxRow; i < boxRow + this.boxSize; i++) {
             for (let j = boxCol; j < boxCol + this.boxSize; j++) {
                 if (board[i][j] === num) return false;
             }
         }
-        
+
         return true;
     }
 
@@ -104,17 +104,17 @@ export class BoardGenerator {
                 positions.push([i, j]);
             }
         }
-        
+
         this.shuffle(positions);
-        
+
         const puzzle = board.map(row => [...row]);
-        
+
         // Remove cells randomly up to the target count
         for (let i = 0; i < Math.min(cellsToRemove, positions.length); i++) {
             const [row, col] = positions[i];
             puzzle[row][col] = 0;
         }
-        
+
         return puzzle;
     }
 
@@ -123,7 +123,7 @@ export class BoardGenerator {
         const solution = this.generateSolution();
         const cellsToRemove = difficulty.cellsToRemove;
         const puzzle = this.removeCells(solution, cellsToRemove);
-        
+
         return {
             puzzle,
             solution

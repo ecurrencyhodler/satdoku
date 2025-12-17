@@ -6,21 +6,21 @@ import { storeCheckoutSession, getCheckoutSession } from '../../../../lib/redis/
  * POST /api/checkout/init
  * Store checkoutId -> sessionId mapping when checkout is initiated
  * Body: { checkoutId: string }
- * 
+ *
  * NOTE: This endpoint is no longer needed for life purchases since we removed webhook processing.
  * Life purchases are now handled client-side via isCheckoutPaid from useCheckoutSuccess().
- * 
+ *
  * This endpoint is kept for backwards compatibility but may be removed in the future.
  */
 export async function POST(request) {
   try {
     // Get session ID from cookie
     const sessionId = await getSessionId();
-    
+
     if (!sessionId) {
       console.warn('[checkout/init] No session found - cannot store mapping');
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: 'Session not found',
           errorCode: 'INVALID_SESSION'
@@ -69,7 +69,7 @@ export async function POST(request) {
 
     // Store the mapping
     const stored = await storeCheckoutSession(checkoutId, sessionId);
-    
+
     if (!stored) {
       console.error('[checkout/init] Failed to store checkout session mapping:', { checkoutId, sessionId });
       return NextResponse.json(
@@ -100,4 +100,5 @@ export async function POST(request) {
     );
   }
 }
+
 

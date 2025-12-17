@@ -31,14 +31,14 @@ async function main() {
   try {
     console.log('Removing last leaderboard entry...');
     const result = await removeLastLeaderboardEntry();
-    
+
     if (result.removed) {
       console.log('Successfully removed last entry:');
       console.log(JSON.stringify(result.entry, null, 2));
     } else {
       console.log('No entries found in leaderboard to remove.');
     }
-    
+
     // Close Redis connection by exiting
     process.exit(0);
   } catch (error) {
@@ -48,5 +48,6 @@ async function main() {
 }
 
 main();
+
 
 

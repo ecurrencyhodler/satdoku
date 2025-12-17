@@ -4,7 +4,7 @@ import { use } from 'react';
 
 /**
  * MDK Checkout page
- * 
+ *
  * Life purchases are now handled client-side via isCheckoutPaid from useCheckoutSuccess().
  * No need to store checkout session mapping anymore.
  */

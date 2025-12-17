@@ -18,7 +18,7 @@ export async function GET(request) {
     }
 
     const processed = await isCheckoutProcessed(checkoutId);
-    
+
     return NextResponse.json({
       success: true,
       processed,
@@ -32,4 +32,5 @@ export async function GET(request) {
     );
   }
 }
+
 

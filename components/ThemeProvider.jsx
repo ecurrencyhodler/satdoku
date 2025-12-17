@@ -20,7 +20,7 @@ export function ThemeProvider({ children }) {
     // Check localStorage and system preference
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
     updateDocumentClass(initialTheme);

@@ -19,7 +19,7 @@ export function useMobileInput(isMobile, selectedCell, handleCellInput) {
         handleCellInput(0);
         return;
       }
-      
+
       const num = parseInt(value, 10);
       if (!isNaN(num) && num >= 1 && num <= 9) {
         isProcessingRef.current = true;
@@ -90,6 +90,7 @@ export function useMobileInput(isMobile, selectedCell, handleCellInput) {
     handleMobileKeyDown,
   };
 }
+
 
 
 

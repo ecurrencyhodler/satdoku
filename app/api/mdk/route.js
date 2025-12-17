@@ -2,7 +2,7 @@ import { POST as mdkPost } from '@moneydevkit/nextjs/server/route';
 
 /**
  * MDK webhook endpoint
- * 
+ *
  * Life purchases are now handled client-side via isCheckoutPaid from useCheckoutSuccess().
  * This endpoint just passes through to MDK for signature verification and any other webhook processing.
  */

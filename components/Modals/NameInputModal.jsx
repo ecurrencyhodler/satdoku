@@ -32,10 +32,10 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, completionId
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const trimmedUsername = username.trim();
     const validationError = validateUsername(trimmedUsername);
-    
+
     if (validationError) {
       setError(validationError);
       return;
@@ -68,8 +68,8 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, completionId
     <div className="modal show">
       <div className="modal-content">
         <h2>Enter Your Name</h2>
-        <p style={{ 
-          textAlign: 'center', 
+        <p style={{
+          textAlign: 'center',
           fontSize: '16px',
           marginBottom: '20px',
           color: '#4a5568'
@@ -78,16 +78,16 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, completionId
         </p>
 
         {error && (
-          <div style={{ 
-            background: '#fed7d7', 
-            padding: '12px', 
-            borderRadius: '6px', 
+          <div style={{
+            background: '#fed7d7',
+            padding: '12px',
+            borderRadius: '6px',
             marginBottom: '15px',
             border: '1px solid #e53e3e'
           }}>
-            <p style={{ 
-              textAlign: 'center', 
-              fontWeight: '600', 
+            <p style={{
+              textAlign: 'center',
+              fontWeight: '600',
               color: '#742a2a',
               fontSize: '14px',
               margin: 0
@@ -117,9 +117,9 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, completionId
               autoFocus
               disabled={submitting}
             />
-            <p style={{ 
-              fontSize: '12px', 
-              color: '#718096', 
+            <p style={{
+              fontSize: '12px',
+              color: '#718096',
               marginTop: '6px',
               marginBottom: 0
             }}>
@@ -149,6 +149,7 @@ export default function NameInputModal({ isOpen, onClose, onSubmit, completionId
     </div>
   );
 }
+
 
 
 

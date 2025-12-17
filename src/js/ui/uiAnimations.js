@@ -5,16 +5,16 @@ export class UIAnimations {
         const popup = document.createElement('div');
         popup.className = 'score-popup';
         popup.textContent = `+${score}`;
-        
+
         // Position relative to cell
         const rect = element.getBoundingClientRect();
         popup.style.position = 'fixed';
         popup.style.left = `${rect.left + rect.width / 2}px`;
         popup.style.top = `${rect.top + rect.height / 2}px`;
         popup.style.transform = 'translate(-50%, -50%)';
-        
+
         document.body.appendChild(popup);
-        
+
         // Remove after animation
         setTimeout(() => {
             popup.remove();

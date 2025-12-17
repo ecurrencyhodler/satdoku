@@ -3,7 +3,7 @@
 /**
  * Script to clear the leaderboard, preserving only ecurrencyhodler
  * Usage: node scripts/reset-leaderboard.js
- * 
+ *
  * Make sure REDIS_URL is set in your environment or .env.local file
  */
 
@@ -39,11 +39,11 @@ async function resetLeaderboard() {
     if (!client) {
       throw new Error('Redis client not available. Make sure REDIS_URL is set in .env.local');
     }
-    
+
     console.log('Clearing leaderboard (preserving ecurrencyhodler)...');
     await clearLeaderboard();
     console.log('✓ Leaderboard cleared. Only ecurrencyhodler entry remains.');
-    
+
     console.log('\nLeaderboard reset complete!');
   } catch (error) {
     console.error('Error resetting leaderboard:', error);
@@ -58,6 +58,7 @@ async function resetLeaderboard() {
 }
 
 resetLeaderboard();
+
 
 
 

@@ -22,7 +22,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
   const handlePurchase = async () => {
     setIsProcessing(true);
     hasInitiatedNavigation.current = true;
-    
+
     // Navigate to checkout - MDK will generate checkoutId and redirect
     navigate({
       title: 'Satdoku',
@@ -34,7 +34,7 @@ export default function PurchaseLifeModal({ isOpen, onClose, onSuccess }) {
         successUrl: '/purchase-success?checkout-id={CHECKOUT_ID}',
       },
     });
-    
+
     // Note: We can't get checkoutId here synchronously from navigate()
     // The checkoutId will be in the URL after redirect, so we'll store
     // the mapping when the user lands on the checkout or purchase-success page

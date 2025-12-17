@@ -13,7 +13,7 @@ export const StateManager = {
 
         const OLD_SESSION_KEY = 'satdoku_session_id';
         const oldSessionId = localStorage.getItem(OLD_SESSION_KEY);
-        
+
         if (oldSessionId) {
             localStorage.removeItem(OLD_SESSION_KEY);
             console.log('[StateManager] Cleaned up old localStorage sessionID (now using cookies)');
@@ -45,15 +45,15 @@ export const StateManager = {
             if (!response.ok) {
                 // Handle version conflicts
                 if (result.errorCode === 'VERSION_CONFLICT') {
-                    return { 
-                        success: false, 
-                        conflict: true, 
+                    return {
+                        success: false,
+                        conflict: true,
                         version: result.version,
                         error: result.error,
                         errorCode: result.errorCode
                     };
                 }
-                
+
                 return {
                     success: false,
                     error: result.error || 'Action failed',
@@ -84,7 +84,7 @@ export const StateManager = {
 
             if (response.ok) {
                 const result = await response.json();
-                
+
                 if (result.success && result.state) {
                     return result.state;
                 }

@@ -32,7 +32,7 @@ export async function POST(request) {
     }
 
     // Validation: Check each row has 9 columns
-    const isValidStructure = board.every(row => 
+    const isValidStructure = board.every(row =>
       Array.isArray(row) && row.length === 9
     );
     if (!isValidStructure) {
@@ -43,7 +43,7 @@ export async function POST(request) {
     }
 
     // Check if board is empty (all zeros)
-    const isEmpty = board.every(row => 
+    const isEmpty = board.every(row =>
       row.every(cell => cell === 0)
     );
 
@@ -114,7 +114,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('[tutor/strategy] Error:', error);
-    
+
     if (error instanceof OpenAI.APIError) {
       return NextResponse.json(
         { error: 'AI_ERROR', message: error.message },
@@ -128,3 +128,4 @@ export async function POST(request) {
     );
   }
 }
+

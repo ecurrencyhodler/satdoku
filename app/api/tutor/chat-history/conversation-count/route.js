@@ -41,7 +41,7 @@ export async function POST(request) {
     }
 
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    
+
     // Get current count
     const currentCountValue = await redis.get(countKey);
     const currentCount = currentCountValue ? parseInt(currentCountValue, 10) : 0;
@@ -60,9 +60,9 @@ export async function POST(request) {
     const newCount = currentCount + 1;
     await redis.setEx(countKey, CHAT_HISTORY_TTL, newCount.toString());
 
-    return NextResponse.json({ 
-      success: true, 
-      conversationCount: newCount 
+    return NextResponse.json({
+      success: true,
+      conversationCount: newCount
     });
 
   } catch (error) {
@@ -73,3 +73,4 @@ export async function POST(request) {
     );
   }
 }
+

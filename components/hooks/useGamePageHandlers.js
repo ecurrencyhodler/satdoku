@@ -23,7 +23,7 @@ export function useGamePageHandlers(
     // Allow clicking on any cell for highlighting
     // Input processing will be handled by useCellInput hook
     setSelectedCell({ row, col });
-    
+
     // Focus mobile input immediately on click (must be in user interaction handler)
     // Must be synchronous for mobile browsers to allow focus
     if (isMobile && mobileInputRef?.current) {
@@ -59,7 +59,7 @@ export function useGamePageHandlers(
   const handleKeepPlaying = useCallback(async () => {
     try {
       const result = await StateManager.sendGameAction({ action: 'keepPlaying' }, gameState?.version);
-      
+
       if (result.success) {
         // Transform server state to client format
         const transformedState = {
@@ -89,11 +89,11 @@ export function useGamePageHandlers(
 
   const handlePurchaseLife = useCallback(async (paymentSessionId) => {
     try {
-      const result = await StateManager.sendGameAction({ 
-        action: 'purchaseLife', 
-        paymentSessionId 
+      const result = await StateManager.sendGameAction({
+        action: 'purchaseLife',
+        paymentSessionId
       }, gameState?.version);
-      
+
       if (result.success) {
         setGameState(result.state);
       } else {

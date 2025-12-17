@@ -14,10 +14,10 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     try {
       isLoadingStateRef.current = true;
       const difficulty = pendingDifficultyChange || 'beginner';
-      
-      const result = await StateManager.sendGameAction({ 
-        action: 'startNewGame', 
-        difficulty 
+
+      const result = await StateManager.sendGameAction({
+        action: 'startNewGame',
+        difficulty
       });
 
       if (result.success) {
@@ -33,7 +33,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
           throw new Error('Invalid board structure received from server');
         }
-        
+
         // Ensure board is a proper 2D array (not sparse)
         const validatedBoard = result.state.currentBoard.map((row) => {
           if (!Array.isArray(row)) {
@@ -41,7 +41,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           }
           return row;
         });
-        
+
         const transformedState = {
           board: validatedBoard,
           puzzle: result.state.currentPuzzle,
@@ -74,9 +74,9 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
   const resetBoardKeepStats = useCallback(async () => {
     try {
       isLoadingStateRef.current = true;
-      
-      const result = await StateManager.sendGameAction({ 
-        action: 'keepPlaying' 
+
+      const result = await StateManager.sendGameAction({
+        action: 'keepPlaying'
       });
 
       if (result.success) {
@@ -84,7 +84,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
           throw new Error('Invalid board structure received from server');
         }
-        
+
         // Ensure board is a proper 2D array (not sparse)
         const validatedBoard = result.state.currentBoard.map((row) => {
           if (!Array.isArray(row)) {
@@ -92,7 +92,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           }
           return row;
         });
-        
+
         // Transform server state to client format
         const transformedState = {
           board: validatedBoard,
@@ -135,7 +135,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           isLoadingStateRef.current = false;
           return false;
         }
-        
+
         // Ensure board is a proper 2D array (not sparse)
         const validatedBoard = state.currentBoard.map((row) => {
           if (!Array.isArray(row)) {
@@ -143,7 +143,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           }
           return row;
         });
-        
+
         // Transform server state to client format
         const transformedState = {
           board: validatedBoard,
@@ -162,12 +162,12 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           version: state.version
         };
         setGameState(transformedState);
-        
+
         // Check if lives are 0 and trigger purchase modal if needed
         if (state.lives === 0 && state.gameInProgress) {
           setShowPurchaseModal(true);
         }
-        
+
         isLoadingStateRef.current = false;
         return true;
       } else {
@@ -202,10 +202,10 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     if (!hasInitialized.current) {
       // Only load initial state once
       hasInitialized.current = true;
-      
+
       // Clean up old localStorage sessionID (migration cleanup)
       StateManager.cleanupOldSessionStorage();
-      
+
       loadGameState().catch((error) => {
         console.error('[useGameInitialization] Error loading initial game state:', error);
       });

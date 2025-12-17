@@ -42,18 +42,18 @@ export function useTutorChat(gameState, selectedCell) {
     try {
       const response = await fetch('/api/tutor/chat-history');
       const data = await response.json();
-      
+
       if (data.success && Array.isArray(data.history)) {
         setChatHistory(data.history);
         setConversationCount(data.conversationCount || 0);
-        
+
         // Calculate current conversation length (assistant messages since last conversation start)
         const currentConversationMessages = data.history.slice(lastConversationStartIndexRef.current);
         const assistantMessagesInCurrentConversation = currentConversationMessages.filter(
           msg => msg.role === 'assistant'
         ).length;
         conversationLengthRef.current = assistantMessagesInCurrentConversation;
-        
+
         // Check if current conversation should be closed (reached limit)
         if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH) {
           setIsConversationClosed(true);
@@ -94,7 +94,7 @@ export function useTutorChat(gameState, selectedCell) {
       // Mark where this conversation starts in history (before incrementing)
       // At this point, no new messages have been added yet, so current length is the start
       const conversationStartIndex = chatHistory.length;
-      
+
       // Increment conversation count
       const response = await fetch('/api/tutor/chat-history/conversation-count', {
         method: 'POST'
@@ -147,7 +147,7 @@ export function useTutorChat(gameState, selectedCell) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role, content })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -209,7 +209,7 @@ export function useTutorChat(gameState, selectedCell) {
       }
 
       const strategyData = await strategyResponse.json();
-      
+
       if (strategyData.error) {
         throw new Error(strategyData.message || strategyData.error);
       }
@@ -283,3 +283,4 @@ export function useTutorChat(gameState, selectedCell) {
     setError
   };
 }
+

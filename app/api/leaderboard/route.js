@@ -30,7 +30,7 @@ export async function POST(request) {
   try {
     // Get session ID from cookie
     const sessionId = await getSessionId();
-    
+
     if (!sessionId) {
       return NextResponse.json(
         { error: 'Session not found' },
@@ -39,7 +39,7 @@ export async function POST(request) {
     }
 
     const { completionId, username } = await request.json();
-    
+
     // Validate completionId
     if (!completionId || typeof completionId !== 'string') {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Validate username
     if (!username || typeof username !== 'string' || username.trim().length === 0) {
       return NextResponse.json(
@@ -55,7 +55,7 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Validate username length and charset
     const trimmedUsername = username.trim();
     if (trimmedUsername.length > 50) {
@@ -64,22 +64,22 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Validate completion
     const validation = await validateCompletionForLeaderboard(completionId, sessionId);
-    
+
     if (!validation.valid) {
       return NextResponse.json(
         { error: validation.error || 'Completion validation failed' },
         { status: 400 }
       );
     }
-    
+
     const completion = validation.completion;
-    
+
     // Mark completion as submitted
     await markCompletionSubmitted(completionId);
-    
+
     // Add entry to leaderboard using server-derived data only
     // Note: addLeaderboardEntry currently only accepts sessionId, score, username
     // The score is server-derived from the completion record
@@ -88,7 +88,7 @@ export async function POST(request) {
       completion.score,
       trimmedUsername
     );
-    
+
     return NextResponse.json({
       success: true,
       leaderboard: updatedLeaderboard

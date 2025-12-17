@@ -56,8 +56,8 @@ export default function Navigation() {
       <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
         Game
       </Link>
-      <a 
-        href="/leaderboard" 
+      <a
+        href="/leaderboard"
         target="_blank"
         rel="noopener noreferrer"
         className={pathname === '/leaderboard' ? 'nav-link active' : 'nav-link'}
@@ -65,18 +65,18 @@ export default function Navigation() {
       >
         Leaderboard
       </a>
-      <a 
-        href="https://github.com/ecurrencyhodler/satdoku" 
-        target="_blank" 
+      <a
+        href="https://github.com/ecurrencyhodler/satdoku"
+        target="_blank"
         rel="noopener noreferrer"
         className={pathname === '/github' ? 'nav-link active' : 'nav-link'}
         onClick={closeMenu}
       >
         Github
       </a>
-      <a 
-        href="https://forms.gle/wzuHjAJAVb4PJK7d9" 
-        target="_blank" 
+      <a
+        href="https://forms.gle/wzuHjAJAVb4PJK7d9"
+        target="_blank"
         rel="noopener noreferrer"
         className="nav-link"
         onClick={closeMenu}
@@ -90,8 +90,8 @@ export default function Navigation() {
     <nav className="navigation">
       {isMobile ? (
         <>
-          <button 
-            className="hamburger-menu" 
+          <button
+            className="hamburger-menu"
             onClick={toggleMenu}
             aria-label="Toggle menu"
             aria-expanded={isMenuOpen}
@@ -124,5 +124,6 @@ export default function Navigation() {
     </nav>
   );
 }
+
 
 

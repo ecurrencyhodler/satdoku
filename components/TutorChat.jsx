@@ -14,7 +14,7 @@ export default function TutorChat({ gameState, selectedCell }) {
   const [size, setSize] = useState({ width: 400, height: 500 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeCorner, setResizeCorner] = useState(null); // 'bottom-left' or 'bottom-right'
-  
+
   const chatPanelRef = useRef(null);
   const messagesEndRef = useRef(null);
   const headerRef = useRef(null);
@@ -34,10 +34,10 @@ export default function TutorChat({ gameState, selectedCell }) {
   // Helper function to constrain position within viewport
   const constrainPosition = (x, y, width, height) => {
     if (typeof window === 'undefined') return { x, y };
-    
+
     const maxX = window.innerWidth - width;
     const maxY = window.innerHeight - height;
-    
+
     return {
       x: Math.max(0, Math.min(x, maxX)),
       y: Math.max(0, Math.min(y, maxY))
@@ -52,11 +52,11 @@ export default function TutorChat({ gameState, selectedCell }) {
   const sizeRef = useRef(size);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, left: 0 });
-  
+
   useEffect(() => {
     positionRef.current = position;
   }, [position]);
-  
+
   useEffect(() => {
     sizeRef.current = size;
   }, [size]);
@@ -65,9 +65,9 @@ export default function TutorChat({ gameState, selectedCell }) {
     const handleResize = () => {
       if (isOpen && typeof window !== 'undefined') {
         const constrained = constrainPosition(
-          positionRef.current.x, 
-          positionRef.current.y, 
-          sizeRef.current.width, 
+          positionRef.current.x,
+          positionRef.current.y,
+          sizeRef.current.width,
           sizeRef.current.height
         );
         setPosition(constrained);
@@ -153,7 +153,7 @@ export default function TutorChat({ gameState, selectedCell }) {
         const resizeStart = resizeStartRef.current;
         const deltaX = e.clientX - resizeStart.x;
         const deltaY = e.clientY - resizeStart.y;
-        
+
         if (resizeCorner === 'bottom-right') {
           // Resize from bottom-right corner
           const maxWidth = typeof window !== 'undefined' ? window.innerWidth - resizeStart.left : 800;
@@ -226,19 +226,19 @@ export default function TutorChat({ gameState, selectedCell }) {
       setError('Please start a game first');
       return;
     }
-    
+
     // If modal is already open, do nothing
     if (isOpen) {
       return;
     }
-    
+
     // Start a new conversation when opening modal
     const started = await startNewConversation();
     if (!started) {
       // Failed to start conversation (e.g., max reached)
       return;
     }
-    
+
     // Reset position to middle-right when opening
     justOpenedRef.current = true;
     const initialPos = getMiddleRightPosition(size.width, size.height);
@@ -260,12 +260,12 @@ export default function TutorChat({ gameState, selectedCell }) {
   return (
     <>
       {/* Howie Logo/Avatar - Fixed at bottom center */}
-      <div 
+      <div
         className={`howie-logo ${isDisabled ? 'howie-logo-disabled' : ''}`}
         onClick={handleHowieClick}
         title={
-          !gameState 
-            ? 'Start a game to get help from Howie' 
+          !gameState
+            ? 'Start a game to get help from Howie'
             : !canStartNewConversation
             ? `You've used all ${conversationCount} conversations. Start a new game to chat again!`
             : `Click to chat with Howie (${conversationCount}/${MAX_CONVERSATIONS_PER_GAME} conversations used)`
@@ -311,7 +311,7 @@ export default function TutorChat({ gameState, selectedCell }) {
             {chatHistory.length === 0 && (
               <TutorChatMessage
                 role="assistant"
-                content="Hi! I'm Howie. I'll teach you how to solve Sudoku puzzles. Ask me a question!"
+                content="Hi! I'm Howie. I teach players how to solve Sudoku puzzles. You get to ask me 5 questions.  Ask me anything!"
               />
             )}
             {chatHistory.map((msg, index) => (
@@ -379,3 +379,4 @@ export default function TutorChat({ gameState, selectedCell }) {
     </>
   );
 }
+

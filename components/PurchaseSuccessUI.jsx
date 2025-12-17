@@ -6,21 +6,21 @@
 export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
   if (status === 'error') {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh', 
-        flexDirection: 'column', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        flexDirection: 'column',
         gap: '20px',
         padding: '20px',
         maxWidth: '600px',
         margin: '0 auto'
       }}>
-        <div style={{ 
-          border: '2px solid #ff4444', 
-          borderRadius: '8px', 
-          padding: '20px', 
+        <div style={{
+          border: '2px solid #ff4444',
+          borderRadius: '8px',
+          padding: '20px',
           backgroundColor: '#fff5f5',
           width: '100%'
         }}>
@@ -31,14 +31,14 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
             {error || 'An unexpected error occurred while processing your purchase.'}
           </p>
           <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
-            If your payment was successful, please contact support with your checkout ID. 
+            If your payment was successful, please contact support with your checkout ID.
             Your payment will be verified and the life will be added to your account.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button 
+            <button
               onClick={onReturnToGame}
-              style={{ 
-                padding: '12px 24px', 
+              style={{
+                padding: '12px 24px',
                 cursor: 'pointer',
                 backgroundColor: '#007bff',
                 color: 'white',
@@ -50,10 +50,10 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
             >
               Return to Game
             </button>
-            <button 
+            <button
               onClick={() => window.location.reload()}
-              style={{ 
-                padding: '12px 24px', 
+              style={{
+                padding: '12px 24px',
                 cursor: 'pointer',
                 backgroundColor: '#6c757d',
                 color: 'white',
@@ -72,12 +72,12 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
   }
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh', 
-      flexDirection: 'column', 
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      flexDirection: 'column',
       gap: '20px',
       padding: '20px'
     }}>
@@ -97,7 +97,7 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
           <p style={{ color: '#666', fontSize: '14px' }}>Redirecting back to game...</p>
         )}
         {(status === 'verifying' || status === 'granting') && (
-          <div style={{ 
+          <div style={{
             marginTop: '20px',
             display: 'flex',
             justifyContent: 'center'

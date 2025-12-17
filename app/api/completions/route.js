@@ -9,7 +9,7 @@ import { addLeaderboardEntry } from '../../../lib/redis/leaderboard.js';
  */
 export async function POST(request) {
   let body;
-  
+
   // Handle JSON parsing separately to return 400 for malformed JSON
   try {
     body = await request.json();
@@ -90,7 +90,7 @@ export async function POST(request) {
 
   try {
     const success = await saveCompletion(sessionId, score, difficulty, mistakes);
-    
+
     if (success) {
       // Automatically add to leaderboard
       try {
@@ -100,7 +100,7 @@ export async function POST(request) {
         // Log error but don't fail the request - completion is saved
         console.error('[completions] Error adding to leaderboard (completion still saved):', leaderboardError);
       }
-      
+
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

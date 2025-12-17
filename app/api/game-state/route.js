@@ -15,12 +15,12 @@ export async function GET(request) {
     }
 
     const gameState = await getGameState(sessionId);
-    
+
     if (gameState) {
       // Remove internal metadata before returning, but keep version
       const { storedAt, version, ...state } = gameState;
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         state: { ...state, version: version || 0 }
       });
     } else {
@@ -45,7 +45,7 @@ export async function POST(request) {
   try {
     const { getSessionId } = await import('../../../lib/session/cookieSession.js');
     const sessionId = await getSessionId();
-    
+
     if (!sessionId) {
       return NextResponse.json(
         { error: 'Session not found' },
@@ -64,11 +64,11 @@ export async function POST(request) {
     }
 
     const result = await storeGameState(sessionId, state, expectedVersion ?? null);
-    
+
     if (result.success) {
-      return NextResponse.json({ 
-        success: true, 
-        version: result.version 
+      return NextResponse.json({
+        success: true,
+        version: result.version
       });
     } else if (result.conflict) {
       return NextResponse.json(
@@ -104,7 +104,7 @@ export async function DELETE(request) {
     }
 
     const success = await deleteGameState(sessionId);
-    
+
     if (success) {
       return NextResponse.json({ success: true });
     } else {
@@ -121,6 +121,7 @@ export async function DELETE(request) {
     );
   }
 }
+
 
 
 

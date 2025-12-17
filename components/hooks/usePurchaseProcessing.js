@@ -7,7 +7,7 @@ import { isLifeGranted, markLifeGranted } from '../../lib/purchaseSessionStorage
 /**
  * Hook for processing purchase and granting life
  * When MDK returns isCheckoutPaid: true, directly grant life on the server
- * 
+ *
  * Simplified: No longer coordinates with webhook - only relies on client-side confirmation
  */
 export function usePurchaseProcessing() {
@@ -22,16 +22,16 @@ export function usePurchaseProcessing() {
   useEffect(() => {
     if (!isCheckoutPaidLoading && isCheckoutPaid && !hasProcessed.current) {
       const checkoutId = searchParams?.get('checkout-id');
-      
+
       console.log('[usePurchaseProcessing] Payment confirmed, granting life', { checkoutId, isCheckoutPaid });
-      
+
       if (!checkoutId) {
         console.error('[usePurchaseProcessing] No checkout ID found in URL');
         setError('Invalid checkout ID');
         setStatus('error');
         return;
       }
-      
+
       // Check if already granted (client-side cache)
       if (isLifeGranted(checkoutId)) {
         console.log('[usePurchaseProcessing] Life already granted (cached)');
@@ -42,11 +42,11 @@ export function usePurchaseProcessing() {
         }, 500);
         return;
       }
-      
+
       // Grant life function - defined before use
       const grantLife = (checkoutId) => {
         setStatus('granting');
-        
+
         // Load current state to get version for optimistic locking
         StateManager.loadGameState()
           .then((state) => {
@@ -56,7 +56,7 @@ export function usePurchaseProcessing() {
               setStatus('error');
               return;
             }
-            
+
             // Grant life via server action
             StateManager.sendGameAction(
               { action: 'purchaseLife', checkoutId },
@@ -68,7 +68,7 @@ export function usePurchaseProcessing() {
                   markLifeGranted(checkoutId);
                   setStatus('success');
                   hasProcessed.current = true;
-                  
+
                   setTimeout(() => {
                     router.push('/?payment_success=true');
                   }, 500);
@@ -140,7 +140,7 @@ export function usePurchaseProcessing() {
             setStatus('error');
           });
       };
-      
+
       // Check if already processed on server (idempotency check)
       fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
         .then(res => res.json())
@@ -156,7 +156,7 @@ export function usePurchaseProcessing() {
             }, 500);
             return;
           }
-          
+
           // Not yet processed - grant life
           grantLife(checkoutId);
         })
@@ -175,6 +175,7 @@ export function usePurchaseProcessing() {
     isCheckoutPaid,
   };
 }
+
 
 
 

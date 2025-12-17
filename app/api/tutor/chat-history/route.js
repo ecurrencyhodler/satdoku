@@ -29,7 +29,7 @@ export async function GET(request) {
 
     const key = `tutor_chat:${sessionId}`;
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    
+
     // Get both history and conversation count
     const [value, countValue] = await Promise.all([
       redis.get(key),
@@ -51,8 +51,8 @@ export async function GET(request) {
 
     const conversationCount = countValue ? parseInt(countValue, 10) : 0;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       history: history,
       conversationCount: conversationCount
     });
@@ -108,11 +108,11 @@ export async function POST(request) {
     }
 
     const key = `tutor_chat:${sessionId}`;
-    
+
     // Get existing history
     const existingValue = await redis.get(key);
     let history = [];
-    
+
     if (existingValue) {
       try {
         history = JSON.parse(existingValue);
@@ -185,3 +185,4 @@ export async function DELETE(request) {
     );
   }
 }
+

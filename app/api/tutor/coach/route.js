@@ -37,7 +37,7 @@ export async function POST(request) {
     }
 
     // Validation: Check board structure
-    if (!Array.isArray(board) || board.length !== 9 || 
+    if (!Array.isArray(board) || board.length !== 9 ||
         !board.every(row => Array.isArray(row) && row.length === 9)) {
       return NextResponse.json(
         { error: 'INVALID_BOARD', message: 'Board structure invalid' },
@@ -46,7 +46,7 @@ export async function POST(request) {
     }
 
     // Validation: Check puzzle structure
-    if (!Array.isArray(puzzle) || puzzle.length !== 9 || 
+    if (!Array.isArray(puzzle) || puzzle.length !== 9 ||
         !puzzle.every(row => Array.isArray(row) && row.length === 9)) {
       return NextResponse.json(
         { error: 'INVALID_BOARD', message: 'Puzzle structure invalid' },
@@ -144,7 +144,7 @@ export async function POST(request) {
         } else {
           // Leak detected, add a warning to the system prompt and retry
           console.warn(`[tutor/coach] Answer leak detected on attempt ${attempts}, retrying...`);
-          
+
           if (attempts < MAX_RETRIES + 1) {
             // Update system prompt with stricter instructions
             messages[0] = {
@@ -195,3 +195,4 @@ export async function POST(request) {
     );
   }
 }
+

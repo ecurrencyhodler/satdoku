@@ -1,18 +1,18 @@
 'use client';
 
-export default function Cell({ 
-  row, 
-  col, 
-  value, 
-  isPrefilled, 
+export default function Cell({
+  row,
+  col,
+  value,
+  isPrefilled,
   isIncorrect,
-  isSelected, 
+  isSelected,
   isHighlightedRow,
   isHighlightedColumn,
   isHighlightedBox,
   isHighlightedSameNumber,
   onClick,
-  hasLives 
+  hasLives
 }) {
   // Determine if cell is locked (prefilled or user-filled with a value)
   // Note: Cells with incorrect values should still be editable, so we don't consider them locked

@@ -11,7 +11,7 @@ export class ScoreAnimationHandler {
      */
     static showScoreAnimations(scoreEvents, cellElement) {
         const board = UIAnimations.getGameBoard();
-        
+
         scoreEvents.forEach(event => {
             if (event.type === 'cell') {
                 UIAnimations.showScorePopup(cellElement, event.score);

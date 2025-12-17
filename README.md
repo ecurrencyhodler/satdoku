@@ -16,7 +16,7 @@ A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase ad
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Money Dev Kit account (get credentials from [moneydevkit.com](https://moneydevkit.com) or run `npx @moneydevkit/create`)
 
 ### Installation

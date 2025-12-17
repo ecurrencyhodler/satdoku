@@ -37,7 +37,7 @@ export function useKeyboardInput(
         if (!selectedCell || isInputElement) {
           return;
         }
-        
+
         e.preventDefault();
 
         let newRow = selectedCell.row;
