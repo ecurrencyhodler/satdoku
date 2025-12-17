@@ -30,6 +30,17 @@ export function useCellInput(
     const row = selectedCell.row;
     const col = selectedCell.col;
 
+    // Check if cell is locked (prefilled or correctly filled)
+    const currentValue = gameState.board?.[row]?.[col] ?? 0;
+    const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
+    const isIncorrect = !isPrefilled && currentValue !== 0 && gameState.solution && gameState.solution[row]?.[col] !== 0 && currentValue !== gameState.solution[row]?.[col];
+    const isLocked = isPrefilled || (currentValue !== 0 && !isIncorrect);
+
+    // Prevent input on locked cells (prefilled or correctly filled)
+    if (isLocked && value !== 0) {
+      return; // Cell is locked, ignore input
+    }
+
     // Create action
     const action = value === 0
       ? { action: 'clearCell', row, col }
