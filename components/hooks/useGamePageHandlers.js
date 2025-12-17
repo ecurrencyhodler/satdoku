@@ -24,19 +24,9 @@ export function useGamePageHandlers(
     // Input processing will be handled by useCellInput hook
     setSelectedCell({ row, col });
 
-    // Focus mobile input immediately on click (must be in user interaction handler)
-    // Must be synchronous for mobile browsers to allow focus
-    if (isMobile && mobileInputRef?.current) {
-      try {
-        // Focus immediately - mobile browsers require this to be synchronous
-        mobileInputRef.current.focus();
-        // Also try click to ensure it's triggered
-        mobileInputRef.current.click();
-      } catch (e) {
-        console.error('Error focusing mobile input:', e);
-      }
-    }
-  }, [setSelectedCell, isMobile, mobileInputRef]);
+    // Don't focus mobile input - we're using the number pad instead
+    // This prevents the native keyboard from popping up
+  }, [setSelectedCell]);
 
   const handleDifficultyChange = useCallback((newDifficulty) => {
     if (gameState && gameState.gameInProgress) {

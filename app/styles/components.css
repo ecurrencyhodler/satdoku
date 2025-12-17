@@ -178,6 +178,7 @@
     display: block;
 }
 
+/* Horizontal number pad (legacy, not currently used) */
 .number-pad {
     display: flex;
     justify-content: center;
@@ -259,6 +260,73 @@
 .dark .number-pad-clear:active {
     background: #718096;
 }
+
+/* Vertical number pad - right side of game board */
+.number-pad-vertical {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.number-pad-vertical-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 45px;
+    flex-shrink: 0;
+    height: 450px;
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+.number-pad-button-vertical {
+    padding: 0;
+    font-size: 20px;
+    font-weight: 600;
+    border: 2px solid #4299e1;
+    border-radius: 8px;
+    background: white;
+    color: #4299e1;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    width: 45px;
+    height: calc((450px - 8 * 6px) / 9);
+    flex: 0 0 calc((450px - 8 * 6px) / 9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .number-pad-button-vertical {
+    background: #4a5568;
+    border-color: #4299e1;
+    color: #e2e8f0;
+}
+
+.number-pad-button-vertical:active {
+    background: #4299e1;
+    color: white;
+    transform: scale(0.95);
+}
+
+.number-pad-button-vertical:hover {
+    background: #bee3f8;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.dark .number-pad-button-vertical:hover {
+    background: #5a6478;
+}
+
+.number-pad-button-vertical:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 
 /* Leaderboard styles */
 .leaderboard-loading {

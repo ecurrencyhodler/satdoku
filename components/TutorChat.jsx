@@ -272,7 +272,6 @@ export default function TutorChat({ gameState, selectedCell }) {
         }
       >
         <img src="/howie.svg" alt="Howie" className="howie-avatar" />
-        <div className="howie-name">Howie</div>
       </div>
 
       {/* Chat Panel - Draggable and Resizable */}
@@ -311,7 +310,7 @@ export default function TutorChat({ gameState, selectedCell }) {
             {chatHistory.length === 0 && (
               <TutorChatMessage
                 role="assistant"
-                content="Hi! I'm Howie. I teach players how to solve Sudoku puzzles. You get to ask me 5 questions.  Ask me anything!"
+                content="Hi! I'm Howie. I teach players how to solve Sudoku puzzles. Ask me up to 5 questions."
               />
             )}
             {chatHistory.map((msg, index) => (

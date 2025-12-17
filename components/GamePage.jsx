@@ -15,6 +15,7 @@ import GameModals from './GameModals';
 import GamePageHeader from './GamePageHeader';
 import GamePageLayout from './GamePageLayout';
 import TutorChat from './TutorChat';
+import NumberPad from './NumberPad';
 
 export default function GamePage() {
   const [gameState, setGameState] = useState(null);
@@ -152,6 +153,7 @@ export default function GamePage() {
           !e.target.closest('.modal') &&
           !e.target.closest('.howie-logo') &&
           !e.target.closest('.tutor-chat-panel') &&
+          !e.target.closest('.number-pad-vertical') &&
           e.target.id !== 'new-game-btn' &&
           e.target.id !== 'difficulty' &&
           e.target.id !== 'mobile-number-input') {
@@ -187,14 +189,20 @@ export default function GamePage() {
         difficulty={gameState.difficulty}
       />
 
-      <GameBoard
-        board={gameState.board}
-        puzzle={gameState.puzzle}
-        solution={gameState.solution}
-        selectedCell={selectedCell}
-        onCellClick={handleCellClick}
-        hasLives={gameState.lives > 0}
-      />
+      <div className="game-board-with-numberpad">
+        <GameBoard
+          board={gameState.board}
+          puzzle={gameState.puzzle}
+          solution={gameState.solution}
+          selectedCell={selectedCell}
+          onCellClick={handleCellClick}
+          hasLives={gameState.lives > 0}
+        />
+        <NumberPad
+          onNumberClick={handleCellInput}
+          disabled={!selectedCell || !gameState.gameInProgress}
+        />
+      </div>
 
       <TutorChat
         gameState={gameState}

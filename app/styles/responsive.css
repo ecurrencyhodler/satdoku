@@ -51,4 +51,31 @@
         padding: 18px;
         font-size: 22px;
     }
+
+    /* Vertical number pad on mobile - scales proportionally with board */
+    .game-board-with-numberpad {
+        gap: min(20px, calc((100vw - 100px) * 20 / 450));
+        flex-wrap: nowrap;
+    }
+
+    .game-board {
+        width: min(450px, calc(100vw - 100px));
+        height: min(450px, calc(100vw - 100px));
+        max-width: min(450px, calc(100vw - 100px));
+        max-height: min(450px, calc(100vw - 100px));
+    }
+
+    .number-pad-vertical-grid {
+        width: min(45px, calc((100vw - 100px) * 45 / 450));
+        gap: calc(min(450px, calc(100vw - 100px)) * 6 / 450);
+        height: min(450px, calc(100vw - 100px));
+        justify-content: flex-start;
+    }
+
+    .number-pad-button-vertical {
+        font-size: 16px;
+        width: min(45px, calc((100vw - 100px) * 45 / 450));
+        height: calc((min(450px, calc(100vw - 100px)) - 8 * calc(min(450px, calc(100vw - 100px)) * 6 / 450)) / 9);
+        flex: 0 0 calc((min(450px, calc(100vw - 100px)) - 8 * calc(min(450px, calc(100vw - 100px)) * 6 / 450)) / 9);
+    }
 }
