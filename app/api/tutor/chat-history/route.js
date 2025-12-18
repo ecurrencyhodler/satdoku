@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId, getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
 import { getRedisClient } from '../../../../lib/redis/client.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
+import { trackMessage, getCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
 
 const CHAT_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days (matches game state)
 
@@ -135,6 +136,18 @@ export async function POST(request) {
     // Save back to Redis with TTL
     await redis.setEx(key, CHAT_HISTORY_TTL, JSON.stringify(history));
 
+    // Track message for analytics (non-blocking)
+    // Get current conversation ID for this session
+    getCurrentConversationId(sessionId).then(conversationId => {
+      if (conversationId) {
+        return trackMessage(conversationId, sessionId, role);
+      }
+      return null;
+    }).catch(error => {
+      console.error('[tutor/chat-history] Error tracking message analytics:', error);
+      // Don't fail the request if analytics tracking fails
+    });
+
     return NextResponse.json({ success: true });
 
   } catch (error) {
@@ -185,5 +198,7 @@ export async function DELETE(request) {
     );
   }
 }
+
+
 
 

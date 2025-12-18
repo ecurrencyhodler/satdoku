@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../../lib/session/cookieSession.js';
 import { getRedisClient } from '../../../../../lib/redis/client.js';
 import { getGameState } from '../../../../../lib/redis/gameState.js';
+import { trackConversationOpened } from '../../../../../lib/redis/tutorAnalytics.js';
 
 const CHAT_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days (matches game state)
 const MAX_CONVERSATIONS_PER_GAME = 5;
@@ -60,6 +61,12 @@ export async function POST(request) {
     const newCount = currentCount + 1;
     await redis.setEx(countKey, CHAT_HISTORY_TTL, newCount.toString());
 
+    // Track conversation opened for analytics (non-blocking)
+    trackConversationOpened(sessionId, gameVersion).catch(error => {
+      console.error('[tutor/chat-history] Error tracking conversation analytics:', error);
+      // Don't fail the request if analytics tracking fails
+    });
+
     return NextResponse.json({
       success: true,
       conversationCount: newCount
@@ -73,5 +80,7 @@ export async function POST(request) {
     );
   }
 }
+
+
 
 
