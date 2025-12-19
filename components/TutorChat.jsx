@@ -76,6 +76,7 @@ export default function TutorChat({ gameState, selectedCell }) {
     sendMessage,
     startNewConversation,
     endConversation,
+    reloadChatHistory,
     setError
   } = useTutorChat(gameState, selectedCell);
 
@@ -241,21 +242,24 @@ export default function TutorChat({ gameState, selectedCell }) {
     const tutorChatOpen = urlParams.get('tutor_chat_open');
 
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
-      // Start conversation and open chat
-      startNewConversation().then((started) => {
-        if (started) {
-          justOpenedRef.current = true;
-          const initialPos = getMiddleRightPosition(size.width, size.height);
-          setPosition(initialPos);
-          setIsOpen(true);
-        }
+      // Reload chat history first to get updated payment status after payment
+      reloadChatHistory().then(() => {
+        // Then start conversation and open chat
+        startNewConversation().then((started) => {
+          if (started) {
+            justOpenedRef.current = true;
+            const initialPos = getMiddleRightPosition(size.width, size.height);
+            setPosition(initialPos);
+            setIsOpen(true);
+          }
+        });
       });
       // Remove query param from URL
       urlParams.delete('tutor_chat_open');
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
       window.history.replaceState({}, '', newUrl);
     }
-  }, [gameState, isOpen, startNewConversation]);
+  }, [gameState, isOpen, startNewConversation, reloadChatHistory]);
 
   return (
     <>

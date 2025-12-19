@@ -190,6 +190,18 @@ export function useTutorChat(gameState, selectedCell) {
     sendMessage('Get help with this cell');
   }, [selectedCell, sendMessage]);
 
+  /**
+   * Reload chat history and update payment status
+   * Useful after payment to refresh the payment status
+   */
+  const reloadChatHistory = useCallback(async () => {
+    const data = await loadChatHistory();
+    if (data.success) {
+      updatePaymentStatus(data);
+    }
+    return data;
+  }, [loadChatHistory, updatePaymentStatus]);
+
   return {
     chatHistory,
     isLoading,
@@ -204,6 +216,7 @@ export function useTutorChat(gameState, selectedCell) {
     clearChatHistory,
     startNewConversation,
     endConversation,
+    reloadChatHistory,
     setError
   };
 }
