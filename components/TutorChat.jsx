@@ -312,7 +312,7 @@ export default function TutorChat({ gameState, selectedCell }) {
             )}
             {isConversationClosed && (
               <div className="tutor-chat-closed">
-                <p>This conversation has reached its limit. Close and reopen to start a new conversation!</p>
+                <p>This conversation has reached its 5 message limit.</p>
               </div>
             )}
             <div ref={messagesEndRef} />
