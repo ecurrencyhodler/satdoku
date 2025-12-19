@@ -112,7 +112,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         return { 
           success: false, 
           requiresPayment: shouldRequirePayment,
-          error: shouldRequirePayment ? 'Payment required to start a new conversation' : 'Failed to start conversation'
+          error: null // Don't show error message when payment is required
         };
       } else {
         return { 

@@ -63,7 +63,12 @@ export function useTutorChat(gameState, selectedCell) {
       setError(null);
       return true;
     } else {
-      setError(result.error || 'Failed to start new conversation');
+      // Don't show error message when payment is required
+      if (!result.requiresPayment && result.error) {
+        setError(result.error);
+      } else {
+        setError(null);
+      }
       return false;
     }
   }, [startNewConversationTracking]);

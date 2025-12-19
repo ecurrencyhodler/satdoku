@@ -80,6 +80,13 @@ export default function TutorChat({ gameState, selectedCell }) {
 
   const { navigate, isNavigating } = useCheckout();
 
+  // Compute whether payment button should be shown
+  // Show payment button if:
+  // 1. Payment is required (normal case), OR
+  // 2. Conversation is closed and next conversation will require payment
+  const shouldShowPaymentButton = requiresPayment || 
+    (isConversationClosed && conversationCount > 0 && conversationCount > paidConversationsCount);
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -121,7 +128,7 @@ export default function TutorChat({ gameState, selectedCell }) {
     e.preventDefault();
     
     // If payment is required, trigger payment instead of sending message
-    if (requiresPayment) {
+    if (shouldShowPaymentButton) {
       handlePayment();
       return;
     }
@@ -320,26 +327,26 @@ export default function TutorChat({ gameState, selectedCell }) {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  requiresPayment 
+                  shouldShowPaymentButton 
                     ? "Pay 100 sats to chat again 👉" 
                     : isConversationClosed 
                     ? "Conversation closed" 
                     : "Ask Howie a question..."
                 }
-                disabled={requiresPayment || isLoading || isConversationClosed || !gameState}
+                disabled={shouldShowPaymentButton || isLoading || isConversationClosed || !gameState}
                 className="tutor-chat-input"
                 rows={1}
               />
               <button
                 type="submit"
                 disabled={
-                  requiresPayment 
+                  shouldShowPaymentButton 
                     ? isNavigating 
                     : isLoading || isConversationClosed || !gameState
                 }
-                className={`tutor-chat-send-btn ${requiresPayment ? 'tutor-chat-send-btn-payment' : ''}`}
+                className={`tutor-chat-send-btn ${shouldShowPaymentButton ? 'tutor-chat-send-btn-payment' : ''}`}
               >
-                {requiresPayment 
+                {shouldShowPaymentButton 
                   ? (
                     isNavigating ? (
                       <span className="tutor-chat-spinner-container">
