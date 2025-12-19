@@ -12,38 +12,12 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
   const [requiresPayment, setRequiresPayment] = useState(false);
   const [paidConversationsCount, setPaidConversationsCount] = useState(0);
   const [isConversationClosed, setIsConversationClosed] = useState(false);
-  
+
   const conversationLengthRef = useRef(0);
   const lastConversationStartIndexRef = useRef(0);
   const userMessageCountRef = useRef(0);
   const conversationStartedRef = useRef(false);
-
-  // Update conversation state when chat history changes
-  useEffect(() => {
-    if (chatHistory && chatHistory.length > 0) {
-      // Calculate current conversation length (assistant messages since last conversation start)
-      const currentConversationMessages = chatHistory.slice(lastConversationStartIndexRef.current);
-      const assistantMessagesInCurrentConversation = currentConversationMessages.filter(
-        msg => msg.role === 'assistant'
-      ).length;
-      const userMessagesInCurrentConversation = currentConversationMessages.filter(
-        msg => msg.role === 'user'
-      ).length;
-      
-      conversationLengthRef.current = assistantMessagesInCurrentConversation;
-      userMessageCountRef.current = userMessagesInCurrentConversation;
-
-      // Check if current conversation should be closed (reached limit)
-      if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH) {
-        setIsConversationClosed(true);
-      }
-
-      // If we have messages, mark conversation as started
-      if (userMessagesInCurrentConversation > 0) {
-        conversationStartedRef.current = true;
-      }
-    }
-  }, [chatHistory]);
+  const hasIncrementedForCurrentConversationRef = useRef(false);
 
   /**
    * Increment conversation count when conversation completes
@@ -60,7 +34,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
           setConversationCount(data.conversationCount);
           setPaidConversationsCount(data.paidConversationsCount || 0);
           // Check if payment is now required for next conversation
-          const canStartWithoutPayment = data.conversationCount === 0 || 
+          const canStartWithoutPayment = data.conversationCount === 0 ||
             (data.conversationCount <= (data.paidConversationsCount || 0));
           setRequiresPayment(!canStartWithoutPayment);
         }
@@ -69,6 +43,56 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       console.error('[useConversationTracking] Error incrementing conversation count:', error);
     }
   }, []);
+
+  // Update conversation state when chat history changes
+  useEffect(() => {
+    if (chatHistory && chatHistory.length > 0) {
+      // Calculate current conversation length (assistant messages since last conversation start)
+      const currentConversationMessages = chatHistory.slice(lastConversationStartIndexRef.current);
+      const assistantMessagesInCurrentConversation = currentConversationMessages.filter(
+        msg => msg.role === 'assistant'
+      ).length;
+      const userMessagesInCurrentConversation = currentConversationMessages.filter(
+        msg => msg.role === 'user'
+      ).length;
+
+      conversationLengthRef.current = assistantMessagesInCurrentConversation;
+      userMessageCountRef.current = userMessagesInCurrentConversation;
+
+      // Check if current conversation should be closed (reached limit)
+      if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH) {
+        setIsConversationClosed(true);
+        
+        // If conversation reached limit and had user messages, increment count immediately
+        // This ensures the payment button appears right away
+        if (userMessagesInCurrentConversation > 0 && !hasIncrementedForCurrentConversationRef.current) {
+          hasIncrementedForCurrentConversationRef.current = true;
+          
+          // Optimistically update the conversation count and payment status
+          // This ensures the payment button shows immediately
+          // Use functional updates to ensure we use current state values
+          setConversationCount(prevCount => {
+            const newCount = prevCount + 1;
+            // Update requiresPayment optimistically based on current state
+            // Payment is required if newCount > 0 and newCount > paidConversationsCount
+            // We read paidConversationsCount from closure (current value when effect runs)
+            const currentPaid = paidConversationsCount;
+            const canStartWithoutPayment = newCount === 0 || (newCount <= currentPaid);
+            setRequiresPayment(!canStartWithoutPayment);
+            return newCount;
+          });
+          
+          // Then update from server to get accurate values (will correct requiresPayment if needed)
+          incrementConversationCount();
+        }
+      }
+
+      // If we have messages, mark conversation as started
+      if (userMessagesInCurrentConversation > 0) {
+        conversationStartedRef.current = true;
+      }
+    }
+  }, [chatHistory, incrementConversationCount, paidConversationsCount]);
 
   /**
    * Start a new conversation
@@ -97,6 +121,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         conversationLengthRef.current = 0;
         userMessageCountRef.current = 0;
         conversationStartedRef.current = true;
+        hasIncrementedForCurrentConversationRef.current = false;
         // Mark where this conversation starts in history
         lastConversationStartIndexRef.current = conversationStartIndex;
         // Reload history to get updated conversation count
@@ -109,22 +134,22 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         const shouldRequirePayment = data.requiresPayment !== undefined ? data.requiresPayment : (currentCount > 0);
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
-        return { 
-          success: false, 
+        return {
+          success: false,
           requiresPayment: shouldRequirePayment,
           error: null // Don't show error message when payment is required
         };
       } else {
-        return { 
-          success: false, 
+        return {
+          success: false,
           requiresPayment: false,
           error: data.message || 'Failed to start new conversation'
         };
       }
     } catch (error) {
       console.error('[useConversationTracking] Error starting new conversation:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         requiresPayment: false,
         error: 'Failed to start new conversation'
       };
@@ -137,12 +162,15 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
    */
   const endConversation = useCallback(async () => {
     // If conversation was started and had user messages, increment count
-    if (conversationStartedRef.current && userMessageCountRef.current > 0) {
+    // Only if we haven't already incremented (might have been incremented when conversation closed)
+    if (conversationStartedRef.current && userMessageCountRef.current > 0 && !hasIncrementedForCurrentConversationRef.current) {
+      hasIncrementedForCurrentConversationRef.current = true;
       await incrementConversationCount();
-      // Reset for next conversation
-      conversationStartedRef.current = false;
-      userMessageCountRef.current = 0;
     }
+    // Reset for next conversation
+    conversationStartedRef.current = false;
+    userMessageCountRef.current = 0;
+    hasIncrementedForCurrentConversationRef.current = false;
   }, [incrementConversationCount]);
 
   /**
@@ -154,6 +182,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     lastConversationStartIndexRef.current = 0;
     userMessageCountRef.current = 0;
     conversationStartedRef.current = false;
+    hasIncrementedForCurrentConversationRef.current = false;
     setConversationCount(0);
     setRequiresPayment(false);
     setPaidConversationsCount(0);
@@ -176,10 +205,15 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
    */
   const incrementUserMessageCount = useCallback(() => {
     userMessageCountRef.current += 1;
-    
+
     // Check if conversation is complete (5 user messages)
     if (userMessageCountRef.current >= 5) {
-      incrementConversationCount();
+      // Only increment if we haven't already incremented for this conversation
+      // (the useEffect might have already incremented it when the 5th assistant message arrived)
+      if (!hasIncrementedForCurrentConversationRef.current) {
+        hasIncrementedForCurrentConversationRef.current = true;
+        incrementConversationCount();
+      }
       setIsConversationClosed(true);
       // Reset for next conversation
       conversationStartedRef.current = false;
@@ -206,6 +240,4 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     incrementUserMessageCount
   };
 }
-
-
 

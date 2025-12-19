@@ -32,7 +32,7 @@ export function PurchaseSuccessUI({ status, error, paymentType = 'life_purchase'
           </p>
           <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
             If your payment was successful, please contact support with your checkout ID.
-            {paymentType === 'tutor_chat' 
+            {paymentType === 'tutor_chat'
               ? ' Your payment will be verified and you\'ll be able to chat with Howie again.'
               : ' Your payment will be verified and the life will be added to your account.'}
           </p>
@@ -90,7 +90,7 @@ export function PurchaseSuccessUI({ status, error, paymentType = 'life_purchase'
         <p style={{ fontSize: '18px', marginBottom: '10px' }}>
           {status === 'verifying' && 'Verifying payment…'}
           {status === 'granting' && (
-            paymentType === 'tutor_chat' 
+            paymentType === 'tutor_chat'
               ? 'Payment confirmed! Unlocking Howie chat...'
               : 'Payment confirmed! Adding life to your game...'
           )}

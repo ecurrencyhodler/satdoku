@@ -14,7 +14,7 @@ export function useResizablePanel(initialSize, position, constrainPosition, setP
   const [size, setSize] = useState(initialSize);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeCorner, setResizeCorner] = useState(null); // 'bottom-left' or 'bottom-right'
-  
+
   const sizeRef = useRef(size);
   const positionRef = useRef(position);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, left: 0, top: 0 });
@@ -96,6 +96,4 @@ export function useResizablePanel(initialSize, position, constrainPosition, setP
     handleResizeStart
   };
 }
-
-
 

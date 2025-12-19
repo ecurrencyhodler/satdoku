@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export function useDraggablePanel(initialPosition, size, constrainPosition) {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const positionRef = useRef(position);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
@@ -81,6 +81,4 @@ export function useDraggablePanel(initialPosition, size, constrainPosition) {
     handleMouseDown
   };
 }
-
-
 

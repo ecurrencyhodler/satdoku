@@ -14,6 +14,7 @@ export default function TutorChat({ gameState, selectedCell }) {
 
   const chatPanelRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const headerRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -84,15 +85,34 @@ export default function TutorChat({ gameState, selectedCell }) {
   // Show payment button if:
   // 1. Payment is required (normal case), OR
   // 2. Conversation is closed and next conversation will require payment
-  const shouldShowPaymentButton = requiresPayment || 
+  const shouldShowPaymentButton = requiresPayment ||
     (isConversationClosed && conversationCount > 0 && conversationCount > paidConversationsCount);
 
-  // Scroll to bottom when new messages arrive
+  // Track previous isOpen state to detect when chat opens
+  const prevIsOpenRef = useRef(false);
+
+  // Scroll to bottom when chat opens or new messages arrive
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isOpen) {
+      const isOpening = !prevIsOpenRef.current;
+      prevIsOpenRef.current = isOpen;
+      
+      if (isOpening) {
+        // When opening, set scroll position immediately using requestAnimationFrame
+        // This happens after render but before paint, preventing visible jump
+        requestAnimationFrame(() => {
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          }
+        });
+      } else if (messagesEndRef.current) {
+        // For new messages, use smooth scroll
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      prevIsOpenRef.current = isOpen;
     }
-  }, [chatHistory]);
+  }, [isOpen, chatHistory?.length ?? 0]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -126,13 +146,13 @@ export default function TutorChat({ gameState, selectedCell }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // If payment is required, trigger payment instead of sending message
     if (shouldShowPaymentButton) {
       handlePayment();
       return;
     }
-    
+
     if (!inputValue.trim() || isLoading || isConversationClosed) return;
 
     await sendMessage(inputValue.trim());
@@ -161,15 +181,16 @@ export default function TutorChat({ gameState, selectedCell }) {
       return;
     }
 
-    // If modal is already open, do nothing
+    // If modal is already open, close it
     if (isOpen) {
+      handleClose();
       return;
     }
 
     // Always try to start a conversation first
     // The API will tell us if payment is actually required
     const started = await startNewConversation();
-    
+
     if (!started) {
       // Failed to start - check if it's because payment is required
       // If so, open chat panel to show payment button
@@ -215,10 +236,10 @@ export default function TutorChat({ gameState, selectedCell }) {
   // Auto-open chat if redirected from payment success
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const tutorChatOpen = urlParams.get('tutor_chat_open');
-    
+
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
       // Start conversation and open chat
       startNewConversation().then((started) => {
@@ -283,7 +304,7 @@ export default function TutorChat({ gameState, selectedCell }) {
           </div>
 
           {/* Messages Area */}
-          <div className="tutor-chat-messages">
+          <div ref={messagesContainerRef} className="tutor-chat-messages">
             {chatHistory.length === 0 && (
               <TutorChatMessage
                 role="assistant"
@@ -327,10 +348,10 @@ export default function TutorChat({ gameState, selectedCell }) {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  shouldShowPaymentButton 
-                    ? "Pay 100 sats to chat again 👉" 
-                    : isConversationClosed 
-                    ? "Conversation closed" 
+                  shouldShowPaymentButton
+                    ? "Pay 100 sats to chat again 👉"
+                    : isConversationClosed
+                    ? "Conversation closed"
                     : "Ask Howie a question..."
                 }
                 disabled={shouldShowPaymentButton || isLoading || isConversationClosed || !gameState}
@@ -340,13 +361,13 @@ export default function TutorChat({ gameState, selectedCell }) {
               <button
                 type="submit"
                 disabled={
-                  shouldShowPaymentButton 
-                    ? isNavigating 
+                  shouldShowPaymentButton
+                    ? isNavigating
                     : isLoading || isConversationClosed || !gameState
                 }
                 className={`tutor-chat-send-btn ${shouldShowPaymentButton ? 'tutor-chat-send-btn-payment' : ''}`}
               >
-                {shouldShowPaymentButton 
+                {shouldShowPaymentButton
                   ? (
                     isNavigating ? (
                       <span className="tutor-chat-spinner-container">

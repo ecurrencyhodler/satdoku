@@ -39,7 +39,7 @@ export async function POST(request) {
       const gameVersion = gameState?.version || 0;
       const { getPaidConversationsCount } = await import('../../../../lib/redis/tutorAnalytics.js');
       const paidCount = await getPaidConversationsCount(sessionId, gameVersion);
-      
+
       return NextResponse.json({
         success: true,
         alreadyProcessed: true,
@@ -85,6 +85,4 @@ export async function POST(request) {
     );
   }
 }
-
-
 
