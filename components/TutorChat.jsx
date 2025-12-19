@@ -365,6 +365,8 @@ export default function TutorChat({ gameState, selectedCell }) {
                     ? "Pay 100 sats to chat again 👉"
                     : isConversationClosed
                     ? "Conversation closed"
+                    : chatHistory.length > 0
+                    ? ""
                     : "Ask Howie a question..."
                 }
                 disabled={shouldShowPaymentButton || isLoading || isConversationClosed || !gameState}

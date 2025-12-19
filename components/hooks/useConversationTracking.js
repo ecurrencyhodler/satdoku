@@ -101,10 +101,14 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         conversationStartedRef.current = true;
       }
     } else if (chatHistory && chatHistory.length === 0) {
-      // No chat history - if payment is required OR conversation was completed (count > 0), conversation should be closed
+      // No chat history - only close if payment is required (conversationCount > paidConversationsCount)
       // This handles the case where page is refreshed after a conversation was completed
-      if ((requiresPayment && conversationCount > 0) || conversationCount > 0) {
+      // But don't close if payment was made (paidConversationsCount >= conversationCount)
+      if (conversationCount > 0 && conversationCount > paidConversationsCount) {
         setIsConversationClosed(true);
+      } else {
+        // Payment was made or no conversations yet - conversation should be open
+        setIsConversationClosed(false);
       }
     }
   }, [chatHistory, incrementConversationCount, paidConversationsCount, requiresPayment, conversationCount]);
@@ -234,11 +238,13 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     console.log('[DEBUG] updatePaymentStatus state updated', { location: 'useConversationTracking.js:217', count, paidCount, shouldRequirePayment, apiRequiresPayment, hypothesisId: 'D' });
     // #endregion
     
-    // If payment is required, ensure conversation is closed
-    // OR if conversation count > 0 and chat history is empty, conversation was completed and should be locked
-    // This handles the case where page is refreshed after a conversation was completed
-    if ((shouldRequirePayment && count > 0) || (count > 0 && (!chatHistory || chatHistory.length === 0))) {
+    // Only close conversation if payment is actually required (count > paidCount)
+    // Don't close if payment was made (paidCount >= count)
+    if (shouldRequirePayment && count > 0 && count > paidCount) {
       setIsConversationClosed(true);
+    } else if (count > 0 && count <= paidCount) {
+      // Payment was made - conversation should be open
+      setIsConversationClosed(false);
     }
   }, [chatHistory]);
 
