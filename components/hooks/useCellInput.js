@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { StateManager } from '../../src/js/system/localState.js';
+import { transformServerStateToClient } from '../../src/js/system/stateTransformation.js';
 import { ScoreAnimationHandler } from '../../src/js/ui/scoreAnimationHandler.js';
 import { UIAnimations } from '../../src/js/ui/uiAnimations.js';
 
@@ -51,22 +52,7 @@ export function useCellInput(
 
       if (result.success) {
         // Transform server state to client format
-        const transformedState = {
-          board: result.state.currentBoard,
-          puzzle: result.state.currentPuzzle,
-          solution: result.state.currentSolution,
-          difficulty: result.state.difficulty,
-          mistakes: result.state.mistakes,
-          gameInProgress: result.state.gameInProgress,
-          score: result.state.score,
-          moves: result.state.moves,
-          lives: result.state.lives,
-          livesPurchased: result.state.livesPurchased || 0,
-          completedRows: result.state.completedRows || [],
-          completedColumns: result.state.completedColumns || [],
-          completedBoxes: result.state.completedBoxes || [],
-          version: result.state.version
-        };
+        const transformedState = transformServerStateToClient(result.state);
         setGameState(transformedState);
 
         // Show score animations or error animations

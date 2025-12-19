@@ -1,19 +1,16 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useCheckout } from '@moneydevkit/nextjs';
 import { useTutorChat } from './hooks/useTutorChat';
+import { useDraggablePanel } from './hooks/useDraggablePanel';
+import { useResizablePanel } from './hooks/useResizablePanel';
 import TutorChatMessage from './TutorChatMessage';
-
-const MAX_CONVERSATIONS_PER_GAME = 5;
+import { HOWIE_CHAT_PAYMENT } from '../src/js/system/constants.js';
 
 export default function TutorChat({ gameState, selectedCell }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [size, setSize] = useState({ width: 400, height: 500 });
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeCorner, setResizeCorner] = useState(null); // 'bottom-left' or 'bottom-right'
 
   const chatPanelRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -47,36 +44,24 @@ export default function TutorChat({ gameState, selectedCell }) {
   // Track if chat was just opened to set initial position
   const justOpenedRef = useRef(false);
 
-  // Keep panel within viewport when window is resized
-  const positionRef = useRef(position);
-  const sizeRef = useRef(size);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, left: 0 });
+  // Initial size and position
+  const initialSize = { width: 400, height: 500 };
+  const initialPosition = { x: 0, y: 0 };
 
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
+  // Use draggable panel hook (must be first to get setPosition)
+  const { position, setPosition, isDragging, handleMouseDown: handleDragMouseDown } = useDraggablePanel(
+    initialPosition,
+    initialSize,
+    constrainPosition
+  );
 
-  useEffect(() => {
-    sizeRef.current = size;
-  }, [size]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (isOpen && typeof window !== 'undefined') {
-        const constrained = constrainPosition(
-          positionRef.current.x,
-          positionRef.current.y,
-          sizeRef.current.width,
-          sizeRef.current.height
-        );
-        setPosition(constrained);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen]);
+  // Use resizable panel hook
+  const { size, setSize, isResizing, resizeCorner, handleResizeStart } = useResizablePanel(
+    initialSize,
+    position,
+    constrainPosition,
+    setPosition
+  );
 
   const {
     chatHistory,
@@ -84,6 +69,8 @@ export default function TutorChat({ gameState, selectedCell }) {
     error,
     isConversationClosed,
     conversationCount,
+    requiresPayment,
+    paidConversationsCount,
     canStartNewConversation,
     sendMessage,
     startNewConversation,
@@ -91,103 +78,14 @@ export default function TutorChat({ gameState, selectedCell }) {
     setError
   } = useTutorChat(gameState, selectedCell);
 
+  const { navigate, isNavigating } = useCheckout();
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatHistory]);
-
-  // Handle drag
-  const handleMouseDown = (e) => {
-    if (headerRef.current && headerRef.current.contains(e.target)) {
-      setIsDragging(true);
-      dragStartRef.current = {
-        x: e.clientX - positionRef.current.x,
-        y: e.clientY - positionRef.current.y
-      };
-    }
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      const handleMouseMove = (e) => {
-        const newX = e.clientX - dragStartRef.current.x;
-        const newY = e.clientY - dragStartRef.current.y;
-        const constrained = constrainPosition(newX, newY, sizeRef.current.width, sizeRef.current.height);
-        setPosition(constrained);
-      };
-
-      const handleMouseUp = () => {
-        setIsDragging(false);
-      };
-
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging]);
-
-  // Handle resize
-  const handleResizeStart = (e, corner) => {
-    e.preventDefault();
-    setIsResizing(true);
-    setResizeCorner(corner);
-    resizeStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      width: sizeRef.current.width,
-      height: sizeRef.current.height,
-      left: positionRef.current.x,
-      top: positionRef.current.y
-    };
-  };
-
-  useEffect(() => {
-    if (isResizing) {
-      const handleMouseMove = (e) => {
-        const resizeStart = resizeStartRef.current;
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
-
-        if (resizeCorner === 'bottom-right') {
-          // Resize from bottom-right corner
-          const maxWidth = typeof window !== 'undefined' ? window.innerWidth - resizeStart.left : 800;
-          const maxHeight = typeof window !== 'undefined' ? window.innerHeight - resizeStart.y : 800;
-          const newWidth = Math.max(300, Math.min(800, Math.min(resizeStart.width + deltaX, maxWidth)));
-          const newHeight = Math.max(300, Math.min(800, Math.min(resizeStart.height + deltaY, maxHeight)));
-          setSize({ width: newWidth, height: newHeight });
-        } else if (resizeCorner === 'bottom-left') {
-          // Resize from bottom-left corner
-          const maxWidth = typeof window !== 'undefined' ? resizeStart.left + resizeStart.width : 800;
-          const maxHeight = typeof window !== 'undefined' ? window.innerHeight - resizeStart.top : 800;
-          const newWidth = Math.max(300, Math.min(800, Math.min(resizeStart.width - deltaX, maxWidth)));
-          const newHeight = Math.max(300, Math.min(800, Math.min(resizeStart.height + deltaY, maxHeight)));
-          const newLeft = resizeStart.left + (resizeStart.width - newWidth);
-          const constrained = constrainPosition(newLeft, resizeStart.top, newWidth, newHeight);
-          setSize({ width: newWidth, height: newHeight });
-          setPosition(constrained);
-        }
-      };
-
-      const handleMouseUp = () => {
-        setIsResizing(false);
-        setResizeCorner(null);
-      };
-
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isResizing, resizeCorner]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -199,6 +97,13 @@ export default function TutorChat({ gameState, selectedCell }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // If payment is required, trigger payment instead of sending message
+    if (requiresPayment) {
+      handlePayment();
+      return;
+    }
+    
     if (!inputValue.trim() || isLoading || isConversationClosed) return;
 
     await sendMessage(inputValue.trim());
@@ -232,18 +137,41 @@ export default function TutorChat({ gameState, selectedCell }) {
       return;
     }
 
-    // Start a new conversation when opening modal
+    // Always try to start a conversation first
+    // The API will tell us if payment is actually required
     const started = await startNewConversation();
+    
     if (!started) {
-      // Failed to start conversation (e.g., max reached)
+      // Failed to start - check if it's because payment is required
+      // If so, open chat panel to show payment button
+      if (requiresPayment) {
+        justOpenedRef.current = true;
+        const initialPos = getMiddleRightPosition(size.width, size.height);
+        setPosition(initialPos);
+        setIsOpen(true);
+      }
       return;
     }
 
-    // Reset position to middle-right when opening
+    // Successfully started conversation - open chat panel
     justOpenedRef.current = true;
     const initialPos = getMiddleRightPosition(size.width, size.height);
     setPosition(initialPos);
     setIsOpen(true);
+  };
+
+  const handlePayment = () => {
+    navigate({
+      title: 'Satdoku',
+      description: 'Unlock Howie chat conversation',
+      amount: HOWIE_CHAT_PAYMENT,
+      currency: 'SAT',
+      metadata: {
+        type: 'tutor_chat_payment',
+        gameVersion: gameState?.version,
+        successUrl: '/purchase-success?checkout-id={CHECKOUT_ID}&type=tutor_chat',
+      },
+    });
   };
 
   // Set position when chat first opens
@@ -255,20 +183,40 @@ export default function TutorChat({ gameState, selectedCell }) {
     }
   }, [isOpen, size.width, size.height]);
 
-  const isDisabled = !gameState || !canStartNewConversation;
+  // Auto-open chat if redirected from payment success
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const tutorChatOpen = urlParams.get('tutor_chat_open');
+    
+    if (tutorChatOpen === 'true' && !isOpen && gameState) {
+      // Start conversation and open chat
+      startNewConversation().then((started) => {
+        if (started) {
+          justOpenedRef.current = true;
+          const initialPos = getMiddleRightPosition(size.width, size.height);
+          setPosition(initialPos);
+          setIsOpen(true);
+        }
+      });
+      // Remove query param from URL
+      urlParams.delete('tutor_chat_open');
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [gameState, isOpen, startNewConversation]);
 
   return (
     <>
       {/* Howie Logo/Avatar - Fixed at bottom center */}
       <div
-        className={`howie-logo ${isDisabled ? 'howie-logo-disabled' : ''}`}
+        className="howie-logo"
         onClick={handleHowieClick}
         title={
           !gameState
             ? 'Start a game to get help from Howie'
-            : !canStartNewConversation
-            ? `You've used all ${conversationCount} conversations. Start a new game to chat again!`
-            : `Click to chat with Howie (${conversationCount}/${MAX_CONVERSATIONS_PER_GAME} conversations used)`
+            : `Click to chat with Howie${conversationCount > 0 ? ` (${conversationCount} conversation${conversationCount !== 1 ? 's' : ''} used)` : ''}`
         }
       >
         <img src="/howie.svg" alt="Howie" className="howie-avatar" />
@@ -290,7 +238,7 @@ export default function TutorChat({ gameState, selectedCell }) {
           <div
             ref={headerRef}
             className="tutor-chat-header"
-            onMouseDown={handleMouseDown}
+            onMouseDown={(e) => handleDragMouseDown(e, headerRef)}
           >
             <div className="tutor-chat-header-title">
               <img src="/howie.svg" alt="Howie" className="howie-avatar-small" />
@@ -349,17 +297,30 @@ export default function TutorChat({ gameState, selectedCell }) {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isConversationClosed ? "Conversation closed" : "Ask Howie a question..."}
-                disabled={isLoading || isConversationClosed || !gameState}
+                placeholder={
+                  requiresPayment 
+                    ? "Pay 100 sats to chat again 👉" 
+                    : isConversationClosed 
+                    ? "Conversation closed" 
+                    : "Ask Howie a question..."
+                }
+                disabled={requiresPayment || isLoading || isConversationClosed || !gameState}
                 className="tutor-chat-input"
                 rows={1}
               />
               <button
                 type="submit"
-                disabled={!inputValue.trim() || isLoading || isConversationClosed || !gameState}
-                className="tutor-chat-send-btn"
+                disabled={
+                  requiresPayment 
+                    ? isNavigating 
+                    : !inputValue.trim() || isLoading || isConversationClosed || !gameState
+                }
+                className={`tutor-chat-send-btn ${requiresPayment ? 'tutor-chat-send-btn-payment' : ''}`}
               >
-                Send
+                {requiresPayment 
+                  ? (isNavigating ? 'Processing...' : `${HOWIE_CHAT_PAYMENT} sats`)
+                  : 'Send'
+                }
               </button>
             </form>
           </div>

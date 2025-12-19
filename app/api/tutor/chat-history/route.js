@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId, getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
 import { getRedisClient } from '../../../../lib/redis/client.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
-import { trackMessage, getCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
+import { trackMessage, getCurrentConversationId, getPaidConversationsCount, canStartConversationWithoutPayment } from '../../../../lib/redis/tutorAnalytics.js';
 
 const CHAT_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days (matches game state)
 
@@ -52,10 +52,17 @@ export async function GET(request) {
 
     const conversationCount = countValue ? parseInt(countValue, 10) : 0;
 
+    // Get payment status
+    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
+    const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameVersion);
+    const requiresPayment = !canStartWithoutPayment && conversationCount > 0;
+
     return NextResponse.json({
       success: true,
       history: history,
-      conversationCount: conversationCount
+      conversationCount: conversationCount,
+      paidConversationsCount: paidConversationsCount,
+      requiresPayment: requiresPayment
     });
 
   } catch (error) {
@@ -198,6 +205,7 @@ export async function DELETE(request) {
     );
   }
 }
+
 
 
 

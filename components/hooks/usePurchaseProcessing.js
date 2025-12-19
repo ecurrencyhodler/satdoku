@@ -18,12 +18,13 @@ export function usePurchaseProcessing() {
   const [error, setError] = useState(null);
   const hasProcessed = useRef(false);
 
-  // Grant life directly when payment is confirmed
+  // Process payment when confirmed - route by payment type
   useEffect(() => {
     if (!isCheckoutPaidLoading && isCheckoutPaid && !hasProcessed.current) {
       const checkoutId = searchParams?.get('checkout-id');
+      const paymentType = searchParams?.get('type') || 'life_purchase';
 
-      console.log('[usePurchaseProcessing] Payment confirmed, granting life', { checkoutId, isCheckoutPaid });
+      console.log('[usePurchaseProcessing] Payment confirmed', { checkoutId, isCheckoutPaid, paymentType });
 
       if (!checkoutId) {
         console.error('[usePurchaseProcessing] No checkout ID found in URL');
@@ -32,16 +33,101 @@ export function usePurchaseProcessing() {
         return;
       }
 
-      // Check if already granted (client-side cache)
-      if (isLifeGranted(checkoutId)) {
-        console.log('[usePurchaseProcessing] Life already granted (cached)');
-        setStatus('success');
-        hasProcessed.current = true;
-        setTimeout(() => {
-          router.push('/?payment_success=true');
-        }, 500);
-        return;
+      // Route to appropriate payment processor
+      if (paymentType === 'tutor_chat') {
+        processTutorChatPayment(checkoutId);
+      } else {
+        processLifePurchase(checkoutId);
       }
+    }
+  }, [isCheckoutPaid, isCheckoutPaidLoading, router, searchParams]);
+
+  // Process tutor chat payment
+  const processTutorChatPayment = (checkoutId) => {
+    setStatus('granting');
+
+    // Check if already processed on server (idempotency check)
+    fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.processed) {
+          // Already processed - redirect to game with chat open
+          console.log('[usePurchaseProcessing] Tutor chat payment already processed');
+          setStatus('success');
+          hasProcessed.current = true;
+          setTimeout(() => {
+            router.push('/?tutor_chat_open=true');
+          }, 500);
+          return;
+        }
+
+        // Process tutor chat payment
+        fetch('/api/tutor/payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkoutId })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              console.log('[usePurchaseProcessing] Tutor chat payment processed successfully');
+              setStatus('success');
+              hasProcessed.current = true;
+              setTimeout(() => {
+                router.push('/?tutor_chat_open=true');
+              }, 500);
+            } else {
+              console.error('[usePurchaseProcessing] Failed to process tutor chat payment:', data.error);
+              setError(data.error || 'Failed to unlock conversation');
+              setStatus('error');
+            }
+          })
+          .catch(err => {
+            console.error('[usePurchaseProcessing] Error processing tutor chat payment:', err);
+            setError('Network error while processing payment');
+            setStatus('error');
+          });
+      })
+      .catch(err => {
+        console.error('[usePurchaseProcessing] Error checking checkout status:', err);
+        // Continue with processing anyway
+        fetch('/api/tutor/payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkoutId })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setStatus('success');
+              hasProcessed.current = true;
+              setTimeout(() => {
+                router.push('/?tutor_chat_open=true');
+              }, 500);
+            } else {
+              setError(data.error || 'Failed to unlock conversation');
+              setStatus('error');
+            }
+          })
+          .catch(err => {
+            setError('Network error while processing payment');
+            setStatus('error');
+          });
+      });
+  };
+
+  // Process life purchase (existing logic)
+  const processLifePurchase = (checkoutId) => {
+    // Check if already granted (client-side cache)
+    if (isLifeGranted(checkoutId)) {
+      console.log('[usePurchaseProcessing] Life already granted (cached)');
+      setStatus('success');
+      hasProcessed.current = true;
+      setTimeout(() => {
+        router.push('/?payment_success=true');
+      }, 500);
+      return;
+    }
 
       // Grant life function - defined before use
       const grantLife = (checkoutId) => {
@@ -141,32 +227,31 @@ export function usePurchaseProcessing() {
           });
       };
 
-      // Check if already processed on server (idempotency check)
-      fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.processed) {
-            // Already processed - mark as success and redirect
-            console.log('[usePurchaseProcessing] Checkout already processed');
-            markLifeGranted(checkoutId);
-            setStatus('success');
-            hasProcessed.current = true;
-            setTimeout(() => {
-              router.push('/?payment_success=true');
-            }, 500);
-            return;
-          }
+    // Check if already processed on server (idempotency check)
+    fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.processed) {
+          // Already processed - mark as success and redirect
+          console.log('[usePurchaseProcessing] Checkout already processed');
+          markLifeGranted(checkoutId);
+          setStatus('success');
+          hasProcessed.current = true;
+          setTimeout(() => {
+            router.push('/?payment_success=true');
+          }, 500);
+          return;
+        }
 
-          // Not yet processed - grant life
-          grantLife(checkoutId);
-        })
-        .catch(err => {
-          console.error('[usePurchaseProcessing] Error checking checkout status:', err);
-          // Continue with granting life anyway (status check is just for idempotency)
-          grantLife(checkoutId);
-        });
-    }
-  }, [isCheckoutPaid, isCheckoutPaidLoading, router, searchParams]);
+        // Not yet processed - grant life
+        grantLife(checkoutId);
+      })
+      .catch(err => {
+        console.error('[usePurchaseProcessing] Error checking checkout status:', err);
+        // Continue with granting life anyway (status check is just for idempotency)
+        grantLife(checkoutId);
+      });
+  };
 
   return {
     status,
@@ -175,6 +260,7 @@ export function usePurchaseProcessing() {
     isCheckoutPaid,
   };
 }
+
 
 
 

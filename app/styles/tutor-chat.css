@@ -242,9 +242,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  height: fit-content;
+  height: 42px;
   align-self: flex-end;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tutor-chat-send-btn:hover:not(:disabled) {
@@ -254,6 +257,21 @@
 .tutor-chat-send-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+.tutor-chat-send-btn-payment {
+  background: #4299e1 !important;
+  cursor: pointer;
+}
+
+.tutor-chat-send-btn-payment:hover:not(:disabled) {
+  background: #3182ce !important;
+}
+
+.tutor-chat-send-btn-payment:disabled {
+  background: #3182ce !important;
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .tutor-chat-help-btn {

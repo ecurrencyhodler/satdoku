@@ -16,4 +16,5 @@ export const INITIAL_LIVES = 2;
 export const BOARD_SIZE = 9;
 export const BOX_SIZE = 3;
 export const LIFE_PURCHASE_PRICE_SATS = 1200;
+export const HOWIE_CHAT_PAYMENT = 100;
 

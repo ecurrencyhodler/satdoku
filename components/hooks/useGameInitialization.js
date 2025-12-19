@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { StateManager } from '../../src/js/system/localState.js';
+import { transformServerStateToClient } from '../../src/js/system/stateTransformation.js';
 import { usePaymentSuccessHandler } from './usePaymentSuccessHandler.js';
 
 /**
@@ -29,35 +30,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
         }
 
         // Transform server state to client format
-        // Validate board structure before setting state
-        if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
-          throw new Error('Invalid board structure received from server');
-        }
-
-        // Ensure board is a proper 2D array (not sparse)
-        const validatedBoard = result.state.currentBoard.map((row) => {
-          if (!Array.isArray(row)) {
-            return Array(9).fill(0); // Return empty row as fallback
-          }
-          return row;
-        });
-
-        const transformedState = {
-          board: validatedBoard,
-          puzzle: result.state.currentPuzzle,
-          solution: result.state.currentSolution,
-          difficulty: result.state.difficulty,
-          mistakes: result.state.mistakes,
-          gameInProgress: result.state.gameInProgress,
-          score: result.state.score,
-          moves: result.state.moves,
-          lives: result.state.lives,
-          livesPurchased: result.state.livesPurchased || 0,
-          completedRows: result.state.completedRows || [],
-          completedColumns: result.state.completedColumns || [],
-          completedBoxes: result.state.completedBoxes || [],
-          version: result.state.version
-        };
+        const transformedState = transformServerStateToClient(result.state);
         setGameState(transformedState);
         setSelectedCell(null);
       } else {
@@ -80,36 +53,8 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       });
 
       if (result.success) {
-        // Validate board structure before setting state
-        if (!result.state.currentBoard || !Array.isArray(result.state.currentBoard)) {
-          throw new Error('Invalid board structure received from server');
-        }
-
-        // Ensure board is a proper 2D array (not sparse)
-        const validatedBoard = result.state.currentBoard.map((row) => {
-          if (!Array.isArray(row)) {
-            return Array(9).fill(0); // Return empty row as fallback
-          }
-          return row;
-        });
-
         // Transform server state to client format
-        const transformedState = {
-          board: validatedBoard,
-          puzzle: result.state.currentPuzzle,
-          solution: result.state.currentSolution,
-          difficulty: result.state.difficulty,
-          mistakes: result.state.mistakes,
-          gameInProgress: result.state.gameInProgress,
-          score: result.state.score,
-          moves: result.state.moves,
-          lives: result.state.lives,
-          livesPurchased: result.state.livesPurchased || 0,
-          completedRows: result.state.completedRows || [],
-          completedColumns: result.state.completedColumns || [],
-          completedBoxes: result.state.completedBoxes || [],
-          version: result.state.version
-        };
+        const transformedState = transformServerStateToClient(result.state);
         setGameState(transformedState);
         setSelectedCell(null);
       } else {
@@ -128,40 +73,17 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       const state = await StateManager.loadGameState();
 
       if (state) {
-        // Validate board structure before setting state
-        if (!state.currentBoard || !Array.isArray(state.currentBoard)) {
+        try {
+          // Transform server state to client format
+          const transformedState = transformServerStateToClient(state);
+          setGameState(transformedState);
+        } catch (error) {
           // Fallback to starting a new game if state is corrupted
+          console.warn('[useGameInitialization] Invalid state structure, starting new game:', error);
           await startNewGame();
           isLoadingStateRef.current = false;
           return false;
         }
-
-        // Ensure board is a proper 2D array (not sparse)
-        const validatedBoard = state.currentBoard.map((row) => {
-          if (!Array.isArray(row)) {
-            return Array(9).fill(0); // Return empty row as fallback
-          }
-          return row;
-        });
-
-        // Transform server state to client format
-        const transformedState = {
-          board: validatedBoard,
-          puzzle: state.currentPuzzle,
-          solution: state.currentSolution,
-          difficulty: state.difficulty,
-          mistakes: state.mistakes,
-          gameInProgress: state.gameInProgress,
-          score: state.score,
-          moves: state.moves,
-          lives: state.lives,
-          livesPurchased: state.livesPurchased || 0,
-          completedRows: state.completedRows || [],
-          completedColumns: state.completedColumns || [],
-          completedBoxes: state.completedBoxes || [],
-          version: state.version
-        };
-        setGameState(transformedState);
 
         // Check if lives are 0 and trigger purchase modal if needed
         if (state.lives === 0 && state.gameInProgress) {
