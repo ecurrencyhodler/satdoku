@@ -17,7 +17,8 @@ export function useCellInput(
   onPurchaseLife,
   setCompletionId,
   setQualifiedForLeaderboard,
-  isLoadingState
+  isLoadingState,
+  noteMode = false
 ) {
   const handleCellInput = useCallback(async (value) => {
     // Prevent input during state reload
@@ -36,6 +37,36 @@ export function useCellInput(
     const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
     const isIncorrect = !isPrefilled && currentValue !== 0 && gameState.solution && gameState.solution[row]?.[col] !== 0 && currentValue !== gameState.solution[row]?.[col];
     const isLocked = isPrefilled || (currentValue !== 0 && !isIncorrect);
+
+    // Handle note mode
+    if (noteMode && value !== 0) {
+      // In note mode, toggle note instead of placing number
+      // Check if cell is prefilled - cannot add notes to prefilled cells
+      if (isPrefilled) {
+        return; // Cannot add notes to prefilled cells
+      }
+      
+      const action = { action: 'toggleNote', row, col, value };
+      try {
+        const result = await StateManager.sendGameAction(action, gameState?.version);
+        
+        if (result.success) {
+          const transformedState = transformServerStateToClient(result.state);
+          setGameState(transformedState);
+        } else if (result.conflict) {
+          console.warn('[useCellInput] Version conflict, reloading state');
+          const currentState = await StateManager.loadGameState();
+          if (currentState) {
+            setGameState(currentState);
+          }
+        } else {
+          console.error('[useCellInput] Toggle note failed:', result.error);
+        }
+      } catch (error) {
+        console.error('[useCellInput] Error toggling note:', error);
+      }
+      return; // Don't proceed with regular input handling
+    }
 
     // Prevent input on locked cells (prefilled or correctly filled)
     if (isLocked && value !== 0) {
@@ -132,7 +163,7 @@ export function useCellInput(
       console.error('[useCellInput] Error sending action:', error);
       // TODO: Show error message to user
     }
-  }, [selectedCell, gameState, setGameState, onWin, onGameOver, onPurchaseLife, setCompletionId, setQualifiedForLeaderboard, isLoadingState]);
+  }, [selectedCell, gameState, setGameState, onWin, onGameOver, onPurchaseLife, setCompletionId, setQualifiedForLeaderboard, isLoadingState, noteMode]);
 
   return { handleCellInput };
 }

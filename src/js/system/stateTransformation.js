@@ -40,6 +40,12 @@ export function transformServerStateToClient(serverState) {
   // Ensure board is a proper 2D array (not sparse)
   const validatedBoard = validateBoard(serverState.currentBoard);
 
+  // Initialize notes if it doesn't exist (for backward compatibility)
+  let notes = serverState.notes;
+  if (!notes || !Array.isArray(notes)) {
+    notes = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => []));
+  }
+
   // Transform server state to client format
   return {
     board: validatedBoard,
@@ -55,7 +61,8 @@ export function transformServerStateToClient(serverState) {
     completedRows: serverState.completedRows || [],
     completedColumns: serverState.completedColumns || [],
     completedBoxes: serverState.completedBoxes || [],
-    version: serverState.version
+    version: serverState.version,
+    notes: notes
   };
 }
 

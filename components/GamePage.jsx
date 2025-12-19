@@ -8,6 +8,8 @@ import { useModalState } from './hooks/useModalState';
 import { useGamePageHandlers } from './hooks/useGamePageHandlers';
 import { useMobileDetection } from './hooks/useMobileDetection';
 import { useMobileInput } from './hooks/useMobileInput';
+import { StateManager } from '../src/js/system/localState.js';
+import { transformServerStateToClient } from '../src/js/system/stateTransformation.js';
 import GameBoard from './GameBoard';
 import StatsBar from './StatsBar';
 import GameControls from './GameControls';
@@ -16,11 +18,13 @@ import GamePageHeader from './GamePageHeader';
 import GamePageLayout from './GamePageLayout';
 import TutorChat from './TutorChat';
 import NumberPad from './NumberPad';
+import NoteControls from './NoteControls';
 
 export default function GamePage() {
   const [gameState, setGameState] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [pendingDifficultyChange, setPendingDifficultyChange] = useState(null);
+  const [noteMode, setNoteMode] = useState(false);
 
   // Mobile detection
   const isMobile = useMobileDetection();
@@ -106,8 +110,41 @@ export default function GamePage() {
     handlePurchaseLife,
     setCompletionId,
     setQualifiedForLeaderboard,
-    isLoadingState
+    isLoadingState,
+    noteMode
   );
+
+  // Toggle note mode handler
+  const handleToggleNoteMode = useCallback(() => {
+    setNoteMode(prev => !prev);
+  }, []);
+
+  // Clear notes handler
+  const handleClearNotes = useCallback(async () => {
+    if (!gameState) return;
+    
+    try {
+      const result = await StateManager.sendGameAction(
+        { action: 'clearNotes' },
+        gameState.version
+      );
+      
+      if (result.success) {
+        const transformedState = transformServerStateToClient(result.state);
+        setGameState(transformedState);
+      } else if (result.conflict) {
+        console.warn('[GamePage] Version conflict, reloading state');
+        const currentState = await StateManager.loadGameState();
+        if (currentState) {
+          setGameState(currentState);
+        }
+      } else {
+        console.error('[GamePage] Clear notes failed:', result.error);
+      }
+    } catch (error) {
+      console.error('[GamePage] Error clearing notes:', error);
+    }
+  }, [gameState]);
 
   // Keyboard input hook
   useKeyboardInput(
@@ -115,7 +152,9 @@ export default function GamePage() {
     selectedCell,
     setSelectedCell,
     null, // gameStateRef no longer needed
-    handleCellInput
+    handleCellInput,
+    noteMode,
+    handleToggleNoteMode
   );
 
   // Mobile input handling (must come before useGamePageHandlers)
@@ -154,6 +193,7 @@ export default function GamePage() {
           !e.target.closest('.howie-logo') &&
           !e.target.closest('.tutor-chat-panel') &&
           !e.target.closest('.number-pad-vertical') &&
+          !e.target.closest('.note-controls') &&
           e.target.id !== 'new-game-btn' &&
           e.target.id !== 'difficulty' &&
           e.target.id !== 'mobile-number-input') {
@@ -197,10 +237,20 @@ export default function GamePage() {
           selectedCell={selectedCell}
           onCellClick={handleCellClick}
           hasLives={gameState.lives > 0}
+          notes={gameState.notes || []}
         />
         <NumberPad
           onNumberClick={handleCellInput}
           disabled={!selectedCell || !gameState.gameInProgress}
+        />
+      </div>
+
+      <div className="note-controls-wrapper">
+        <NoteControls
+          noteMode={noteMode}
+          onToggleNoteMode={handleToggleNoteMode}
+          onClear={handleClearNotes}
+          disabled={!gameState.gameInProgress}
         />
       </div>
 

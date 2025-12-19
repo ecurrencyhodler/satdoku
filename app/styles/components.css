@@ -763,3 +763,155 @@
         display: none;
     }
 }
+
+/* Note Controls Wrapper - matches game-board-with-numberpad layout */
+.note-controls-wrapper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+    margin: 10px 0 20px 0;
+    width: 100%;
+}
+
+/* Note Controls - aligned to center box of sudoku table */
+.note-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0;
+    width: 450px;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    height: 48px; /* Height to accommodate buttons */
+}
+
+.btn-note-toggle {
+    position: relative;
+}
+
+.btn-clear {
+    position: relative;
+}
+
+.btn-note-toggle {
+    background: white;
+    color: #4299e1;
+    border: 2px solid #4299e1;
+    border-radius: 8px;
+    transition: all 0.2s;
+    padding: 11px 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.dark .btn-note-toggle {
+    background: #4a5568;
+    color: #e2e8f0;
+    border-color: #4299e1;
+}
+
+.btn-note-toggle:hover {
+    background: #bee3f8;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.dark .btn-note-toggle:hover {
+    background: #5a6478;
+}
+
+.btn-note-toggle:active {
+    background: #4299e1;
+    color: white;
+    transform: scale(0.95);
+}
+
+.btn-note-toggle-active {
+    background: #4299e1 !important;
+    color: white !important;
+    border-color: #4299e1 !important;
+}
+
+.btn-note-toggle-active:hover {
+    background: #3182ce !important;
+    border-color: #3182ce !important;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.btn-note-toggle-active:active {
+    transform: scale(0.95);
+}
+
+.pencil-icon,
+.eraser-icon {
+    display: inline-block;
+    vertical-align: middle;
+    width: 16px;
+    height: 16px;
+}
+
+.btn-label {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.btn-clear {
+    background: white;
+    color: #4299e1;
+    border: 2px solid #4299e1;
+    border-radius: 8px;
+    transition: all 0.2s;
+    padding: 11px 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.dark .btn-clear {
+    background: #4a5568;
+    color: #e2e8f0;
+    border-color: #4299e1;
+}
+
+.btn-clear:hover {
+    background: #bee3f8;
+    transform: translateX(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.dark .btn-clear:hover {
+    background: #5a6478;
+}
+
+.btn-clear:active {
+    background: #4299e1;
+    color: white;
+    transform: scale(0.95);
+}
+
+.btn-note-toggle:disabled,
+.btn-clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -8,7 +8,9 @@ export function useKeyboardInput(
   selectedCell,
   setSelectedCell,
   gameStateRef,
-  handleCellInput
+  handleCellInput,
+  noteMode,
+  onToggleNoteMode
 ) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -22,7 +24,13 @@ export function useKeyboardInput(
         target.isContentEditable
       );
 
-      if (e.key >= '1' && e.key <= '9') {
+      // Toggle note mode with 'N' key
+      if ((e.key === 'n' || e.key === 'N') && !isInputElement) {
+        if (onToggleNoteMode) {
+          e.preventDefault();
+          onToggleNoteMode();
+        }
+      } else if (e.key >= '1' && e.key <= '9') {
         if (selectedCell && !isInputElement) {
           e.preventDefault();
           handleCellInput(parseInt(e.key));
@@ -64,5 +72,5 @@ export function useKeyboardInput(
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, selectedCell, setSelectedCell, handleCellInput]);
+  }, [gameState, selectedCell, setSelectedCell, handleCellInput, noteMode, onToggleNoteMode]);
 }

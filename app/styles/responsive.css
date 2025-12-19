@@ -78,4 +78,31 @@
         height: calc((min(450px, calc(100vw - 100px)) - 8 * calc(min(450px, calc(100vw - 100px)) * 6 / 450)) / 9);
         flex: 0 0 calc((min(450px, calc(100vw - 100px)) - 8 * calc(min(450px, calc(100vw - 100px)) * 6 / 450)) / 9);
     }
+
+    /* Note controls on mobile - scales proportionally with board */
+    .note-controls {
+        width: min(450px, calc(100vw - 100px));
+        height: calc(min(450px, calc(100vw - 100px)) * 48 / 450);
+        gap: calc(min(450px, calc(100vw - 100px)) * 12 / 450);
+    }
+
+    .btn-note-toggle {
+        font-size: 13px;
+        padding: calc(min(450px, calc(100vw - 100px)) * 11 / 450) calc(min(450px, calc(100vw - 100px)) * 16 / 450);
+    }
+
+    .btn-clear {
+        font-size: 13px;
+        padding: calc(min(450px, calc(100vw - 100px)) * 11 / 450) calc(min(450px, calc(100vw - 100px)) * 16 / 450);
+    }
+
+    .pencil-icon,
+    .eraser-icon {
+        width: calc(min(450px, calc(100vw - 100px)) * 16 / 450);
+        height: calc(min(450px, calc(100vw - 100px)) * 16 / 450);
+    }
+
+    .btn-label {
+        font-size: calc(min(450px, calc(100vw - 100px)) * 10 / 450);
+    }
 }

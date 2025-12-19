@@ -9,7 +9,8 @@ export default function GameBoard({
   solution,
   selectedCell,
   onCellClick,
-  hasLives
+  hasLives,
+  notes = []
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -46,6 +47,7 @@ export default function GameBoard({
                 isHighlightedSameNumber={false}
                 onClick={onCellClick}
                 hasLives={hasLives}
+                notes={notes[row]?.[col] || []}
               />
             ));
           }
@@ -96,6 +98,7 @@ export default function GameBoard({
                 isHighlightedSameNumber={isHighlightedSameNumber}
                 onClick={onCellClick}
                 hasLives={hasLives}
+                notes={notes[row]?.[col] || []}
               />
             );
           });

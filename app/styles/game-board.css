@@ -11,7 +11,7 @@
     align-items: flex-start;
     justify-content: center;
     gap: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     width: 100%;
     flex-wrap: nowrap;
 }
@@ -219,4 +219,46 @@
 .dark .cell:nth-child(n+19):nth-child(-n+27):not([data-row="8"]),
 .dark .cell:nth-child(n+46):nth-child(-n+54):not([data-row="8"]) {
     border-bottom-color: #ffffff;
+}
+
+/* Notes display - 3x3 grid covering the cell */
+.cell-notes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0;
+    padding: 2px;
+    pointer-events: none;
+}
+
+.cell-note-number {
+    font-size: 9px;
+    font-weight: 400;
+    color: #9ca3af;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.cell-note-active {
+    color: #9ca3af;
+}
+
+.cell-note-empty {
+    color: transparent;
+}
+
+.dark .cell-note-active {
+    color: #6b7280;
+}
+
+.dark .cell-note-empty {
+    color: transparent;
 }
