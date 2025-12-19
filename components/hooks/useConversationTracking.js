@@ -120,9 +120,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     try {
       // Mark where this conversation starts in history
       const conversationStartIndex = chatHistory.length;
-      // #region agent log
-      console.log('[DEBUG] startNewConversation called', { location: 'useConversationTracking.js:115', conversationCount, paidConversationsCount, requiresPayment, hypothesisId: 'A' });
-      // #endregion
 
       // Check if payment is required (don't increment count yet)
       const response = await fetch('/api/tutor/chat-history/conversation-count', {
@@ -130,9 +127,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       });
 
       const data = await response.json();
-      // #region agent log
-      console.log('[DEBUG] conversation-count API response', { location: 'useConversationTracking.js:125', success: data.success, error: data.error, conversationCount: data.conversationCount, paidConversationsCount: data.paidConversationsCount, requiresPayment: data.requiresPayment, hypothesisId: 'C' });
-      // #endregion
 
       if (data.success) {
         const currentCount = data.conversationCount;
@@ -141,9 +135,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         const shouldRequirePayment = data.requiresPayment || false;
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
-        // #region agent log
-        console.log('[DEBUG] conversation started successfully', { location: 'useConversationTracking.js:133', currentCount, paidConversationsCount: data.paidConversationsCount, shouldRequirePayment, hypothesisId: 'A' });
-        // #endregion
         // Reset conversation state for new conversation
         setIsConversationClosed(false);
         conversationLengthRef.current = 0;
@@ -162,9 +153,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         const shouldRequirePayment = data.requiresPayment !== undefined ? data.requiresPayment : (currentCount > 0);
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
-        // #region agent log
-        console.log('[DEBUG] payment still required', { location: 'useConversationTracking.js:152', currentCount, paidConversationsCount: data.paidConversationsCount, shouldRequirePayment, hypothesisId: 'C' });
-        // #endregion
         return {
           success: false,
           requiresPayment: shouldRequirePayment,
@@ -226,17 +214,11 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     const count = data.conversationCount || 0;
     const paidCount = data.paidConversationsCount || 0;
     const apiRequiresPayment = data.requiresPayment || false;
-    // #region agent log
-    console.log('[DEBUG] updatePaymentStatus entry', { location: 'useConversationTracking.js:209', count, paidCount, apiRequiresPayment, chatHistoryLength: chatHistory?.length, hypothesisId: 'D' });
-    // #endregion
     setConversationCount(count);
     // First conversation (count 0) is ALWAYS free
     const shouldRequirePayment = count === 0 ? false : (apiRequiresPayment || false);
     setRequiresPayment(shouldRequirePayment);
     setPaidConversationsCount(paidCount);
-    // #region agent log
-    console.log('[DEBUG] updatePaymentStatus state updated', { location: 'useConversationTracking.js:217', count, paidCount, shouldRequirePayment, apiRequiresPayment, hypothesisId: 'D' });
-    // #endregion
     
     // Only close conversation if payment is actually required (count > paidCount)
     // Don't close if payment was made (paidCount >= count)

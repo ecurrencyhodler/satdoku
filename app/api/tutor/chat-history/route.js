@@ -56,9 +56,6 @@ export async function GET(request) {
     const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
     const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameVersion);
     const requiresPayment = !canStartWithoutPayment && conversationCount > 0;
-    // #region agent log
-    console.log('[DEBUG] GET chat-history payment status', { location: 'tutor/chat-history/route.js:56', sessionId, gameVersion, conversationCount, paidConversationsCount, canStartWithoutPayment, requiresPayment, hypothesisId: 'E' });
-    // #endregion
 
     return NextResponse.json({
       success: true,

@@ -195,21 +195,12 @@ export function useTutorChat(gameState, selectedCell) {
    * Useful after payment to refresh the payment status
    */
   const reloadChatHistory = useCallback(async () => {
-    // #region agent log
-    console.log('[DEBUG] reloadChatHistory called', { location: 'useTutorChat.js:197', gameVersion: gameState?.version, hypothesisId: 'A' });
-    // #endregion
     const data = await loadChatHistory();
-    // #region agent log
-    console.log('[DEBUG] loadChatHistory response', { location: 'useTutorChat.js:200', success: data?.success, conversationCount: data?.conversationCount, paidConversationsCount: data?.paidConversationsCount, requiresPayment: data?.requiresPayment, hypothesisId: 'A' });
-    // #endregion
     if (data.success) {
       updatePaymentStatus(data);
-      // #region agent log
-      console.log('[DEBUG] updatePaymentStatus called', { location: 'useTutorChat.js:203', conversationCount: data?.conversationCount, paidConversationsCount: data?.paidConversationsCount, requiresPayment: data?.requiresPayment, hypothesisId: 'D' });
-      // #endregion
     }
     return data;
-  }, [loadChatHistory, updatePaymentStatus, gameState?.version]);
+  }, [loadChatHistory, updatePaymentStatus]);
 
   return {
     chatHistory,

@@ -242,19 +242,10 @@ export default function TutorChat({ gameState, selectedCell }) {
     const tutorChatOpen = urlParams.get('tutor_chat_open');
 
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
-      // #region agent log
-      console.log('[DEBUG] tutor_chat_open detected, starting reload', { location: 'TutorChat.jsx:242', gameVersion: gameState?.version, hypothesisId: 'A' });
-      // #endregion
       // Reload chat history first to get updated payment status after payment
       reloadChatHistory().then((data) => {
-        // #region agent log
-        console.log('[DEBUG] reloadChatHistory completed', { location: 'TutorChat.jsx:246', success: data?.success, conversationCount: data?.conversationCount, paidConversationsCount: data?.paidConversationsCount, requiresPayment: data?.requiresPayment, hypothesisId: 'A' });
-        // #endregion
         // Then start conversation and open chat
         startNewConversation().then((started) => {
-          // #region agent log
-          console.log('[DEBUG] startNewConversation result', { location: 'TutorChat.jsx:250', started, requiresPayment, hypothesisId: 'A' });
-          // #endregion
           if (started) {
             justOpenedRef.current = true;
             const initialPos = getMiddleRightPosition(size.width, size.height);
