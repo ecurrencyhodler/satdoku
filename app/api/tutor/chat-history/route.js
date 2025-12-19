@@ -169,15 +169,26 @@ export async function POST(request) {
 /**
  * DELETE /api/tutor/chat-history
  * Clear chat history for current session
- * NOTE: This endpoint should preserve both chat history and conversation count
- * to maintain state across page refreshes. This is a no-op endpoint.
+ * NOTE: Conversation count is keyed by gameVersion, so it automatically resets
+ * for new games. This endpoint clears the chat history when a new game starts.
  */
 export async function DELETE(request) {
   try {
-    // Do not delete chat history or conversation count
-    // Both should persist across page refreshes
-    // Chat history and conversation count are only cleared when explicitly needed
-    // (e.g., when starting a completely new game, which is handled elsewhere)
+    const sessionId = await getSessionIdIfExists();
+
+    if (!sessionId) {
+      return NextResponse.json({ success: true });
+    }
+
+    const redis = await getRedisClient();
+    if (!redis) {
+      console.warn('[tutor/chat-history] Redis not available');
+      return NextResponse.json({ success: true });
+    }
+
+    const key = `tutor_chat:${sessionId}`;
+    await redis.del(key);
+
     return NextResponse.json({ success: true });
 
   } catch (error) {

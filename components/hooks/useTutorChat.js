@@ -47,11 +47,22 @@ export function useTutorChat(gameState, selectedCell) {
 
   // Reset conversation when game state changes (new game)
   useEffect(() => {
-    if (gameState) {
+    if (gameState?.version !== undefined) {
+      // Reset local conversation tracking state first
       resetConversation();
-      // Clear chat history when new game starts
-      clearChatHistory();
+      // Clear chat history when new game starts (server-side)
+      clearChatHistory().then(() => {
+        // Reload to get fresh conversation count for new game version from server
+        // Since conversation count is keyed by gameVersion, new game = count 0 = free conversation
+        // Chat history is already cleared, so this just updates payment status
+        loadChatHistory().then((data) => {
+          if (data.success) {
+            updatePaymentStatus(data);
+          }
+        });
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.version]); // Reset when game version changes (new game)
 
   /**
