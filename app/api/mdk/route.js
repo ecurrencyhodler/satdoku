@@ -12,26 +12,10 @@ import { POST as mdkPost } from '@moneydevkit/nextjs/server/route';
  */
 export async function POST(request) {
   try {
-    // Log webhook receipt for debugging (without sensitive data)
-    const url = request.url;
-    const signatureHeader = request.headers.get('x-mdk-signature') || request.headers.get('X-MDK-Signature');
-    console.log('[MDK Webhook] Received webhook request:', {
-      url,
-      hasSignature: !!signatureHeader,
-      method: request.method,
-      contentType: request.headers.get('content-type')
-    });
-
     // Pass through to MDK handler for signature verification
     // The MDK library handles webhook signature verification automatically
-    const response = await mdkPost(request);
-    
-    // Log response status
-    console.log('[MDK Webhook] Webhook processed, status:', response.status);
-    
-    return response;
+    return await mdkPost(request);
   } catch (error) {
-    console.error('[MDK Webhook] Error processing webhook:', error);
     // If signature verification fails, MDK will return an error response
     // We should pass it through rather than masking it
     if (error instanceof Response) {

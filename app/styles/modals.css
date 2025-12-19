@@ -72,6 +72,24 @@
     color: #cbd5e0;
 }
 
+.modal-content a {
+    color: #4299e1;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.modal-content a:hover {
+    color: #3182ce;
+}
+
+.dark .modal-content a {
+    color: #63b3ed;
+}
+
+.dark .modal-content a:hover {
+    color: #90cdf4;
+}
+
 .win-message {
     text-align: center;
     color: #48bb78;
