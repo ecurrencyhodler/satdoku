@@ -85,14 +85,29 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
           // Then update from server to get accurate values (will correct requiresPayment if needed)
           incrementConversationCount();
         }
+      } else {
+        // If conversation hasn't reached limit, check if it should still be closed
+        // This handles the case where payment is required (conversation was completed previously)
+        // In that case, we want to keep it closed until payment is made
+        if (requiresPayment && conversationCount > 0) {
+          // Payment is required, so the current conversation should be considered closed
+          // (user needs to pay to start a new one)
+          setIsConversationClosed(true);
+        }
       }
 
       // If we have messages, mark conversation as started
       if (userMessagesInCurrentConversation > 0) {
         conversationStartedRef.current = true;
       }
+    } else if (chatHistory && chatHistory.length === 0) {
+      // No chat history - if payment is required OR conversation was completed (count > 0), conversation should be closed
+      // This handles the case where page is refreshed after a conversation was completed
+      if ((requiresPayment && conversationCount > 0) || conversationCount > 0) {
+        setIsConversationClosed(true);
+      }
     }
-  }, [chatHistory, incrementConversationCount, paidConversationsCount]);
+  }, [chatHistory, incrementConversationCount, paidConversationsCount, requiresPayment, conversationCount]);
 
   /**
    * Start a new conversation
@@ -198,7 +213,14 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     const shouldRequirePayment = count === 0 ? false : (data.requiresPayment || false);
     setRequiresPayment(shouldRequirePayment);
     setPaidConversationsCount(data.paidConversationsCount || 0);
-  }, []);
+    
+    // If payment is required, ensure conversation is closed
+    // OR if conversation count > 0 and chat history is empty, conversation was completed and should be locked
+    // This handles the case where page is refreshed after a conversation was completed
+    if ((shouldRequirePayment && count > 0) || (count > 0 && (!chatHistory || chatHistory.length === 0))) {
+      setIsConversationClosed(true);
+    }
+  }, [chatHistory]);
 
   /**
    * Increment user message count (called when user sends a message)
@@ -220,6 +242,15 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       userMessageCountRef.current = 0;
     }
   }, [incrementConversationCount]);
+
+  // Ensure conversation is closed when payment is required (handles page refresh case)
+  useEffect(() => {
+    // If payment is required and we have a conversation count > 0, 
+    // the conversation should be closed (user needs to pay to start new one)
+    if (requiresPayment && conversationCount > 0) {
+      setIsConversationClosed(true);
+    }
+  }, [requiresPayment, conversationCount]);
 
   // Ensure first conversation (count 0) never requires payment
   const actualRequiresPayment = conversationCount === 0 ? false : requiresPayment;
