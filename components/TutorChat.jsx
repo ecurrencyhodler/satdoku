@@ -95,6 +95,17 @@ export default function TutorChat({ gameState, selectedCell }) {
     }
   }, [inputValue]);
 
+  // Focus textarea after Howie responds
+  useEffect(() => {
+    if (!isLoading && textareaRef.current && isOpen) {
+      // Small delay to ensure the message has been rendered
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, isOpen]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
