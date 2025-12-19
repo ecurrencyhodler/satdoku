@@ -61,6 +61,10 @@ export async function POST(request) {
     // Increment paid conversations count
     const result = await incrementPaidConversations(sessionId, gameVersion);
 
+    // #region agent log
+    console.log('[DEBUG] incrementPaidConversations result', { location: 'tutor/payment/route.js:62', success: result.success, newCount: result.newCount, error: result.error, sessionId, gameVersion, hypothesisId: 'B' });
+    // #endregion
+
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to unlock conversation' },
@@ -71,6 +75,10 @@ export async function POST(request) {
     // Mark checkout as processed
     await markCheckoutProcessed(checkoutId);
     console.log('[tutor/payment] Marked checkout as processed:', checkoutId);
+
+    // #region agent log
+    console.log('[DEBUG] payment processed successfully', { location: 'tutor/payment/route.js:75', checkoutId, sessionId, gameVersion, paidConversationsCount: result.newCount, hypothesisId: 'B' });
+    // #endregion
 
     return NextResponse.json({
       success: true,

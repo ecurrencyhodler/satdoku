@@ -45,16 +45,25 @@ export function usePurchaseProcessing() {
   // Process tutor chat payment
   const processTutorChatPayment = (checkoutId) => {
     setStatus('granting');
+    // #region agent log
+    console.log('[DEBUG] processTutorChatPayment started', { location: 'usePurchaseProcessing.js:46', checkoutId, hypothesisId: 'A' });
+    // #endregion
 
     // Check if already processed on server (idempotency check)
     fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
       .then(res => res.json())
       .then(data => {
+        // #region agent log
+        console.log('[DEBUG] checkout status response', { location: 'usePurchaseProcessing.js:52', success: data.success, processed: data.processed, hypothesisId: 'A' });
+        // #endregion
         if (data.success && data.processed) {
           // Already processed - redirect to game with chat open
           console.log('[usePurchaseProcessing] Tutor chat payment already processed');
           setStatus('success');
           hasProcessed.current = true;
+          // #region agent log
+          console.log('[DEBUG] payment already processed, redirecting', { location: 'usePurchaseProcessing.js:59', checkoutId, hypothesisId: 'A' });
+          // #endregion
           setTimeout(() => {
             router.push('/?tutor_chat_open=true');
           }, 500);
@@ -69,10 +78,16 @@ export function usePurchaseProcessing() {
         })
           .then(res => res.json())
           .then(data => {
+            // #region agent log
+            console.log('[DEBUG] tutor payment API response', { location: 'usePurchaseProcessing.js:72', success: data.success, paidConversationsCount: data.paidConversationsCount, error: data.error, hypothesisId: 'B' });
+            // #endregion
             if (data.success) {
               console.log('[usePurchaseProcessing] Tutor chat payment processed successfully');
               setStatus('success');
               hasProcessed.current = true;
+              // #region agent log
+              console.log('[DEBUG] payment success, redirecting', { location: 'usePurchaseProcessing.js:77', checkoutId, paidConversationsCount: data.paidConversationsCount, hypothesisId: 'A' });
+              // #endregion
               setTimeout(() => {
                 router.push('/?tutor_chat_open=true');
               }, 500);
@@ -98,6 +113,9 @@ export function usePurchaseProcessing() {
         })
           .then(res => res.json())
           .then(data => {
+            // #region agent log
+            console.log('[DEBUG] tutor payment API response (fallback)', { location: 'usePurchaseProcessing.js:100', success: data.success, paidConversationsCount: data.paidConversationsCount, error: data.error, hypothesisId: 'B' });
+            // #endregion
             if (data.success) {
               setStatus('success');
               hasProcessed.current = true;
