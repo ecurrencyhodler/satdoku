@@ -95,6 +95,17 @@ export default function TutorChat({ gameState, selectedCell }) {
     }
   }, [inputValue]);
 
+  // Focus textarea when chat modal opens
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      // Small delay to ensure the DOM has rendered the textarea
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen]);
+
   // Focus textarea after Howie responds
   useEffect(() => {
     if (!isLoading && textareaRef.current && isOpen) {
@@ -324,12 +335,20 @@ export default function TutorChat({ gameState, selectedCell }) {
                 disabled={
                   requiresPayment 
                     ? isNavigating 
-                    : !inputValue.trim() || isLoading || isConversationClosed || !gameState
+                    : isLoading || isConversationClosed || !gameState
                 }
                 className={`tutor-chat-send-btn ${requiresPayment ? 'tutor-chat-send-btn-payment' : ''}`}
               >
                 {requiresPayment 
-                  ? (isNavigating ? 'Processing...' : `${HOWIE_CHAT_PAYMENT} sats`)
+                  ? (
+                    isNavigating ? (
+                      <span className="tutor-chat-spinner-container">
+                        <span className="tutor-chat-spinner"></span>
+                      </span>
+                    ) : (
+                      `${HOWIE_CHAT_PAYMENT} sats`
+                    )
+                  )
                   : 'Send'
                 }
               </button>

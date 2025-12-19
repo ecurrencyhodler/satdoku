@@ -9,6 +9,7 @@ function PurchaseSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, error, isCheckoutPaidLoading, isCheckoutPaid } = usePurchaseProcessing();
+  const paymentType = searchParams?.get('type') || 'life_purchase';
 
   if (isCheckoutPaidLoading || isCheckoutPaid === null) {
     return (
@@ -30,6 +31,7 @@ function PurchaseSuccessContent() {
     <PurchaseSuccessUI
       status={status}
       error={error}
+      paymentType={paymentType}
       onReturnToGame={() => router.push('/')}
     />
   );

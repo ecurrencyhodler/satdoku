@@ -3,7 +3,7 @@
 /**
  * UI component for purchase success page states
  */
-export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
+export function PurchaseSuccessUI({ status, error, paymentType = 'life_purchase', onReturnToGame }) {
   if (status === 'error') {
     return (
       <div style={{
@@ -32,7 +32,9 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
           </p>
           <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
             If your payment was successful, please contact support with your checkout ID.
-            Your payment will be verified and the life will be added to your account.
+            {paymentType === 'tutor_chat' 
+              ? ' Your payment will be verified and you\'ll be able to chat with Howie again.'
+              : ' Your payment will be verified and the life will be added to your account.'}
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
@@ -87,11 +89,23 @@ export function PurchaseSuccessUI({ status, error, onReturnToGame }) {
       }}>
         <p style={{ fontSize: '18px', marginBottom: '10px' }}>
           {status === 'verifying' && 'Verifying payment…'}
-          {status === 'granting' && 'Payment confirmed! Adding life to your game...'}
-          {status === 'success' && 'Life added successfully! Redirecting...'}
+          {status === 'granting' && (
+            paymentType === 'tutor_chat' 
+              ? 'Payment confirmed! Unlocking Howie chat...'
+              : 'Payment confirmed! Adding life to your game...'
+          )}
+          {status === 'success' && (
+            paymentType === 'tutor_chat'
+              ? 'Another chat with Howie unlocked! Redirecting...'
+              : 'Life added successfully! Redirecting...'
+          )}
         </p>
         {status === 'granting' && (
-          <p style={{ color: '#666', fontSize: '14px' }}>Please wait while we update your game...</p>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            {paymentType === 'tutor_chat'
+              ? 'Please wait while we unlock your chat...'
+              : 'Please wait while we update your game...'}
+          </p>
         )}
         {status === 'success' && (
           <p style={{ color: '#666', fontSize: '14px' }}>Redirecting back to game...</p>
