@@ -47,7 +47,7 @@ export default function NoteControls({ noteMode, onToggleNoteMode, onClear, disa
         <span className="btn-label">Notes</span>
       </button>
       <button
-        className={`btn btn-clear ${noteMode ? 'btn-clear-notes-mode' : ''}`}
+        className="btn btn-clear"
         onClick={onClear}
         disabled={disabled}
         aria-label="Clear notes and incorrect guesses"
