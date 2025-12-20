@@ -238,6 +238,7 @@ export default function GamePage() {
           onCellClick={handleCellClick}
           hasLives={gameState.lives > 0}
           notes={gameState.notes || []}
+          noteMode={noteMode}
         />
         <NumberPad
           onNumberClick={handleCellInput}

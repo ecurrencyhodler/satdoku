@@ -32,9 +32,18 @@
     transition: border-color 0.2s, background-color 0.2s;
 }
 
+/* Notes mode - orange border for light mode */
+.game-board.notes-mode {
+    border-color: #f59e0b;
+}
+
 .dark .game-board {
     border-color: #ffffff;
     background: #4a5568;
+}
+
+.dark .game-board.notes-mode {
+    border-color: #a78bfa;
 }
 
 .cell {

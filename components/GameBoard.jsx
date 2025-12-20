@@ -10,7 +10,8 @@ export default function GameBoard({
   selectedCell,
   onCellClick,
   hasLives,
-  notes = []
+  notes = [],
+  noteMode = false
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -28,7 +29,7 @@ export default function GameBoard({
 
   return (
     <div className="game-board-container">
-      <div id="game-board" className="game-board">
+      <div id="game-board" className={`game-board ${noteMode ? 'notes-mode' : ''}`}>
         {Array.from({ length: BOARD_SIZE }, (_, row) => {
           // Defensive check: ensure board[row] exists
           if (!board[row] || !Array.isArray(board[row])) {

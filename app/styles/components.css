@@ -838,16 +838,27 @@
 }
 
 .btn-note-toggle-active {
-    background: #4299e1 !important;
+    background: #f59e0b !important;
     color: white !important;
-    border-color: #4299e1 !important;
+    border-color: #f59e0b !important;
+}
+
+.dark .btn-note-toggle-active {
+    background: #a78bfa !important;
+    border-color: #a78bfa !important;
 }
 
 .btn-note-toggle-active:hover {
-    background: #3182ce !important;
-    border-color: #3182ce !important;
+    background: #d97706 !important;
+    border-color: #d97706 !important;
     transform: translateX(-2px);
-    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.2);
+}
+
+.dark .btn-note-toggle-active:hover {
+    background: #8b5cf6 !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 4px 8px rgba(167, 139, 250, 0.2);
 }
 
 .btn-note-toggle-active:active {
@@ -908,6 +919,42 @@
     background: #4299e1;
     color: white;
     transform: scale(0.95);
+}
+
+/* Erase button when notes mode is active */
+.btn-clear-notes-mode {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+}
+
+.dark .btn-clear-notes-mode {
+    border-color: #a78bfa !important;
+    color: #a78bfa !important;
+}
+
+.btn-clear-notes-mode:hover {
+    background: #fef3c7 !important;
+    border-color: #d97706 !important;
+    color: #d97706 !important;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.2);
+}
+
+.dark .btn-clear-notes-mode:hover {
+    background: #5a6478 !important;
+    border-color: #8b5cf6 !important;
+    color: #8b5cf6 !important;
+    box-shadow: 0 4px 8px rgba(167, 139, 250, 0.2);
+}
+
+.btn-clear-notes-mode:active {
+    background: #f59e0b !important;
+    color: white !important;
+    transform: scale(0.95);
+}
+
+.dark .btn-clear-notes-mode:active {
+    background: #a78bfa !important;
+    color: white !important;
 }
 
 .btn-note-toggle:disabled,
