@@ -21,5 +21,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "redis": "^5.10.0"
+  },
+  "devDependencies": {
+    "shadcn": "^3.6.2"
   }
 }

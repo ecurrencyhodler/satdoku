@@ -102,11 +102,11 @@
     display: flex;
     justify-content: space-around;
     background: #f7fafc;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
     margin-bottom: 20px;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
     transition: background-color 0.2s;
 }
 
@@ -118,11 +118,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 
 .stat-label {
-    font-size: 12px;
+    font-size: 9.6px;
     color: #718096;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -134,7 +134,7 @@
 }
 
 .stat-value {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
     color: #2d3748;
     transition: color 0.2s;

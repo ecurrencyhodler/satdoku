@@ -29,7 +29,7 @@ body {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 30px;
+    padding: 20px 30px 30px 30px;
     transition: background-color 0.2s, box-shadow 0.2s;
 }
 
@@ -40,11 +40,11 @@ body {
 
 header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 header h1 {
-    font-size: 2.5em;
+    font-size: 2.25em;
     color: #4a5568;
     font-weight: 300;
     letter-spacing: 2px;

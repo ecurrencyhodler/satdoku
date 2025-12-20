@@ -5,7 +5,7 @@
     }
 
     header h1 {
-        font-size: 2em;
+        font-size: 1.8em;
     }
 
     .game-controls {
@@ -18,7 +18,7 @@
     }
 
     .stats-bar {
-        gap: 15px;
+        gap: 12px;
     }
 
     .cell {
