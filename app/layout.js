@@ -2,6 +2,7 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
 import Navigation from '../components/Navigation';
 import { ThemeProvider } from '../components/ThemeProvider';
+import Snowfall from '../components/Snowfall';
 
 export const metadata = {
   title: 'Satdoku',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ThemeProvider>
+          <Snowfall />
           <Navigation />
           <div className="main-content">
             {children}
