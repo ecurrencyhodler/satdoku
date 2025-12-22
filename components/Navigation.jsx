@@ -56,18 +56,12 @@ export default function Navigation() {
       <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
         Game
       </Link>
+      <Link href="/leaderboard" className={pathname === '/leaderboard' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
+        Leaderboard
+      </Link>
       <Link href="/stats" className={pathname === '/stats' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
         Stats
       </Link>
-      <a
-        href="/leaderboard"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={pathname === '/leaderboard' ? 'nav-link active' : 'nav-link'}
-        onClick={closeMenu}
-      >
-        Leaderboard
-      </a>
       <a
         href="https://github.com/ecurrencyhodler/satdoku"
         target="_blank"

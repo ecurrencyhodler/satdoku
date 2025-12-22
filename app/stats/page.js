@@ -76,7 +76,6 @@ export default function StatsPage() {
 
   const totalGames = filteredData.reduce((sum, item) => sum + item.games, 0);
 
-
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
       <header style={{ marginBottom: '2rem' }}>
