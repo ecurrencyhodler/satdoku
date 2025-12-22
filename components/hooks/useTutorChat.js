@@ -115,6 +115,10 @@ export function useTutorChat(gameState, selectedCell) {
     setIsLoading(true);
     setError(null);
 
+    // Save user message immediately so it appears right away
+    await saveMessage('user', message);
+    incrementUserMessageCount();
+
     try {
       // Step 1: Get strategy from strategy selector
       const strategyResponse = await fetch('/api/tutor/strategy', {
@@ -163,10 +167,6 @@ export function useTutorChat(gameState, selectedCell) {
       if (coachData.error) {
         throw new Error(coachData.message || coachData.error);
       }
-
-      // Save user message
-      await saveMessage('user', message);
-      incrementUserMessageCount();
 
       // Save assistant response
       await saveMessage('assistant', coachData.response);
