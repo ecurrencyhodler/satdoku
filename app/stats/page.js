@@ -23,7 +23,7 @@ const chartConfig = {
 };
 
 export default function StatsPage() {
-  const [timeRange, setTimeRange] = useState("30d");
+  const [timeRange, setTimeRange] = useState("7d");
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     gamesCompleted: 0,

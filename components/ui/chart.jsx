@@ -14,6 +14,27 @@ const ChartContainer = React.forwardRef(
     // Filter out non-DOM props that might come from recharts components
     const {
       allowEscapeViewBox,
+      animationDuration,
+      animationBegin,
+      animationEasing,
+      axisId,
+      contentStyle,
+      filterNull,
+      includeHidden,
+      isAnimationActive,
+      itemSorter,
+      coordinate,
+      viewBox,
+      itemStyle,
+      wrapperStyle,
+      separator,
+      offset,
+      position,
+      labelStyle,
+      reverseDirection,
+      useTranslate3d,
+      activeIndex,
+      accessibilityLayer,
       ...domProps
     } = props
 
@@ -78,6 +99,27 @@ const ChartTooltipContent = React.forwardRef(
     // Filter out non-DOM props that might come from recharts components
     const {
       allowEscapeViewBox,
+      animationDuration,
+      animationBegin,
+      animationEasing,
+      axisId,
+      contentStyle,
+      filterNull,
+      includeHidden,
+      isAnimationActive,
+      itemSorter,
+      coordinate,
+      viewBox,
+      itemStyle,
+      wrapperStyle,
+      separator,
+      offset,
+      position,
+      labelStyle,
+      reverseDirection,
+      useTranslate3d,
+      activeIndex,
+      accessibilityLayer,
       ...domProps
     } = props
 
@@ -242,6 +284,27 @@ const ChartLegendContent = React.forwardRef(
     // Filter out non-DOM props that might come from recharts components
     const {
       allowEscapeViewBox,
+      animationDuration,
+      animationBegin,
+      animationEasing,
+      axisId,
+      contentStyle,
+      filterNull,
+      includeHidden,
+      isAnimationActive,
+      itemSorter,
+      coordinate,
+      viewBox,
+      itemStyle,
+      wrapperStyle,
+      separator,
+      offset,
+      position,
+      labelStyle,
+      reverseDirection,
+      useTranslate3d,
+      activeIndex,
+      accessibilityLayer,
       ...domProps
     } = props
 
