@@ -29,6 +29,11 @@ export function useCellInput(
 
     if (!selectedCell || !gameState) return;
 
+    // Prevent input when game is not in progress
+    if (!gameState.gameInProgress) {
+      return;
+    }
+
     const row = selectedCell.row;
     const col = selectedCell.col;
 
