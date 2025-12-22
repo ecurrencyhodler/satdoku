@@ -965,3 +965,84 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Card Component Styles */
+.dark .card-component {
+    background: #374151 !important;
+    border-color: #4a5568 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .card-description {
+    color: #9ca3af !important;
+}
+
+.dark .card-title {
+    color: #e2e8f0 !important;
+}
+
+/* Chart Card Container (stats page) */
+.dark .chart-card-container {
+    background: #374151 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .chart-card-label {
+    color: #9ca3af !important;
+}
+
+.dark .chart-card-value {
+    color: #e2e8f0 !important;
+}
+
+.dark .chart-section-title {
+    color: #e2e8f0 !important;
+}
+
+/* Chart Component Styles */
+.dark .chart-container {
+    color: #e2e8f0;
+}
+
+.dark .chart-tooltip-content {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+.dark .chart-tooltip-label {
+    color: #e2e8f0 !important;
+}
+
+.dark .chart-tooltip-content span[style*="color: rgb(113, 128, 150)"] {
+    color: #9ca3af !important;
+}
+
+.dark .chart-tooltip-content span[style*="color: rgb(45, 55, 72)"] {
+    color: #e2e8f0 !important;
+}
+
+.dark .chart-legend-content {
+    color: #e2e8f0;
+}
+
+.dark .chart-legend-content div[style*="color: rgb(113, 128, 150)"] {
+    color: #9ca3af !important;
+}
+
+/* Recharts axis and grid dark mode */
+.dark .recharts-cartesian-axis-tick text {
+    fill: #9ca3af !important;
+}
+
+.dark .recharts-cartesian-grid line {
+    stroke: #4a5568 !important;
+}
+
+/* Card footer text dark mode */
+.dark .card-footer-text {
+    color: #e2e8f0 !important;
+}
+
+.dark .card-footer-subtext {
+    color: #9ca3af !important;
+}
