@@ -1,5 +1,9 @@
 'use client';
 
+// #region agent log
+if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:2',message:'Stats page module loading started',data:{timestamp:new Date().toISOString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{}); }
+// #endregion
+
 import { useState, useEffect } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, ResponsiveContainer } from 'recharts';
 import {
@@ -15,6 +19,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
+// #region agent log
+if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:18',message:'All imports completed successfully',data:{hasChartContainer:typeof ChartContainer !== 'undefined',hasCard:typeof Card !== 'undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{}); }
+// #endregion
+
 const chartConfig = {
   games: {
     label: "Games Played",
@@ -23,6 +31,10 @@ const chartConfig = {
 };
 
 export default function StatsPage() {
+  // #region agent log
+  if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:25',message:'StatsPage component rendering',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{}); }
+  // #endregion
+
   const [timeRange, setTimeRange] = useState("7d");
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
@@ -34,17 +46,32 @@ export default function StatsPage() {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
+    // #region agent log
+    if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:38',message:'useEffect triggered, calling fetchStats',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{}); }
+    // #endregion
     fetchStats();
   }, []);
 
   const fetchStats = async () => {
+    // #region agent log
+    if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:42',message:'fetchStats called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{}); }
+    // #endregion
     try {
       setLoading(true);
+      // #region agent log
+      if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:45',message:'Fetching /api/stats',data:{url:'/api/stats'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{}); }
+      // #endregion
       const response = await fetch('/api/stats');
+      // #region agent log
+      if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:48',message:'API response received',data:{status:response.status,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{}); }
+      // #endregion
       if (!response.ok) {
         throw new Error('Failed to fetch stats');
       }
       const data = await response.json();
+      // #region agent log
+      if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:53',message:'Stats data parsed successfully',data:{gamesCompleted:data.gamesCompleted,chartDataLength:data.chartData?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{}); }
+      // #endregion
       setMetrics({
         gamesCompleted: data.gamesCompleted || 0,
         mistakesMade: data.mistakesMade || 0,
@@ -53,6 +80,9 @@ export default function StatsPage() {
       });
       setChartData(data.chartData || []);
     } catch (error) {
+      // #region agent log
+      if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:62',message:'fetchStats error',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{}); }
+      // #endregion
       console.error('Error fetching stats:', error);
       // Keep defaults (0 values) on error
     } finally {
@@ -75,6 +105,10 @@ export default function StatsPage() {
   });
 
   const totalGames = filteredData.reduce((sum, item) => sum + item.games, 0);
+
+  // #region agent log
+  if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/stats/page.js:79',message:'StatsPage render',data:{loading,chartDataLength:chartData.length,hasChartContainer:typeof ChartContainer !== 'undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{}); }
+  // #endregion
 
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>

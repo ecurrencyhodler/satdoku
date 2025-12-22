@@ -1,9 +1,17 @@
 "use client"
 
+// #region agent log
+if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'components/ui/chart.jsx:3',message:'Chart component module loading',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{}); }
+// #endregion
+
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
 import { cn } from "../../lib/utils"
+
+// #region agent log
+if (typeof window !== 'undefined') { fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'components/ui/chart.jsx:10',message:'Chart component imports successful',data:{hasReact:typeof React !== 'undefined',hasRecharts:typeof RechartsPrimitive !== 'undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{}); }
+// #endregion
 
 // Chart container component
 const ChartContainer = React.forwardRef(
