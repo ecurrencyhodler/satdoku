@@ -1046,3 +1046,11 @@
 .dark .card-footer-subtext {
     color: #9ca3af !important;
 }
+
+/* Metric Cards Container - 20% width reduction */
+.metric-cards-container {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 0.8fr)) !important;
+    max-width: 80% !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+}

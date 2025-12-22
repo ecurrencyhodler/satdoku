@@ -79,20 +79,19 @@ export default function StatsPage() {
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
           Statistics Dashboard
         </h1>
-        <div style={{ marginBottom: '2rem' }}>
-          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            ← Back to Game
-          </Link>
-        </div>
       </header>
 
       {/* Metric Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
+      <div 
+        className="metric-cards-container"
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 0.8fr))', 
+          gap: '1rem',
+          marginBottom: '2rem',
+          justifyContent: 'center'
+        }}
+      >
         <Card>
           <CardHeader>
             <CardDescription>Total games completed</CardDescription>
