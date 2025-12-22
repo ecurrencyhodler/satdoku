@@ -664,10 +664,13 @@
     border-bottom: 1px solid #e2e8f0;
     width: 100%;
     text-align: left;
+    color: #718096;
+    text-decoration: none;
 }
 
 .dark .mobile-menu-content .nav-link {
     border-bottom-color: #4a5568;
+    color: #a0aec0;
 }
 
 .mobile-menu-content .nav-link:visited {
