@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { useState, useEffect } from 'react';
+import { Area, AreaChart, CartesianGrid, XAxis, ResponsiveContainer } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -14,30 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import Link from 'next/link';
-
-// Dummy data for games played over the last 30 days
-const generateDummyData = () => {
-  const data = [];
-  const today = new Date();
-  
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    // Generate random games played between 50 and 300
-    const games = Math.floor(Math.random() * 250) + 50;
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      games: games,
-    });
-  }
-  
-  return data;
-};
-
-const chartData = generateDummyData();
 
 const chartConfig = {
   games: {
@@ -48,6 +24,41 @@ const chartConfig = {
 
 export default function StatsPage() {
   const [timeRange, setTimeRange] = useState("30d");
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState({
+    gamesCompleted: 0,
+    mistakesMade: 0,
+    chatsCompleted: 0,
+    messagesReceived: 0,
+  });
+  const [chartData, setChartData] = useState([]);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      const data = await response.json();
+      setMetrics({
+        gamesCompleted: data.gamesCompleted || 0,
+        mistakesMade: data.mistakesMade || 0,
+        chatsCompleted: data.chatsCompleted || 0,
+        messagesReceived: data.messagesReceived || 0,
+      });
+      setChartData(data.chartData || []);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Keep defaults (0 values) on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredData = chartData.filter((item) => {
     const date = new Date(item.date);
@@ -64,14 +75,6 @@ export default function StatsPage() {
   });
 
   const totalGames = filteredData.reduce((sum, item) => sum + item.games, 0);
-
-  // Dummy data for metric cards
-  const metrics = {
-    gamesCompleted: { value: 1247, change: '12.5', trend: 'up' },
-    mistakesMade: { value: 3421, change: '8.2', trend: 'down' },
-    chatsCompleted: { value: 892, change: '24.3', trend: 'up' },
-    messagesReceived: { value: 5432, change: '15.7', trend: 'up' },
-  };
 
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
@@ -95,7 +98,7 @@ export default function StatsPage() {
         <Card>
           <CardHeader>
             <CardDescription>Total games completed</CardDescription>
-            <CardTitle>{metrics.gamesCompleted.value.toLocaleString()}</CardTitle>
+            <CardTitle>{loading ? '...' : metrics.gamesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
@@ -103,7 +106,7 @@ export default function StatsPage() {
         <Card>
           <CardHeader>
             <CardDescription>Total mistakes made</CardDescription>
-            <CardTitle>{metrics.mistakesMade.value.toLocaleString()}</CardTitle>
+            <CardTitle>{loading ? '...' : metrics.mistakesMade.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
@@ -111,7 +114,7 @@ export default function StatsPage() {
         <Card>
           <CardHeader>
             <CardDescription>Total chats completed</CardDescription>
-            <CardTitle>{metrics.chatsCompleted.value.toLocaleString()}</CardTitle>
+            <CardTitle>{loading ? '...' : metrics.chatsCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
@@ -119,7 +122,7 @@ export default function StatsPage() {
         <Card>
           <CardHeader>
             <CardDescription>Total messages received</CardDescription>
-            <CardTitle>{metrics.messagesReceived.value.toLocaleString()}</CardTitle>
+            <CardTitle>{loading ? '...' : metrics.messagesReceived.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
@@ -148,7 +151,7 @@ export default function StatsPage() {
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           marginBottom: '2rem',
-          transition: 'background-color 0.2s, box-shadow 0.2s'
+          transition: 'background-color 0.2s, box-shadow 0.2s, border-color 0.2s'
         }}
       >
         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -173,7 +176,7 @@ export default function StatsPage() {
                 transition: 'color 0.2s'
               }}
             >
-              {totalGames.toLocaleString()}
+              {loading ? '...' : totalGames.toLocaleString()}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -224,59 +227,61 @@ export default function StatsPage() {
           className="w-full"
           style={{ height: '300px' }}
         >
-          <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="fillGames" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor={chartConfig.games.color}
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor={chartConfig.games.color}
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => {
-                const date = new Date(value);
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
-              }}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    });
-                  }}
-                  indicator="dot"
-                />
-              }
-            />
-            <Area
-              dataKey="games"
-              type="natural"
-              fill="url(#fillGames)"
-              fillOpacity={0.6}
-              stroke={chartConfig.games.color}
-              strokeWidth={2}
-            />
-          </AreaChart>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="fillGames" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor={chartConfig.games.color}
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={chartConfig.games.color}
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(value) => {
+                      return new Date(value).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      });
+                    }}
+                    indicator="dot"
+                  />
+                }
+              />
+              <Area
+                dataKey="games"
+                type="monotone"
+                fill="url(#fillGames)"
+                fillOpacity={0.6}
+                stroke={chartConfig.games.color}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </ChartContainer>
       </div>
       </div>

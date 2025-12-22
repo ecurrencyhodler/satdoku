@@ -11,6 +11,12 @@ const ChartContainer = React.forwardRef(
     const uniqueId = React.useId()
     const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
 
+    // Filter out non-DOM props that might come from recharts components
+    const {
+      allowEscapeViewBox,
+      ...domProps
+    } = props
+
     return (
       <div
         data-chart={chartId}
@@ -23,7 +29,7 @@ const ChartContainer = React.forwardRef(
           fontSize: '0.75rem',
           ...style
         }}
-        {...props}
+        {...domProps}
       >
         <ChartContext.Provider value={{ config, chartId }}>
           {children}
@@ -62,11 +68,18 @@ const ChartTooltipContent = React.forwardRef(
       formatter = (value, name) => [value, name],
       nameKey,
       labelKey,
+      cursor,
       ...props
     },
     ref
   ) => {
     const { config } = useChart()
+
+    // Filter out non-DOM props that might come from recharts components
+    const {
+      allowEscapeViewBox,
+      ...domProps
+    } = props
 
     const tooltipLabel = React.useMemo(() => {
       if (!payload?.length) {
@@ -103,7 +116,7 @@ const ChartTooltipContent = React.forwardRef(
     return (
       <div
         ref={ref}
-        className={cn("chart-tooltip-content", props.className)}
+        className={cn("chart-tooltip-content", domProps.className)}
         style={{
           display: 'grid',
           minWidth: '8rem',
@@ -116,9 +129,9 @@ const ChartTooltipContent = React.forwardRef(
           fontSize: '0.75rem',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           transition: 'background-color 0.2s, border-color 0.2s, color 0.2s',
-          ...props.style
+          ...domProps.style
         }}
-        {...props}
+        {...domProps}
       >
         {tooltipLabel && (
           <div 
@@ -226,6 +239,12 @@ const ChartLegendContent = React.forwardRef(
   ) => {
     const { config } = useChart()
 
+    // Filter out non-DOM props that might come from recharts components
+    const {
+      allowEscapeViewBox,
+      ...domProps
+    } = props
+
     if (!payload?.length) {
       return null
     }
@@ -240,9 +259,9 @@ const ChartLegendContent = React.forwardRef(
           justifyContent: 'center',
           gap: '1rem',
           flexDirection: verticalAlign === "top" ? "column-reverse" : verticalAlign === "bottom" ? "column" : "row",
-          ...props.style
+          ...domProps.style
         }}
-        {...props}
+        {...domProps}
       >
         {payload.map((item) => {
           const key = `${item.dataKey || item.value}`

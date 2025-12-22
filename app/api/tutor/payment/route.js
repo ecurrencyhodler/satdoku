@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
 import { isCheckoutProcessed, trackConversationPurchase } from '../../../../lib/supabase/purchases.js';
-import { incrementPaidConversations } from '../../../../lib/redis/tutorAnalytics.js';
+import { incrementPaidConversations, clearCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
 
 /**
  * POST /api/tutor/payment
@@ -67,6 +67,12 @@ export async function POST(request) {
         { status: 500 }
       );
     }
+
+    // Clear current conversation ID to enable a new conversation after payment
+    clearCurrentConversationId(sessionId).catch(error => {
+      console.error('[tutor/payment] Error clearing current conversation ID:', error);
+      // Don't fail the request if this fails
+    });
 
     // Track conversation purchase in Supabase - must complete before marking as processed
     // This ensures idempotency: if process crashes, checkout won't be marked processed

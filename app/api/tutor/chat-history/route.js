@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId, getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
 import { getRedisClient } from '../../../../lib/redis/client.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
-import { trackMessage, getCurrentConversationId, getPaidConversationsCount, canStartConversationWithoutPayment } from '../../../../lib/redis/tutorAnalytics.js';
+import { trackMessage, getCurrentConversationId, getPaidConversationsCount, canStartConversationWithoutPayment, clearCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
 
 const CHAT_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days (matches game state)
 
@@ -188,6 +188,13 @@ export async function DELETE(request) {
 
     const key = `tutor_chat:${sessionId}`;
     await redis.del(key);
+
+    // Clear current conversation ID when chat history is cleared (new game started)
+    // This enables a new conversation to be started for the new game
+    clearCurrentConversationId(sessionId).catch(error => {
+      console.error('[tutor/chat-history] Error clearing current conversation ID:', error);
+      // Don't fail the request if this fails
+    });
 
     return NextResponse.json({ success: true });
 

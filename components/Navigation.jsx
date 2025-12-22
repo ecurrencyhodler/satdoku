@@ -56,6 +56,9 @@ export default function Navigation() {
       <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
         Game
       </Link>
+      <Link href="/stats" className={pathname === '/stats' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
+        Stats
+      </Link>
       <a
         href="/leaderboard"
         target="_blank"

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../../lib/session/cookieSession.js';
 import { getRedisClient } from '../../../../../lib/redis/client.js';
 import { getGameState } from '../../../../../lib/redis/gameState.js';
-import { trackConversationOpened, getPaidConversationsCount, canStartConversationWithoutPayment } from '../../../../../lib/redis/tutorAnalytics.js';
+import { trackConversationOpened, getPaidConversationsCount, canStartConversationWithoutPayment, trackConversationCompleted } from '../../../../../lib/redis/tutorAnalytics.js';
 
 const CHAT_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days (matches game state)
 
@@ -126,6 +126,12 @@ export async function PUT(request) {
     // Increment count (conversation completed)
     const newCount = currentCount + 1;
     await redis.setEx(countKey, CHAT_HISTORY_TTL, newCount.toString());
+
+    // Track conversation completion in Supabase (non-blocking)
+    trackConversationCompleted(sessionId, gameVersion).catch(error => {
+      console.error('[tutor/chat-history] Error tracking conversation completion:', error);
+      // Don't fail the request if analytics tracking fails
+    });
 
     const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
 
