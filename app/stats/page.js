@@ -97,7 +97,7 @@ export default function StatsPage() {
       >
         <Card>
           <CardHeader>
-            <CardDescription>Total runs completed</CardDescription>
+            <CardDescription>Total games completed</CardDescription>
             <CardTitle>{loading ? '...' : metrics.gamesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
