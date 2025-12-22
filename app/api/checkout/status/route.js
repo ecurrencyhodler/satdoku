@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isCheckoutProcessed } from '../../../../lib/redis/checkoutTracking.js';
+import { isCheckoutProcessed } from '../../../../lib/supabase/purchases.js';
 
 /**
  * GET /api/checkout/status?checkout-id=xxx
@@ -32,6 +32,7 @@ export async function GET(request) {
     );
   }
 }
+
 
 
 

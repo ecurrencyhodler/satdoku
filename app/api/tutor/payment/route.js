@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
-import { isCheckoutProcessed, markCheckoutProcessed } from '../../../../lib/redis/checkoutTracking.js';
+import { isCheckoutProcessed, trackConversationPurchase } from '../../../../lib/supabase/purchases.js';
 import { incrementPaidConversations } from '../../../../lib/redis/tutorAnalytics.js';
 
 /**
@@ -68,9 +68,21 @@ export async function POST(request) {
       );
     }
 
-    // Mark checkout as processed
-    await markCheckoutProcessed(checkoutId);
-    console.log('[tutor/payment] Marked checkout as processed:', checkoutId);
+    // Track conversation purchase in Supabase - must complete before marking as processed
+    // This ensures idempotency: if process crashes, checkout won't be marked processed
+    // and can be retried safely
+    const purchaseTracked = await trackConversationPurchase(checkoutId, sessionId, gameVersion, 'success');
+    
+    if (!purchaseTracked) {
+      // If tracking fails, log error but don't fail the request
+      // The checkout won't be marked as processed, so it can be retried
+      console.error('[tutor/payment] Failed to track conversation purchase in Supabase, but conversation was unlocked. Checkout can be retried.');
+      // Note: We still return success since the conversation was unlocked
+      // The tracking can be retried later
+    } else {
+      // Checkout is already marked as processed by trackConversationPurchase (it sets the cache)
+      console.log('[tutor/payment] Conversation purchase tracked and checkout marked as processed:', checkoutId);
+    }
 
     return NextResponse.json({
       success: true,

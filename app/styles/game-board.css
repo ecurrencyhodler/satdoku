@@ -256,6 +256,10 @@
     transition: color 0.2s;
 }
 
+.dark .cell-note-number {
+    color: #ffffff;
+}
+
 .cell-note-active {
     color: #9ca3af;
 }
@@ -265,7 +269,7 @@
 }
 
 .dark .cell-note-active {
-    color: #6b7280;
+    color: #ffffff;
 }
 
 .dark .cell-note-empty {

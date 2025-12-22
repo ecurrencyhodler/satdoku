@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getLeaderboard, addLeaderboardEntry } from '@/lib/redis';
+import { getLeaderboard, addLeaderboardEntry } from '@/lib/supabase/leaderboard';
 import { getSessionId } from '@/lib/session/cookieSession';
-import { validateCompletionForLeaderboard, markCompletionSubmitted } from '@/lib/redis/completions';
+import { validateCompletionForLeaderboard, markCompletionSubmitted } from '@/lib/supabase/completions';
 
 /**
  * GET /api/leaderboard

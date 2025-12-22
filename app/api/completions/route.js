@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { saveCompletion } from '../../../lib/redis/completions.js';
-import { addLeaderboardEntry } from '../../../lib/redis/leaderboard.js';
+import { saveCompletion } from '../../../lib/supabase/completions.js';
+import { addLeaderboardEntry } from '../../../lib/supabase/leaderboard.js';
 
 /**
  * POST /api/completions
- * Save a game completion to Redis
+ * Save a game completion to Supabase
  * Body: { sessionId: string, score: number, difficulty: string, mistakes: number }
+ * Note: This route uses a simplified interface. For full completion tracking, use handleWin.js
  */
 export async function POST(request) {
   let body;
@@ -89,7 +90,23 @@ export async function POST(request) {
   }
 
   try {
-    const success = await saveCompletion(sessionId, score, difficulty, mistakes);
+    // Create completion object matching the Supabase interface
+    const completionId = `c_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const now = new Date();
+    const completion = {
+      completionId,
+      sessionId,
+      score,
+      difficulty,
+      mistakes,
+      moves: 0, // Not provided in this route
+      duration: 0, // Not provided in this route
+      startedAt: now.toISOString(), // Approximate
+      completedAt: now.toISOString(),
+      eligibleForLeaderboard: false, // Will be checked by leaderboard system
+      submittedToLeaderboard: false
+    };
+    const success = await saveCompletion(completion);
 
     if (success) {
       // Automatically add to leaderboard
