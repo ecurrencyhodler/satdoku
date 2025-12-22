@@ -1,14 +1,8 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
 
 export async function GET() {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/stats/route.js:4',message:'GET /api/stats called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
   try {
     const supabase = createSupabaseClient();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/stats/route.js:7',message:'Supabase client created',data:{hasClient:!!supabase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     // Fetch all stats in parallel
     const [
@@ -89,14 +83,8 @@ export async function GET() {
       messagesReceived: totalMessages,
       chartData: chartData
     };
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/stats/route.js:82',message:'Stats API success',data:{gamesCompleted:responseData.gamesCompleted,chartDataLength:responseData.chartData.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     return Response.json(responseData);
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/stats/route.js:87',message:'Stats API error',data:{error:error.message,stack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     console.error('Error fetching stats:', error);
     return Response.json(
       {
