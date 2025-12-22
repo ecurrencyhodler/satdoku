@@ -80,7 +80,7 @@ export default function StatsPage() {
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
       <header style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-          Statistics Dashboard
+          Satdoku Stats
         </h1>
       </header>
 
