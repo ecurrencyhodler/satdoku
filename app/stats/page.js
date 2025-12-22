@@ -97,7 +97,7 @@ export default function StatsPage() {
       >
         <Card>
           <CardHeader>
-            <CardDescription>Total games completed</CardDescription>
+            <CardDescription>Total runs completed</CardDescription>
             <CardTitle>{loading ? '...' : metrics.gamesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
@@ -140,7 +140,7 @@ export default function StatsPage() {
             transition: 'color 0.2s'
           }}
         >
-          Total games played
+          Total puzzles played
         </h2>
 
       <div 
@@ -165,7 +165,7 @@ export default function StatsPage() {
                 transition: 'color 0.2s'
               }}
             >
-              Total Games
+              Total puzzles
             </div>
             <div 
               className="chart-card-value"
