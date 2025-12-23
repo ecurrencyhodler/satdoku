@@ -11,6 +11,7 @@ export function useModalState() {
   const [showScoreSubmissionSuccessModal, setShowScoreSubmissionSuccessModal] = useState(false);
   const [showNameInputModal, setShowNameInputModal] = useState(false);
   const [showKeepPlayingModal, setShowKeepPlayingModal] = useState(false);
+  const [showDifficultySelectionModal, setShowDifficultySelectionModal] = useState(false);
   const [winStats, setWinStats] = useState(null);
   const [gameOverStats, setGameOverStats] = useState(null);
   const [pendingScoreData, setPendingScoreData] = useState(null);
@@ -66,6 +67,14 @@ export function useModalState() {
     setShowKeepPlayingModal(false);
   };
 
+  const openDifficultySelectionModal = () => {
+    setShowDifficultySelectionModal(true);
+  };
+
+  const closeDifficultySelectionModal = () => {
+    setShowDifficultySelectionModal(false);
+  };
+
   return {
     showWinModal,
     showGameOverModal,
@@ -74,6 +83,7 @@ export function useModalState() {
     showScoreSubmissionSuccessModal,
     showNameInputModal,
     showKeepPlayingModal,
+    showDifficultySelectionModal,
     winStats,
     gameOverStats,
     pendingScoreData,
@@ -84,14 +94,17 @@ export function useModalState() {
     setShowScoreSubmissionSuccessModal,
     setShowNameInputModal,
     setShowKeepPlayingModal,
+    setShowDifficultySelectionModal,
     openWinModal,
     openGameOverModal,
     openPurchaseModal,
     openScoreSubmissionSuccessModal,
     openNameInputModal,
     openKeepPlayingModal,
+    openDifficultySelectionModal,
     closeNameInputModal,
     closePurchaseModal,
     closeKeepPlayingModal,
+    closeDifficultySelectionModal,
   };
 }

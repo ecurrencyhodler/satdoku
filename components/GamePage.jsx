@@ -38,6 +38,7 @@ export default function GamePage() {
     showScoreSubmissionSuccessModal,
     showNameInputModal,
     showKeepPlayingModal,
+    showDifficultySelectionModal,
     winStats,
     gameOverStats,
     pendingScoreData,
@@ -48,13 +49,16 @@ export default function GamePage() {
     setShowScoreSubmissionSuccessModal,
     setShowNameInputModal,
     setShowKeepPlayingModal,
+    setShowDifficultySelectionModal,
     openWinModal,
     openGameOverModal,
     openPurchaseModal,
     openScoreSubmissionSuccessModal,
     openNameInputModal,
+    openDifficultySelectionModal,
     closeNameInputModal,
     closePurchaseModal,
+    closeDifficultySelectionModal,
   } = useModalState();
 
   // Store completionId and qualification status
@@ -99,6 +103,44 @@ export default function GamePage() {
     // Reset the board while preserving stats (server action)
     await resetBoardKeepStats();
   }, [setShowWinModal, resetBoardKeepStats]);
+
+  const handleKeepPlayingWithDifficulty = useCallback(async (difficulty) => {
+    if (!gameState) {
+      console.error('[GamePage] Cannot keep playing: game state is null');
+      throw new Error('Game state not available. Please refresh the page.');
+    }
+    
+    try {
+      const result = await StateManager.sendGameAction({
+        action: 'keepPlayingWithDifficulty',
+        difficulty
+      }, gameState.version);
+
+      if (result.success) {
+        // Transform server state to client format
+        const transformedState = transformServerStateToClient(result.state);
+        setGameState(transformedState);
+        setSelectedCell(null);
+        closeDifficultySelectionModal();
+      } else if (result.conflict) {
+        // Handle version conflict by reloading state
+        console.warn('[GamePage] Version conflict, reloading state');
+        const currentState = await StateManager.loadGameState();
+        if (currentState) {
+          const transformedState = transformServerStateToClient(currentState);
+          setGameState(transformedState);
+        }
+        throw new Error('Game state was updated. Please try again.');
+      } else {
+        console.error('[GamePage] Failed to keep playing with difficulty:', result.error);
+        throw new Error(result.error || 'Failed to start new game. Please try again.');
+      }
+    } catch (error) {
+      console.error('[GamePage] Error keeping playing with difficulty:', error);
+      // Re-throw so the modal can handle it
+      throw error;
+    }
+  }, [gameState, setGameState, setSelectedCell, closeDifficultySelectionModal]);
 
   // Cell input hook
   const { handleCellInput } = useCellInput(
@@ -298,6 +340,7 @@ export default function GamePage() {
         showScoreSubmissionSuccessModal={showScoreSubmissionSuccessModal}
         showNameInputModal={showNameInputModal}
         showKeepPlayingModal={showKeepPlayingModal}
+        showDifficultySelectionModal={showDifficultySelectionModal}
         winStats={winStats}
         gameOverStats={gameOverStats}
         pendingScoreData={{ completionId }}
@@ -307,8 +350,11 @@ export default function GamePage() {
         setShowScoreSubmissionSuccessModal={setShowScoreSubmissionSuccessModal}
         setShowNameInputModal={setShowNameInputModal}
         setShowKeepPlayingModal={setShowKeepPlayingModal}
+        setShowDifficultySelectionModal={setShowDifficultySelectionModal}
         startNewGame={startNewGame}
         onKeepPlaying={handleKeepPlaying}
+        onKeepPlayingWithDifficulty={handleKeepPlayingWithDifficulty}
+        onShowDifficultySelection={openDifficultySelectionModal}
         pendingDifficultyChange={pendingDifficultyChange}
         setPendingDifficultyChange={setPendingDifficultyChange}
         handlePurchaseClose={handlePurchaseClose}

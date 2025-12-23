@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useScoreSubmission } from '../hooks/useScoreSubmission';
 
-export default function WinModal({ isOpen, onClose, onPlayAgain, onKeepPlaying, onChangeDifficulty, onEndGame, stats, onScoreSubmitted, onOpenNameInput, onScoreNotHighEnough, completionId, qualifiedForLeaderboard }) {
+export default function WinModal({ isOpen, onClose, onPlayAgain, onKeepPlaying, onShowDifficultySelection, onChangeDifficulty, onEndGame, stats, onScoreSubmitted, onOpenNameInput, onScoreNotHighEnough, completionId, qualifiedForLeaderboard }) {
   const {
     submitting,
     submitted,
@@ -98,7 +98,9 @@ export default function WinModal({ isOpen, onClose, onPlayAgain, onKeepPlaying, 
           <div className="modal-actions">
             <button
               onClick={() => {
-                if (onKeepPlaying) {
+                if (onShowDifficultySelection) {
+                  onShowDifficultySelection();
+                } else if (onKeepPlaying) {
                   onKeepPlaying();
                 } else {
                   onPlayAgain();

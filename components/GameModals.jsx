@@ -7,6 +7,7 @@ import PurchaseLifeModal from './PurchaseLifeModal';
 import ScoreSubmissionSuccessModal from './Modals/ScoreSubmissionSuccessModal';
 import NameInputModal from './Modals/NameInputModal';
 import KeepPlayingModal from './Modals/KeepPlayingModal';
+import DifficultySelectionModal from './Modals/DifficultySelectionModal';
 import { StateManager } from '../src/js/system/localState.js';
 
 /**
@@ -20,6 +21,7 @@ export default function GameModals({
   showScoreSubmissionSuccessModal,
   showNameInputModal,
   showKeepPlayingModal,
+  showDifficultySelectionModal,
   winStats,
   gameOverStats,
   pendingScoreData,
@@ -29,8 +31,11 @@ export default function GameModals({
   setShowScoreSubmissionSuccessModal,
   setShowNameInputModal,
   setShowKeepPlayingModal,
+  setShowDifficultySelectionModal,
   startNewGame,
   onKeepPlaying,
+  onKeepPlayingWithDifficulty,
+  onShowDifficultySelection,
   pendingDifficultyChange,
   setPendingDifficultyChange,
   handlePurchaseClose,
@@ -52,6 +57,10 @@ export default function GameModals({
           startNewGame();
         }}
         onKeepPlaying={onKeepPlaying}
+        onShowDifficultySelection={() => {
+          setShowWinModal(false);
+          onShowDifficultySelection();
+        }}
         onChangeDifficulty={() => {
           setShowWinModal(false);
           startNewGame();
@@ -147,14 +156,23 @@ export default function GameModals({
         isOpen={showKeepPlayingModal}
         onClose={() => setShowKeepPlayingModal(false)}
         onKeepPlaying={onKeepPlaying}
+        onShowDifficultySelection={onShowDifficultySelection}
         onEndGame={() => {
           setShowKeepPlayingModal(false);
           startNewGame();
         }}
       />
+
+      <DifficultySelectionModal
+        isOpen={showDifficultySelectionModal}
+        onClose={() => setShowDifficultySelectionModal(false)}
+        onSelectDifficulty={onKeepPlayingWithDifficulty}
+      />
     </>
   );
 }
+
+
 
 
 

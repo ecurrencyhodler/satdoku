@@ -1,6 +1,6 @@
 'use client';
 
-export default function KeepPlayingModal({ isOpen, onClose, onKeepPlaying, onEndGame }) {
+export default function KeepPlayingModal({ isOpen, onClose, onKeepPlaying, onEndGame, onShowDifficultySelection }) {
   if (!isOpen) return null;
 
   return (
@@ -19,7 +19,9 @@ export default function KeepPlayingModal({ isOpen, onClose, onKeepPlaying, onEnd
           <button
             onClick={() => {
               onClose();
-              if (onKeepPlaying) {
+              if (onShowDifficultySelection) {
+                onShowDifficultySelection();
+              } else if (onKeepPlaying) {
                 onKeepPlaying();
               }
             }}
@@ -45,6 +47,8 @@ export default function KeepPlayingModal({ isOpen, onClose, onKeepPlaying, onEnd
     </div>
   );
 }
+
+
 
 
 
