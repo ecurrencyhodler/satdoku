@@ -134,3 +134,8 @@
 .modal-actions .btn {
     min-width: 140px;
 }
+
+.score-submission-success-modal {
+    max-width: 280px !important;
+    padding: 21px !important;
+}

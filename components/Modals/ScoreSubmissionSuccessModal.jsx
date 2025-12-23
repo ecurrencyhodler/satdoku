@@ -5,7 +5,7 @@ export default function ScoreSubmissionSuccessModal({ isOpen, onClose, onViewLea
 
   return (
     <div className="modal show">
-      <div className="modal-content">
+      <div className="modal-content score-submission-success-modal">
         <h2>Success!</h2>
         <p style={{
           textAlign: 'center',
@@ -13,7 +13,7 @@ export default function ScoreSubmissionSuccessModal({ isOpen, onClose, onViewLea
           marginBottom: '20px',
           color: '#2d3748'
         }}>
-          You're a Satdoku leader and your score has been added to the leaderboard. 🥳
+          You're a Satdoku leader and your score has been added to the leaderboard.
         </p>
         <div className="modal-actions">
           <button
@@ -28,6 +28,7 @@ export default function ScoreSubmissionSuccessModal({ isOpen, onClose, onViewLea
     </div>
   );
 }
+
 
 
 
