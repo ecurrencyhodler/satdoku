@@ -155,3 +155,4 @@ CREATE POLICY "Public can read leaderboard entries" ON leaderboard_entries
 CREATE POLICY "Public can insert leaderboard entries" ON leaderboard_entries
   FOR INSERT WITH CHECK (true);
 
+
