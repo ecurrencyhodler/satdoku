@@ -1,10 +1,32 @@
 import { createSupabaseClient } from '@/lib/supabase/client';
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const timeRange = searchParams.get('timeRange') || '30d';
+    
+    // Calculate start date based on time range
+    const startDate = new Date();
+    let daysToSubtract = 30;
+    if (timeRange === "7d") {
+      daysToSubtract = 7;
+    } else if (timeRange === "14d") {
+      daysToSubtract = 14;
+    }
+    startDate.setDate(startDate.getDate() - daysToSubtract);
+    startDate.setHours(0, 0, 0, 0); // Start of day
+
     const supabase = createSupabaseClient();
 
-    // Fetch all stats in parallel
+    // First, get conversation IDs within the time range for messages filtering
+    const conversationsResult = await supabase
+      .from('tutor_conversations')
+      .select('conversation_id')
+      .gte('started_at', startDate.toISOString());
+
+    const conversationIds = conversationsResult.data?.map(c => c.conversation_id) || [];
+
+    // Fetch all stats in parallel with date filtering
     const [
       gamesCompletedResult,
       mistakesResult,
@@ -12,25 +34,31 @@ export async function GET() {
       messagesResult,
       gamesPlayedResult
     ] = await Promise.all([
-      // Total games completed
+      // Total games completed (filtered by completed_at)
       supabase
         .from('puzzle_completions')
-        .select('id', { count: 'exact', head: true }),
+        .select('id', { count: 'exact', head: true })
+        .gte('completed_at', startDate.toISOString()),
 
-      // Total mistakes made
+      // Total mistakes made (filtered by completed_at)
       supabase
         .from('puzzle_completions')
-        .select('mistakes'),
+        .select('mistakes')
+        .gte('completed_at', startDate.toISOString()),
 
-      // Total chats completed
+      // Total chats completed (filtered by started_at)
       supabase
         .from('tutor_conversations')
-        .select('id', { count: 'exact', head: true }),
+        .select('id', { count: 'exact', head: true })
+        .gte('started_at', startDate.toISOString()),
 
-      // Total messages received (user messages)
-      supabase
-        .from('tutor_messages')
-        .select('user_messages'),
+      // Total messages received (filtered by conversation date)
+      conversationIds.length > 0
+        ? supabase
+            .from('tutor_messages')
+            .select('user_messages')
+            .in('conversation_id', conversationIds)
+        : Promise.resolve({ data: [] }),
 
       // Games played over time (for chart) - last 30 days
       supabase

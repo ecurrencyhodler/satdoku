@@ -34,31 +34,45 @@ export default function StatsPage() {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    let cancelled = false; // Flag to track if this effect has been cancelled
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats');
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/stats?timeRange=${timeRange}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+        const data = await response.json();
+        
+        // Only update state if this request hasn't been cancelled
+        if (!cancelled) {
+          setMetrics({
+            gamesCompleted: data.gamesCompleted || 0,
+            mistakesMade: data.mistakesMade || 0,
+            chatsCompleted: data.chatsCompleted || 0,
+            messagesReceived: data.messagesReceived || 0,
+          });
+          setChartData(data.chartData || []);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        // Only update loading state if this request hasn't been cancelled
+        if (!cancelled) {
+          // Keep defaults (0 values) on error
+          setLoading(false);
+        }
       }
-      const data = await response.json();
-      setMetrics({
-        gamesCompleted: data.gamesCompleted || 0,
-        mistakesMade: data.mistakesMade || 0,
-        chatsCompleted: data.chatsCompleted || 0,
-        messagesReceived: data.messagesReceived || 0,
-      });
-      setChartData(data.chartData || []);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-      // Keep defaults (0 values) on error
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchStats();
+
+    // Cleanup function to cancel the request if timeRange changes
+    return () => {
+      cancelled = true;
+    };
+  }, [timeRange]); // Re-fetch when timeRange changes
 
   const filteredData = chartData.filter((item) => {
     const date = new Date(item.date);
