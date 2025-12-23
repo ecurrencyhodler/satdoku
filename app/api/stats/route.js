@@ -34,17 +34,17 @@ export async function GET(request) {
       messagesResult,
       gamesPlayedResult
     ] = await Promise.all([
-      // Total games completed (filtered by completed_at)
+      // Total games completed (filtered by started_at to match games played logic)
       supabase
         .from('puzzle_completions')
         .select('id', { count: 'exact', head: true })
-        .gte('completed_at', startDate.toISOString()),
+        .gte('started_at', startDate.toISOString()),
 
-      // Total mistakes made (filtered by completed_at)
+      // Total mistakes made (filtered by started_at to match games played logic)
       supabase
         .from('puzzle_completions')
         .select('mistakes')
-        .gte('completed_at', startDate.toISOString()),
+        .gte('started_at', startDate.toISOString()),
 
       // Total chats completed (filtered by started_at)
       supabase
@@ -60,12 +60,13 @@ export async function GET(request) {
             .in('conversation_id', conversationIds)
         : Promise.resolve({ data: [] }),
 
-      // Games played over time (for chart) - last 30 days
+      // Games played over time (for chart) - respect timeRange
       supabase
         .from('puzzle_sessions')
         .select('started_at')
+        .gte('started_at', startDate.toISOString())
         .order('started_at', { ascending: false })
-        .limit(1000) // Get enough data to filter by date range
+        .limit(1000)
     ]);
 
     // Calculate total mistakes
@@ -75,28 +76,35 @@ export async function GET(request) {
     const totalMessages = messagesResult.data?.reduce((sum, row) => sum + (row.user_messages || 0), 0) || 0;
 
     // Process games played data for chart (group by date)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     const gamesByDate = {};
     if (gamesPlayedResult.data) {
       gamesPlayedResult.data.forEach(session => {
         if (session.started_at) {
           const date = new Date(session.started_at);
-          if (date >= thirtyDaysAgo) {
-            const dateKey = date.toISOString().split('T')[0];
-            gamesByDate[dateKey] = (gamesByDate[dateKey] || 0) + 1;
-          }
+          const dateKey = date.toISOString().split('T')[0];
+          gamesByDate[dateKey] = (gamesByDate[dateKey] || 0) + 1;
         }
       });
     }
 
-    // Generate chart data for last 30 days
+    // Generate chart data for the selected time range
     const chartData = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
+    const now = new Date();
+    
+    // Calculate number of days based on timeRange
+    let daysToShow = 30;
+    if (timeRange === "7d") {
+      daysToShow = 7;
+    } else if (timeRange === "14d") {
+      daysToShow = 14;
+    }
+    
+    // Generate dates from (daysToShow - 1) days ago to today (inclusive)
+    // When i=0, we get today; when i=daysToShow-1, we get the oldest date
+    for (let i = daysToShow - 1; i >= 0; i--) {
+      const date = new Date(now);
       date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0); // Normalize to start of day for consistent date keys
       const dateKey = date.toISOString().split('T')[0];
       chartData.push({
         date: dateKey,

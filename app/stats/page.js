@@ -74,21 +74,8 @@ export default function StatsPage() {
     };
   }, [timeRange]); // Re-fetch when timeRange changes
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date);
-    const referenceDate = new Date();
-    let daysToSubtract = 30;
-    if (timeRange === "7d") {
-      daysToSubtract = 7;
-    } else if (timeRange === "14d") {
-      daysToSubtract = 14;
-    }
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-    return date >= startDate;
-  });
-
-  const totalGames = filteredData.reduce((sum, item) => sum + item.games, 0);
+  // API already returns the correct date range, no need to filter again
+  const totalGames = chartData.reduce((sum, item) => sum + item.games, 0);
 
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
@@ -242,7 +229,7 @@ export default function StatsPage() {
           style={{ height: '300px' }}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="fillGames" x1="0" y1="0" x2="0" y2="1">
                   <stop
