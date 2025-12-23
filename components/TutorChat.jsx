@@ -97,7 +97,7 @@ export default function TutorChat({ gameState, selectedCell }) {
     if (isOpen) {
       const isOpening = !prevIsOpenRef.current;
       prevIsOpenRef.current = isOpen;
-      
+
       if (isOpening) {
         // When opening, set scroll position immediately using requestAnimationFrame
         // This happens after render but before paint, preventing visible jump

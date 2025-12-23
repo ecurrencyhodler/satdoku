@@ -70,14 +70,14 @@ const CardDescription = React.forwardRef(({ className, style, ...props }, ref) =
 CardDescription.displayName = "CardDescription"
 
 const CardContent = React.forwardRef(({ className, style, ...props }, ref) => (
-  <div 
-    ref={ref} 
+  <div
+    ref={ref}
     className={cn("card-content", className)}
     style={{
       padding: '0 1.5rem 1.5rem 1.5rem',
       ...style
     }}
-    {...props} 
+    {...props}
   />
 ))
 CardContent.displayName = "CardContent"

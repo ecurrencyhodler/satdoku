@@ -176,7 +176,7 @@ const ChartTooltipContent = React.forwardRef(
         {...domProps}
       >
         {tooltipLabel && (
-          <div 
+          <div
             className={cn("chart-tooltip-label", labelClassName)}
             style={{
               fontWeight: '500',
@@ -212,7 +212,7 @@ const ChartTooltipContent = React.forwardRef(
                     index
                   );
                   const [value, name] = Array.isArray(formatted) ? formatted : [formatted, itemConfig.label || item.name];
-                  
+
                   return (
                     <React.Fragment>
                       {indicator === "dot" && (
@@ -241,7 +241,7 @@ const ChartTooltipContent = React.forwardRef(
                             {name || itemConfig.label || item.name}
                           </span>
                           {typeof value !== "undefined" && (
-                            <span style={{ 
+                            <span style={{
                               fontFamily: 'monospace',
                               fontWeight: '500',
                               fontVariantNumeric: 'tabular-nums',

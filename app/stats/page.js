@@ -85,11 +85,11 @@ export default function StatsPage() {
       </header>
 
       {/* Metric Cards */}
-      <div 
+      <div
         className="metric-cards-container"
-        style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 0.8fr))', 
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 0.8fr))',
           gap: '1rem',
           marginBottom: '2rem',
           justifyContent: 'center'
@@ -97,7 +97,7 @@ export default function StatsPage() {
       >
         <Card>
           <CardHeader>
-            <CardDescription>Total games completed</CardDescription>
+            <CardDescription>Total puzzles completed</CardDescription>
             <CardTitle>{loading ? '...' : metrics.gamesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
@@ -130,11 +130,11 @@ export default function StatsPage() {
 
       {/* Chart Section */}
       <div style={{ marginTop: '2rem' }}>
-        <h2 
+        <h2
           className="chart-section-title"
-          style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: 'bold', 
+          style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
             marginBottom: '1rem',
             color: '#2d3748',
             transition: 'color 0.2s'
@@ -143,11 +143,11 @@ export default function StatsPage() {
           Total puzzles played
         </h2>
 
-      <div 
+      <div
         className="chart-card-container"
-        style={{ 
-          background: '#f7fafc', 
-          borderRadius: '8px', 
+        style={{
+          background: '#f7fafc',
+          borderRadius: '8px',
           padding: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           marginBottom: '2rem',
@@ -156,21 +156,21 @@ export default function StatsPage() {
       >
         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div 
+            <div
               className="chart-card-label"
-              style={{ 
-                fontSize: '0.875rem', 
-                color: '#718096', 
+              style={{
+                fontSize: '0.875rem',
+                color: '#718096',
                 marginBottom: '0.25rem',
                 transition: 'color 0.2s'
               }}
             >
               Total puzzles
             </div>
-            <div 
+            <div
               className="chart-card-value"
-              style={{ 
-                fontSize: '2rem', 
+              style={{
+                fontSize: '2rem',
                 fontWeight: 'bold',
                 color: '#2d3748',
                 transition: 'color 0.2s'

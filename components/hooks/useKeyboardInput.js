@@ -24,6 +24,17 @@ export function useKeyboardInput(
         target.isContentEditable
       );
 
+      // Check if selected cell is locked (prefilled or correctly filled)
+      let isSelectedCellLocked = false;
+      if (selectedCell && gameState) {
+        const row = selectedCell.row;
+        const col = selectedCell.col;
+        const currentValue = gameState.board?.[row]?.[col] ?? 0;
+        const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
+        const isIncorrect = !isPrefilled && currentValue !== 0 && gameState.solution && gameState.solution[row]?.[col] !== 0 && currentValue !== gameState.solution[row]?.[col];
+        isSelectedCellLocked = isPrefilled || (currentValue !== 0 && !isIncorrect);
+      }
+
       // Toggle note mode with 'N' key
       if ((e.key === 'n' || e.key === 'N') && !isInputElement) {
         if (onToggleNoteMode) {
@@ -31,12 +42,14 @@ export function useKeyboardInput(
           onToggleNoteMode();
         }
       } else if (e.key >= '1' && e.key <= '9') {
-        if (selectedCell && !isInputElement) {
+        // Don't process number input if cell is locked
+        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
           e.preventDefault();
           handleCellInput(parseInt(e.key));
         }
       } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-        if (selectedCell && !isInputElement) {
+        // Don't process clear input if cell is locked
+        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
           e.preventDefault();
           handleCellInput(0);
         }

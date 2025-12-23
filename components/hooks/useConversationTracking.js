@@ -62,12 +62,12 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       // Check if current conversation should be closed (reached limit)
       if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH) {
         setIsConversationClosed(true);
-        
+
         // If conversation reached limit and had user messages, increment count immediately
         // This ensures the payment button appears right away
         if (userMessagesInCurrentConversation > 0 && !hasIncrementedForCurrentConversationRef.current) {
           hasIncrementedForCurrentConversationRef.current = true;
-          
+
           // Optimistically update the conversation count and payment status
           // This ensures the payment button shows immediately
           // Use functional updates to ensure we use current state values
@@ -81,7 +81,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
             setRequiresPayment(!canStartWithoutPayment);
             return newCount;
           });
-          
+
           // Then update from server to get accurate values (will correct requiresPayment if needed)
           incrementConversationCount();
         }
@@ -219,7 +219,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     const shouldRequirePayment = count === 0 ? false : (apiRequiresPayment || false);
     setRequiresPayment(shouldRequirePayment);
     setPaidConversationsCount(paidCount);
-    
+
     // Only close conversation if payment is actually required (count > paidCount)
     // Don't close if payment was made (paidCount >= count)
     if (shouldRequirePayment && count > 0 && count > paidCount) {
@@ -253,7 +253,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
 
   // Ensure conversation is closed when payment is required (handles page refresh case)
   useEffect(() => {
-    // If payment is required and we have a conversation count > 0, 
+    // If payment is required and we have a conversation count > 0,
     // the conversation should be closed (user needs to pay to start new one)
     if (requiresPayment && conversationCount > 0) {
       setIsConversationClosed(true);

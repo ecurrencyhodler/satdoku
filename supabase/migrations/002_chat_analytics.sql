@@ -56,3 +56,4 @@ CREATE POLICY "Public can update tutor messages" ON tutor_messages
   FOR UPDATE USING (true);
 
 
+

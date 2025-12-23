@@ -29,12 +29,12 @@ export default function Snowfall() {
   // Check if snowflakes have already been shown for this browser session
   useEffect(() => {
     const hasShownSnowflakes = getCookie(SNOWFLAKE_COOKIE_NAME);
-    
+
     if (!hasShownSnowflakes) {
       // Mark that snowflakes have been shown for this session
       setSessionCookie(SNOWFLAKE_COOKIE_NAME, 'true');
       setIsVisible(true);
-      
+
       // Generate snowflake data only on client side to avoid hydration mismatch
       setSnowflakeData(
         Array.from({ length: SNOWFLAKE_COUNT }, (_, i) => ({

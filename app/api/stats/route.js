@@ -16,22 +16,22 @@ export async function GET() {
       supabase
         .from('puzzle_completions')
         .select('id', { count: 'exact', head: true }),
-      
+
       // Total mistakes made
       supabase
         .from('puzzle_completions')
         .select('mistakes'),
-      
+
       // Total chats completed
       supabase
         .from('tutor_conversations')
         .select('id', { count: 'exact', head: true }),
-      
+
       // Total messages received (user messages)
       supabase
         .from('tutor_messages')
         .select('user_messages'),
-      
+
       // Games played over time (for chart) - last 30 days
       supabase
         .from('puzzle_sessions')
@@ -49,7 +49,7 @@ export async function GET() {
     // Process games played data for chart (group by date)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const gamesByDate = {};
     if (gamesPlayedResult.data) {
       gamesPlayedResult.data.forEach(session => {

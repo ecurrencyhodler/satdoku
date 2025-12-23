@@ -78,7 +78,7 @@ export async function POST(request) {
     // This ensures idempotency: if process crashes, checkout won't be marked processed
     // and can be retried safely
     const purchaseTracked = await trackConversationPurchase(checkoutId, sessionId, gameVersion, 'success');
-    
+
     if (!purchaseTracked) {
       // If tracking fails, log error but don't fail the request
       // The checkout won't be marked as processed, so it can be retried

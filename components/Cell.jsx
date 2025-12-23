@@ -31,7 +31,7 @@ export default function Cell({
   // Create 3x3 grid for notes (positions 1-9)
   const renderNotesGrid = () => {
     if (!showNotes) return null;
-    
+
     return (
       <div className="cell-notes">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (

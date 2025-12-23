@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -122,13 +122,13 @@ export default function GamePage() {
   // Clear notes handler
   const handleClearNotes = useCallback(async () => {
     if (!gameState) return;
-    
+
     try {
       const result = await StateManager.sendGameAction(
         { action: 'clearNotes' },
         gameState.version
       );
-      
+
       if (result.success) {
         const transformedState = transformServerStateToClient(result.state);
         setGameState(transformedState);
@@ -205,6 +205,17 @@ export default function GamePage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [setSelectedCell]);
 
+  // Check if selected cell is locked (prefilled or correctly filled)
+  const isSelectedCellLocked = useMemo(() => {
+    if (!selectedCell || !gameState) return false;
+    const row = selectedCell.row;
+    const col = selectedCell.col;
+    const currentValue = gameState.board?.[row]?.[col] ?? 0;
+    const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
+    const isIncorrect = !isPrefilled && currentValue !== 0 && gameState.solution && gameState.solution[row]?.[col] !== 0 && currentValue !== gameState.solution[row]?.[col];
+    return isPrefilled || (currentValue !== 0 && !isIncorrect);
+  }, [selectedCell, gameState]);
+
   if (!gameState) {
     return <div>Loading...</div>;
   }
@@ -242,7 +253,7 @@ export default function GamePage() {
         />
         <NumberPad
           onNumberClick={handleCellInput}
-          disabled={!selectedCell || !gameState.gameInProgress}
+          disabled={!selectedCell || !gameState.gameInProgress || isSelectedCellLocked}
         />
       </div>
 

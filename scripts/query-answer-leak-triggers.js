@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Query Redis for answer leak detector trigger counts
- * 
+ *
  * Usage:
  *   node scripts/query-answer-leak-triggers.js
  *   node scripts/query-answer-leak-triggers.js --date 2024-01-15
@@ -51,7 +51,7 @@ async function queryAnswerLeakTriggers() {
   const showDate = dateArg || args.includes('--date');
 
   const client = await getRedisClient();
-  
+
   if (!client) {
     console.error('❌ Redis client not available. Check REDIS_URL environment variable.');
     console.error('   Make sure REDIS_URL is set in .env.local or .env file.');
@@ -61,7 +61,7 @@ async function queryAnswerLeakTriggers() {
   try {
     // Get all trigger keys
     const keys = await client.keys('answer_leak:trigger:*');
-    
+
     if (keys.length === 0) {
       console.log('📊 No answer leak trigger data found in Redis.');
       return;
@@ -111,10 +111,10 @@ async function queryAnswerLeakTriggers() {
     if (detectedKeys.length > 0) {
       let totalDetected = 0;
       const detectedResults = [];
-      
+
       // Sort detected keys by date (newest first)
       detectedKeys.sort().reverse();
-      
+
       for (const key of detectedKeys) {
         const count = await client.get(key);
         const date = key.replace('answer_leak:detected:', '');
@@ -124,7 +124,7 @@ async function queryAnswerLeakTriggers() {
           detectedResults.push({ date, count: countNum });
         }
       }
-      
+
       if (detectedResults.length > 0) {
         console.log('\n⚠️  Leaks Detected by Date:\n');
         console.log('Date       | Count');

@@ -50,11 +50,11 @@ export function useCellInput(
       if (isPrefilled) {
         return; // Cannot add notes to prefilled cells
       }
-      
+
       const action = { action: 'toggleNote', row, col, value };
       try {
         const result = await StateManager.sendGameAction(action, gameState?.version);
-        
+
         if (result.success) {
           const transformedState = transformServerStateToClient(result.state);
           setGameState(transformedState);
