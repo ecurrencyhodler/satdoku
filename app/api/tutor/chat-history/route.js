@@ -227,7 +227,8 @@ export async function DELETE(request) {
     // Chat follows gameVersion - key includes gameVersion so chat resets on new game
     const key = `tutor_chat:${sessionId}:${gameVersion}`;
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
+    // Paid conversations are NOT keyed by gameVersion - they persist across moves
+    const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
     
     // #region agent log
     // Get values before deletion for logging
@@ -280,12 +281,3 @@ export async function DELETE(request) {
     );
   }
 }
-
-
-
-
-
-
-
-
-

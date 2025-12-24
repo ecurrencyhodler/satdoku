@@ -68,9 +68,10 @@ export async function POST(request) {
       );
     }
 
-    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
+    // Conversation count follows gameVersion (resets on new game)
+    // Paid count does NOT follow gameVersion (persists across moves within same game)
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
+    const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
 
     // Get current counts
     const [countValue, paidValue] = await Promise.all([
@@ -159,4 +160,3 @@ export async function POST(request) {
     );
   }
 }
-
