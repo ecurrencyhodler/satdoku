@@ -164,6 +164,13 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
    */
   const startNewConversation = useCallback(async () => {
     try {
+      // If a conversation is already active, don't start a new one
+      // This prevents resetting the conversation start index when reopening chat
+      if (conversationStartedRef.current) {
+        console.log('[useConversationTracking] Conversation already active, not starting new one');
+        return { success: true, requiresPayment: false };
+      }
+
       // Check if payment is required (don't increment count yet)
       const response = await fetch('/api/tutor/chat-history/conversation-count', {
         method: 'POST'
@@ -239,14 +246,13 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
   /**
    * End current conversation (called when modal closes)
    * Don't increment conversation count - that only happens when conversation reaches 5 messages
+   * Don't reset counters - they need to persist to prevent messaging in completed conversations
    */
   const endConversation = useCallback(async () => {
-    // Just reset for next conversation - don't increment count
-    // The conversation count should only increment when the conversation
-    // actually reaches 5 messages (handled by useEffect above)
-    conversationStartedRef.current = false;
-    userMessageCountRef.current = 0;
-    hasIncrementedForCurrentConversationRef.current = false;
+    // Don't reset any counters here - they need to persist across chat open/close
+    // to ensure the conversation limit is properly enforced
+    // The counters will be reset when a new conversation actually starts
+    // (after payment or for a new game)
   }, []);
 
   /**
