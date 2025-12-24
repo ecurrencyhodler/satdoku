@@ -208,13 +208,28 @@ export function useTutorChat(gameState, selectedCell) {
    * Called when a new game starts to reset client-side state
    */
   const resetForNewGame = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTutorChat.js:210',message:'resetForNewGame ENTRY',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     // Reset client-side conversation state
     resetConversation();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTutorChat.js:213',message:'resetConversation called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     // Reload chat history to get fresh state from server (should be empty with count 0)
     const data = await loadChatHistory();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTutorChat.js:216',message:'loadChatHistory after reset returned',data:{success:data.success,conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount,requiresPayment:data.requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     if (data.success) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTutorChat.js:219',message:'calling updatePaymentStatus after reset',data:{conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       updatePaymentStatus(data);
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTutorChat.js:222',message:'resetForNewGame EXIT',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
   }, [resetConversation, loadChatHistory, updatePaymentStatus]);
 
   return {

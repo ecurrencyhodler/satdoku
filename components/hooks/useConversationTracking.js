@@ -251,33 +251,42 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       // Payment was made - unlock the conversation
       // #region agent log
       console.log('[DEBUG useConversationTracking] unlocking conversation (paidCount >= count)', { count, paidCount });
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:224',message:'unlocking conversation (paidCount >= count)',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:250',message:'unlocking conversation (paidCount >= count)',data:{count,paidCount,condition:'count > 0 && paidCount >= count'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
       setIsConversationClosed(false);
       setRequiresPayment(false); // Explicitly set to false when payment confirmed
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:254',message:'setIsConversationClosed(false) and setRequiresPayment(false) called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
     } else if (count === 0) {
       // First conversation - always unlocked and free
       // #region agent log
       console.log('[DEBUG useConversationTracking] first conversation, unlocking', { count });
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:228',message:'first conversation, unlocking',data:{count},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:258',message:'first conversation, unlocking',data:{count,condition:'count === 0'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
       // #endregion
       setIsConversationClosed(false);
       setRequiresPayment(false);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:261',message:'setIsConversationClosed(false) and setRequiresPayment(false) called for first conversation',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
     } else {
       // Payment is required (count > paidCount) - lock the conversation
       const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
       // #region agent log
       console.log('[DEBUG useConversationTracking] locking conversation (payment required)', { count, paidCount, shouldRequirePayment });
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:233',message:'locking conversation (payment required)',data:{count,paidCount,shouldRequirePayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:267',message:'locking conversation (payment required)',data:{count,paidCount,shouldRequirePayment,condition:'count > paidCount'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
       setRequiresPayment(shouldRequirePayment);
       if (shouldRequirePayment) {
         setIsConversationClosed(true);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:272',message:'setIsConversationClosed(true) called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
       }
     }
     // #region agent log
     console.log('[DEBUG useConversationTracking] updatePaymentStatus EXIT', { count, paidCount });
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:240',message:'updatePaymentStatus EXIT',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:276',message:'updatePaymentStatus EXIT',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
   }, []);
 
@@ -305,12 +314,27 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
   // Ensure conversation is closed when payment is required (handles page refresh case)
   // But don't override unlocking after payment
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:307',message:'useEffect payment check ENTRY',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+    // #endregion
     // Only close if payment is required AND we haven't paid (count > paidCount)
     // Don't close if payment was made (paidCount >= count)
     if (requiresPayment && conversationCount > 0 && conversationCount > paidConversationsCount) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:311',message:'locking in useEffect (payment required)',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       setIsConversationClosed(true);
     } else if (conversationCount > 0 && paidConversationsCount >= conversationCount) {
       // Payment was made - ensure conversation is unlocked
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:315',message:'unlocking in useEffect (payment made)',data:{conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+      setIsConversationClosed(false);
+      setRequiresPayment(false);
+    } else if (conversationCount === 0) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:320',message:'unlocking in useEffect (first conversation)',data:{conversationCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       setIsConversationClosed(false);
       setRequiresPayment(false);
     }

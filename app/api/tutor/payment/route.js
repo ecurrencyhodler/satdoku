@@ -91,6 +91,7 @@ export async function POST(request) {
       countKey,
       paidKey
     });
+    // Server-side log (will appear in Vercel logs)
     // #endregion
 
     // Ensure paidConversationsCount is at least conversationCount + 1
@@ -110,6 +111,7 @@ export async function POST(request) {
       targetPaidCount,
       calculation: `max(${conversationCount} + 1, ${currentPaidCount} + 1) = max(${conversationCount + 1}, ${currentPaidCount + 1}) = ${targetPaidCount}`
     });
+    // Server-side log (will appear in Vercel logs)
     // #endregion
 
     const result = { success: true, newCount: targetPaidCount };
@@ -137,7 +139,12 @@ export async function POST(request) {
     }
 
     // #region agent log
-    console.log('[tutor/payment] Returning success', { paidConversationsCount: result.newCount });
+    console.log('[tutor/payment] Returning success', { 
+      paidConversationsCount: result.newCount,
+      conversationCount,
+      unlockCondition: `paidCount (${result.newCount}) >= count (${conversationCount}) = ${result.newCount >= conversationCount}`
+    });
+    // Server-side log (will appear in Vercel logs)
     // #endregion
     return NextResponse.json({
       success: true,

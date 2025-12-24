@@ -226,15 +226,42 @@ export async function DELETE(request) {
 
     // Chat follows gameVersion - key includes gameVersion so chat resets on new game
     const key = `tutor_chat:${sessionId}:${gameVersion}`;
+    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
+    
+    // #region agent log
+    // Get values before deletion for logging
+    const [beforeCount, beforePaid] = await Promise.all([
+      redis.get(countKey),
+      redis.get(paidKey)
+    ]);
+    console.log('[tutor/chat-history] DELETE before clearing', {
+      sessionId,
+      gameVersion,
+      countKey,
+      paidKey,
+      beforeCount: beforeCount || 'null',
+      beforePaid: beforePaid || 'null'
+    });
+    // Server-side log (will appear in Vercel logs)
+    // #endregion
+    
     await redis.del(key);
 
     // Also clear conversation count and paid count for this game version
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
     await Promise.all([
       redis.del(countKey),
       redis.del(paidKey)
     ]);
+    
+    // #region agent log
+    console.log('[tutor/chat-history] DELETE after clearing', {
+      sessionId,
+      gameVersion,
+      keysDeleted: [key, countKey, paidKey]
+    });
+    // Server-side log (will appear in Vercel logs)
+    // #endregion
 
     // Clear current conversation ID when chat history is cleared (new game started)
     // This enables a new conversation to be started for the new game

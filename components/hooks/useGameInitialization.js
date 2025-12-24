@@ -12,6 +12,9 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
   const isLoadingStateRef = useRef(false); // Prevent moves during state reload
 
   const startNewGame = useCallback(async (pendingDifficultyChange = null) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:14',message:'startNewGame ENTRY',data:{hasChatResetRef:!!chatResetRef?.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     try {
       isLoadingStateRef.current = true;
       const difficulty = pendingDifficultyChange || 'beginner';
@@ -24,18 +27,40 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
       if (result.success) {
         // Clear chat history when starting new game
         try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:27',message:'calling DELETE chat-history',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
           await fetch('/api/tutor/chat-history', { method: 'DELETE' });
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:29',message:'DELETE chat-history completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
         } catch (error) {
           console.warn('[useGameInitialization] Failed to clear chat history:', error);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:32',message:'DELETE chat-history ERROR',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
         }
 
         // Reset client-side chat state after server-side clear
         if (chatResetRef?.current) {
           try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:36',message:'calling chatResetRef.current',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             await chatResetRef.current();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:38',message:'chatResetRef.current completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
           } catch (error) {
             console.warn('[useGameInitialization] Failed to reset chat state:', error);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:41',message:'chatResetRef.current ERROR',data:{error:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
           }
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:45',message:'chatResetRef.current is NULL',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
         }
 
         // Transform server state to client format
