@@ -18,10 +18,10 @@ export async function GET(request) {
 
     const supabase = createSupabaseClient();
 
-    // First, get conversation IDs within the time range for messages filtering
+    // First, get all conversations that started in the time range
     const conversationsResult = await supabase
       .from('tutor_conversations')
-      .select('conversation_id')
+      .select('conversation_id, started_at')
       .gte('started_at', startDate.toISOString());
 
     const conversationIds = conversationsResult.data?.map(c => c.conversation_id) || [];
@@ -30,7 +30,6 @@ export async function GET(request) {
     const [
       gamesCompletedResult,
       mistakesResult,
-      chatsCompletedResult,
       messagesResult,
       gamesPlayedResult
     ] = await Promise.all([
@@ -46,17 +45,12 @@ export async function GET(request) {
         .select('mistakes')
         .gte('started_at', startDate.toISOString()),
 
-      // Total chats completed (filtered by started_at)
-      supabase
-        .from('tutor_conversations')
-        .select('id', { count: 'exact', head: true })
-        .gte('started_at', startDate.toISOString()),
-
-      // Total messages received (filtered by conversation date)
+      // Total messages received - get all messages from conversations in the time range
+      // Only get messages for conversations that started in the time range
       conversationIds.length > 0
         ? supabase
             .from('tutor_messages')
-            .select('user_messages')
+            .select('conversation_id, user_messages')
             .in('conversation_id', conversationIds)
         : Promise.resolve({ data: [] }),
 
@@ -72,8 +66,20 @@ export async function GET(request) {
     // Calculate total mistakes
     const totalMistakes = mistakesResult.data?.reduce((sum, row) => sum + (row.mistakes || 0), 0) || 0;
 
-    // Calculate total messages
+    // Calculate total messages - sum all user_messages
     const totalMessages = messagesResult.data?.reduce((sum, row) => sum + (row.user_messages || 0), 0) || 0;
+
+    // Count completed conversations - only those that have messages
+    // A conversation is "completed" if it has a corresponding entry in tutor_messages with user_messages > 0
+    const completedConversationIds = new Set();
+    if (messagesResult.data) {
+      messagesResult.data.forEach(msg => {
+        if (msg.user_messages > 0) {
+          completedConversationIds.add(msg.conversation_id);
+        }
+      });
+    }
+    const chatsCompleted = completedConversationIds.size;
 
     // Process games played data for chart (group by date)
     const gamesByDate = {};
@@ -115,7 +121,7 @@ export async function GET(request) {
     const responseData = {
       gamesCompleted: gamesCompletedResult.count || 0,
       mistakesMade: totalMistakes,
-      chatsCompleted: chatsCompletedResult.count || 0,
+      chatsCompleted: chatsCompleted,
       messagesReceived: totalMessages,
       chartData: chartData
     };
