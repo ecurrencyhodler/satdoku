@@ -24,18 +24,20 @@ export async function GET(request) {
       return NextResponse.json({ success: true, history: [], conversationCount: 0 });
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       // If no game state, return empty history (user needs to start a game first)
       return NextResponse.json({ success: true, history: [], conversationCount: 0, paidConversationsCount: 0, requiresPayment: false });
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier (persists across moves)
+    // gameVersion changes with every move, so it's not suitable for chat history
+    const gameId = gameState.gameStartTime;
 
-    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
-    const key = `tutor_chat:${sessionId}:${gameVersion}`;
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    // Chat follows gameId (gameStartTime) - key includes gameId so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameId}`;
+    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
 
     // Get both history and conversation count
     const [value, countValue] = await Promise.all([
@@ -58,9 +60,9 @@ export async function GET(request) {
 
     const conversationCount = countValue ? parseInt(countValue, 10) : 0;
 
-    // Get payment status
-    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
-    const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameVersion);
+    // Get payment status (pass gameId as the identifier)
+    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameId);
+    const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameId);
     const requiresPayment = !canStartWithoutPayment && conversationCount > 0;
 
     // #region agent log
@@ -69,7 +71,7 @@ export async function GET(request) {
       paidConversationsCount, 
       canStartWithoutPayment, 
       requiresPayment,
-      gameVersion 
+      gameId 
     });
     // #endregion
 
@@ -131,19 +133,20 @@ export async function POST(request) {
       );
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       return NextResponse.json(
         { error: 'Game state not found' },
         { status: 400 }
       );
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier (persists across moves)
+    const gameId = gameState.gameStartTime;
 
-    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
-    const key = `tutor_chat:${sessionId}:${gameVersion}`;
+    // Chat follows gameId (gameStartTime) - key includes gameId so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameId}`;
 
     // Get existing history
     const existingValue = await redis.get(key);
@@ -196,9 +199,9 @@ export async function POST(request) {
 
 /**
  * DELETE /api/tutor/chat-history
- * Clear chat history for current game version
- * NOTE: Chat follows gameVersion - conversation count, paid count, and chat history
- * are all keyed by sessionId:gameVersion, so they reset on new game.
+ * Clear chat history for current game
+ * NOTE: Chat follows gameId (gameStartTime) - conversation count, paid count, and chat history
+ * are all keyed by sessionId:gameId, so they reset on new game.
  * This endpoint clears the chat history when a new game starts.
  */
 export async function DELETE(request) {
@@ -215,19 +218,20 @@ export async function DELETE(request) {
       return NextResponse.json({ success: true });
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       // If no game state, nothing to clear
       return NextResponse.json({ success: true });
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier
+    const gameId = gameState.gameStartTime;
 
-    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
-    const key = `tutor_chat:${sessionId}:${gameVersion}`;
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
-    // Paid conversations are NOT keyed by gameVersion - they persist across moves
+    // Chat follows gameId (gameStartTime) - key includes gameId so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameId}`;
+    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
+    // Paid conversations are NOT keyed by gameId - they persist across moves within same game
     const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
     
     // #region agent log
@@ -238,7 +242,7 @@ export async function DELETE(request) {
     ]);
     console.log('[tutor/chat-history] DELETE before clearing', {
       sessionId,
-      gameVersion,
+      gameId,
       countKey,
       paidKey,
       beforeCount: beforeCount || 'null',
@@ -249,7 +253,7 @@ export async function DELETE(request) {
     
     await redis.del(key);
 
-    // Also clear conversation count and paid count for this game version
+    // Also clear conversation count and paid count for this game
     await Promise.all([
       redis.del(countKey),
       redis.del(paidKey)
@@ -258,7 +262,7 @@ export async function DELETE(request) {
     // #region agent log
     console.log('[tutor/chat-history] DELETE after clearing', {
       sessionId,
-      gameVersion,
+      gameId,
       keysDeleted: [key, countKey, paidKey]
     });
     // Server-side log (will appear in Vercel logs)

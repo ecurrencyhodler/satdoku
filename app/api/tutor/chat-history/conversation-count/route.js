@@ -21,16 +21,17 @@ export async function POST(request) {
       );
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       return NextResponse.json(
         { error: 'Game state not found' },
         { status: 400 }
       );
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier (persists across moves)
+    const gameId = gameState.gameStartTime;
     const redis = await getRedisClient();
     if (!redis) {
       console.warn('[tutor/chat-history] Redis not available');
@@ -40,23 +41,23 @@ export async function POST(request) {
       );
     }
 
-    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    // Chat follows gameId (gameStartTime) - key includes gameId so counts reset on new game
+    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
 
     // Get current count (don't increment - that happens when conversation completes)
     const currentCountValue = await redis.get(countKey);
     const currentCount = currentCountValue ? parseInt(currentCountValue, 10) : 0;
 
     // Check if payment is required
-    const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameVersion);
-    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
+    const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameId);
+    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameId);
 
     // #region agent log
     console.log('[tutor/chat-history/conversation-count] POST check', { 
       currentCount, 
       paidConversationsCount, 
       canStartWithoutPayment,
-      gameVersion 
+      gameId 
     });
     // #endregion
 
@@ -78,7 +79,8 @@ export async function POST(request) {
     }
 
     // Track conversation opened for analytics (non-blocking)
-    trackConversationOpened(sessionId, gameVersion).catch(error => {
+    // Note: Analytics may still use numeric version for tracking, but we pass gameId for consistency
+    trackConversationOpened(sessionId, gameId).catch(error => {
       console.error('[tutor/chat-history] Error tracking conversation analytics:', error);
       // Don't fail the request if analytics tracking fails
     });
@@ -121,16 +123,17 @@ export async function PUT(request) {
       );
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       return NextResponse.json(
         { error: 'Game state not found' },
         { status: 400 }
       );
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier (persists across moves)
+    const gameId = gameState.gameStartTime;
     const redis = await getRedisClient();
     if (!redis) {
       console.warn('[tutor/chat-history] Redis not available');
@@ -140,8 +143,8 @@ export async function PUT(request) {
       );
     }
 
-    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    // Chat follows gameId (gameStartTime) - key includes gameId so counts reset on new game
+    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
 
     // Get current count
     const currentCountValue = await redis.get(countKey);
@@ -152,12 +155,12 @@ export async function PUT(request) {
     await redis.setEx(countKey, CHAT_HISTORY_TTL, newCount.toString());
 
     // Track conversation completion in Supabase (non-blocking)
-    trackConversationCompleted(sessionId, gameVersion).catch(error => {
+    trackConversationCompleted(sessionId, gameId).catch(error => {
       console.error('[tutor/chat-history] Error tracking conversation completion:', error);
       // Don't fail the request if analytics tracking fails
     });
 
-    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameVersion);
+    const paidConversationsCount = await getPaidConversationsCount(sessionId, gameId);
 
     return NextResponse.json({
       success: true,
@@ -173,14 +176,3 @@ export async function PUT(request) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

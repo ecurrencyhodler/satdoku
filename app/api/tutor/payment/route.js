@@ -37,9 +37,9 @@ export async function POST(request) {
       // Still return success since payment was already processed
       // Get game state to return current paid conversations count
       const gameState = await getGameState(sessionId);
-      const gameVersion = gameState?.version || 0;
+      const gameId = gameState?.gameStartTime || null;
       const { getPaidConversationsCount } = await import('../../../../lib/redis/tutorAnalytics.js');
-      const paidCount = await getPaidConversationsCount(sessionId, gameVersion);
+      const paidCount = await getPaidConversationsCount(sessionId, gameId);
 
       return NextResponse.json({
         success: true,
@@ -48,16 +48,17 @@ export async function POST(request) {
       });
     }
 
-    // Get game state to determine game version (required for keying)
+    // Get game state to determine game identifier (required for keying)
     const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.version) {
+    if (!gameState || !gameState.gameStartTime) {
       return NextResponse.json(
         { error: 'Game state not found' },
         { status: 400 }
       );
     }
 
-    const gameVersion = gameState.version;
+    // Use gameStartTime as stable game identifier (persists across moves)
+    const gameId = gameState.gameStartTime;
 
     // Get current conversation count and paid count
     const redis = await getRedisClient();
@@ -68,9 +69,9 @@ export async function POST(request) {
       );
     }
 
-    // Conversation count follows gameVersion (resets on new game)
-    // Paid count does NOT follow gameVersion (persists across moves within same game)
-    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    // Conversation count follows gameId (resets on new game)
+    // Paid count does NOT follow gameId (persists across moves within same game)
+    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
     const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
 
     // Get current counts
@@ -85,7 +86,7 @@ export async function POST(request) {
     // #region agent log
     console.log('[tutor/payment] Before payment processing', { 
       sessionId, 
-      gameVersion, 
+      gameId, 
       checkoutId, 
       conversationCount, 
       currentPaidCount,
@@ -95,12 +96,10 @@ export async function POST(request) {
     // Server-side log (will appear in Vercel logs)
     // #endregion
 
-    // Ensure paidConversationsCount is at least conversationCount + 1
-    // This accounts for the fact that payment unlocks the NEXT conversation
-    // If conversationCount is 1, we need paidCount to be at least 2 to unlock conversation 2
-    // If conversationCount is 2, we need paidCount to be at least 3 to unlock conversation 3
-    // This prevents the race condition where count increments after payment
-    const targetPaidCount = Math.max(conversationCount + 1, currentPaidCount + 1);
+    // Increment paidConversationsCount by 1
+    // Each payment unlocks exactly ONE conversation
+    // Don't use conversationCount in calculation to avoid unlocking multiple conversations
+    const targetPaidCount = currentPaidCount + 1;
     
     // Set paid count to target (use setEx to ensure it's set correctly)
     await redis.setEx(paidKey, 90 * 24 * 60 * 60, targetPaidCount.toString());
@@ -110,7 +109,7 @@ export async function POST(request) {
       conversationCount, 
       currentPaidCount, 
       targetPaidCount,
-      calculation: `max(${conversationCount} + 1, ${currentPaidCount} + 1) = max(${conversationCount + 1}, ${currentPaidCount + 1}) = ${targetPaidCount}`
+      calculation: `${currentPaidCount} + 1 = ${targetPaidCount}`
     });
     // Server-side log (will appear in Vercel logs)
     // #endregion
@@ -126,7 +125,7 @@ export async function POST(request) {
     // Track conversation purchase in Supabase - must complete before marking as processed
     // This ensures idempotency: if process crashes, checkout won't be marked processed
     // and can be retried safely
-    const purchaseTracked = await trackConversationPurchase(checkoutId, sessionId, gameVersion, 'success');
+    const purchaseTracked = await trackConversationPurchase(checkoutId, sessionId, gameId, 'success');
 
     if (!purchaseTracked) {
       // If tracking fails, log error but don't fail the request
