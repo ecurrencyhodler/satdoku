@@ -244,15 +244,25 @@ export default function TutorChat({ gameState, selectedCell }) {
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
       // Reload chat history first to get updated payment status after payment
       reloadChatHistory().then((data) => {
-        // Then start conversation and open chat
-        startNewConversation().then((started) => {
-          if (started) {
-            justOpenedRef.current = true;
-            const initialPos = getMiddleRightPosition(size.width, size.height);
-            setPosition(initialPos);
-            setIsOpen(true);
-          }
-        });
+        // Wait a moment to ensure state updates propagate
+        // Then check if we can start a conversation (payment should have unlocked it)
+        setTimeout(() => {
+          startNewConversation().then((started) => {
+            if (started) {
+              justOpenedRef.current = true;
+              const initialPos = getMiddleRightPosition(size.width, size.height);
+              setPosition(initialPos);
+              setIsOpen(true);
+            } else if (requiresPayment) {
+              // If still requires payment, open chat anyway to show payment button
+              // This handles edge cases where state hasn't updated yet
+              justOpenedRef.current = true;
+              const initialPos = getMiddleRightPosition(size.width, size.height);
+              setPosition(initialPos);
+              setIsOpen(true);
+            }
+          });
+        }, 100);
       });
       // Remove query param from URL
       urlParams.delete('tutor_chat_open');

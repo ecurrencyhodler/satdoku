@@ -57,10 +57,16 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
       ).length;
 
       conversationLengthRef.current = assistantMessagesInCurrentConversation;
-      userMessageCountRef.current = userMessagesInCurrentConversation;
+      // Don't overwrite userMessageCountRef if it's been incremented (to avoid race condition)
+      // Only update from chat history if calculated value is higher (handles page refresh)
+      // This prevents the useEffect from overwriting the incremented value after saveMessage
+      if (userMessagesInCurrentConversation > userMessageCountRef.current) {
+        userMessageCountRef.current = userMessagesInCurrentConversation;
+      }
 
       // Check if current conversation should be closed (reached limit)
-      if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH) {
+      // Close if either 5 assistant messages OR 5 user messages
+      if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH || userMessageCountRef.current >= 5) {
         setIsConversationClosed(true);
 
         // If conversation reached limit and had user messages, increment count immediately
@@ -211,18 +217,25 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     const paidCount = data.paidConversationsCount || 0;
     const apiRequiresPayment = data.requiresPayment || false;
     setConversationCount(count);
-    // First conversation (count 0) is ALWAYS free
-    const shouldRequirePayment = count === 0 ? false : (apiRequiresPayment || false);
-    setRequiresPayment(shouldRequirePayment);
     setPaidConversationsCount(paidCount);
 
-    // Only close conversation if payment is actually required (count > paidCount)
-    // Don't close if payment was made (paidCount >= count)
-    if (shouldRequirePayment && count > 0 && count > paidCount) {
-      setIsConversationClosed(true);
-    } else if (count > 0 && count <= paidCount) {
-      // Payment was made - conversation should be open
+    // Unlock chat if payment was made (paidCount >= count)
+    // This ensures chat unlocks after payment
+    if (count > 0 && paidCount >= count) {
+      // Payment was made - unlock the conversation
       setIsConversationClosed(false);
+      setRequiresPayment(false); // Explicitly set to false when payment confirmed
+    } else if (count === 0) {
+      // First conversation - always unlocked and free
+      setIsConversationClosed(false);
+      setRequiresPayment(false);
+    } else {
+      // Payment is required (count > paidCount) - lock the conversation
+      const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
+      setRequiresPayment(shouldRequirePayment);
+      if (shouldRequirePayment) {
+        setIsConversationClosed(true);
+      }
     }
   }, [chatHistory]);
 
@@ -248,13 +261,18 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
   }, [incrementConversationCount]);
 
   // Ensure conversation is closed when payment is required (handles page refresh case)
+  // But don't override unlocking after payment
   useEffect(() => {
-    // If payment is required and we have a conversation count > 0,
-    // the conversation should be closed (user needs to pay to start new one)
-    if (requiresPayment && conversationCount > 0) {
+    // Only close if payment is required AND we haven't paid (count > paidCount)
+    // Don't close if payment was made (paidCount >= count)
+    if (requiresPayment && conversationCount > 0 && conversationCount > paidConversationsCount) {
       setIsConversationClosed(true);
+    } else if (conversationCount > 0 && paidConversationsCount >= conversationCount) {
+      // Payment was made - ensure conversation is unlocked
+      setIsConversationClosed(false);
+      setRequiresPayment(false);
     }
-  }, [requiresPayment, conversationCount]);
+  }, [requiresPayment, conversationCount, paidConversationsCount]);
 
   // Ensure first conversation (count 0) never requires payment
   const actualRequiresPayment = conversationCount === 0 ? false : requiresPayment;
