@@ -44,24 +44,15 @@ export function usePurchaseProcessing() {
 
   // Process tutor chat payment
   const processTutorChatPayment = (checkoutId) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:46',message:'processTutorChatPayment ENTRY',data:{checkoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     setStatus('granting');
 
     // Check if already processed on server (idempotency check)
     fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
       .then(res => res.json())
       .then(data => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:52',message:'checkout status response',data:{success:data.success,processed:data.processed},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         if (data.success && data.processed) {
           // Already processed - redirect to game with chat open
           console.log('[usePurchaseProcessing] Tutor chat payment already processed');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:55',message:'payment already processed, redirecting',data:{checkoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
           setStatus('success');
           hasProcessed.current = true;
           setTimeout(() => {
@@ -71,9 +62,6 @@ export function usePurchaseProcessing() {
         }
 
         // Process tutor chat payment
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:65',message:'calling tutor payment API',data:{checkoutId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         fetch('/api/tutor/payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,14 +69,8 @@ export function usePurchaseProcessing() {
         })
           .then(res => res.json())
           .then(data => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:71',message:'tutor payment API response',data:{success:data.success,paidConversationsCount:data.paidConversationsCount,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             if (data.success) {
               console.log('[usePurchaseProcessing] Tutor chat payment processed successfully');
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePurchaseProcessing.js:73',message:'payment success, redirecting',data:{paidConversationsCount:data.paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-              // #endregion
               setStatus('success');
               hasProcessed.current = true;
               setTimeout(() => {
