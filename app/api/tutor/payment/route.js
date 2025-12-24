@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
+import { getRedisClient } from '../../../../lib/redis/client.js';
 import { isCheckoutProcessed, trackConversationPurchase } from '../../../../lib/supabase/purchases.js';
-import { incrementPaidConversations, clearCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
+import { clearCurrentConversationId } from '../../../../lib/redis/tutorAnalytics.js';
 
 /**
  * POST /api/tutor/payment
@@ -58,21 +59,44 @@ export async function POST(request) {
 
     const gameVersion = gameState.version;
 
-    // Increment paid conversations count
-    // #region agent log
-    console.log('[tutor/payment] Before incrementPaidConversations', { sessionId, gameVersion, checkoutId });
-    // #endregion
-    const result = await incrementPaidConversations(sessionId, gameVersion);
-    // #region agent log
-    console.log('[tutor/payment] After incrementPaidConversations', { success: result.success, newCount: result.newCount, error: result.error });
-    // #endregion
-
-    if (!result.success) {
+    // Get current conversation count and paid count
+    const redis = await getRedisClient();
+    if (!redis) {
       return NextResponse.json(
-        { error: result.error || 'Failed to unlock conversation' },
+        { error: 'Storage not available' },
         { status: 500 }
       );
     }
+
+    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
+
+    // Get current counts
+    const [countValue, paidValue] = await Promise.all([
+      redis.get(countKey),
+      redis.get(paidKey)
+    ]);
+
+    const conversationCount = countValue ? parseInt(countValue, 10) : 0;
+    const currentPaidCount = paidValue ? parseInt(paidValue, 10) : 0;
+
+    // #region agent log
+    console.log('[tutor/payment] Before payment processing', { sessionId, gameVersion, checkoutId, conversationCount, currentPaidCount });
+    // #endregion
+
+    // Ensure paidConversationsCount is at least equal to conversationCount
+    // This fixes the issue where conversationCount increments after payment
+    // If conversationCount is 2 and paidCount is 1, we need to set paidCount to 2
+    const targetPaidCount = Math.max(conversationCount, currentPaidCount + 1);
+    
+    // Set paid count to target (use setEx to ensure it's set correctly)
+    await redis.setEx(paidKey, 90 * 24 * 60 * 60, targetPaidCount.toString());
+
+    // #region agent log
+    console.log('[tutor/payment] After payment processing', { conversationCount, currentPaidCount, targetPaidCount });
+    // #endregion
+
+    const result = { success: true, newCount: targetPaidCount };
 
     // Clear current conversation ID to enable a new conversation after payment
     clearCurrentConversationId(sessionId).catch(error => {
