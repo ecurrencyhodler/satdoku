@@ -250,27 +250,35 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
     const tutorChatOpen = urlParams.get('tutor_chat_open');
 
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
-      // Reload chat history first to get updated payment status after payment
-      reloadChatHistory().then((data) => {
-        // Wait for state updates to propagate before opening chat
-        // Increased timeout to 500ms to ensure React has time to re-render with updated payment status
-        setTimeout(() => {
-          startNewConversation().then((started) => {
-            // Always open chat after payment - whether conversation started or not
-            // If it started, user can chat. If not, they'll see an error message.
-            justOpenedRef.current = true;
-            const initialPos = getMiddleRightPosition(size.width, size.height);
-            setPosition(initialPos);
-            setIsOpen(true);
-          });
-        }, 500);
-      });
-      // Remove query param from URL
+      console.log('[TutorChat] Payment redirect detected, reloading and opening chat');
+      
+      // Remove query param from URL immediately
       urlParams.delete('tutor_chat_open');
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
       window.history.replaceState({}, '', newUrl);
+      
+      // Reload chat history to get updated payment status after payment
+      reloadChatHistory().then((data) => {
+        console.log('[TutorChat] Reloaded chat history after payment', {
+          requiresPayment: data.requiresPayment,
+          paidCount: data.paidConversationsCount,
+          conversationCount: data.conversationCount
+        });
+        
+        // Try to start conversation with fresh data
+        // No timeout needed - startNewConversation makes a fresh API call
+        startNewConversation().then((started) => {
+          console.log('[TutorChat] Start conversation result:', started);
+          
+          // Always open chat after payment
+          justOpenedRef.current = true;
+          const initialPos = getMiddleRightPosition(size.width, size.height);
+          setPosition(initialPos);
+          setIsOpen(true);
+        });
+      });
     }
-  }, [gameState, isOpen, startNewConversation, reloadChatHistory]);
+  }, [gameState, isOpen, startNewConversation, reloadChatHistory, size.width, size.height, setPosition]);
 
   return (
     <>
