@@ -36,31 +36,32 @@ export function useTutorChat(gameState, selectedCell) {
     incrementUserMessageCount
   } = useConversationTracking(chatHistory, loadChatHistory, clearChatHistory);
 
-  // Track the last game version we loaded chat for
-  const lastLoadedVersionRef = useRef(null);
+  // Track the last game ID (gameStartTime) we loaded chat for
+  const lastLoadedGameIdRef = useRef(null);
 
-  // Load chat history when gameState becomes available or when version changes (new game)
+  // Load chat history when gameState becomes available or when game changes (new game)
   useEffect(() => {
-    if (gameState?.version !== undefined) {
-      // If this is a new game version (or initial load), reload chat state
-      if (lastLoadedVersionRef.current !== gameState.version) {
-        console.log('[useTutorChat] Game version changed, reloading chat state', {
-          old: lastLoadedVersionRef.current,
-          new: gameState.version
+    if (gameState?.gameStartTime !== undefined) {
+      // If this is a new game (or initial load), reload chat state
+      // gameStartTime changes only on new game, not on every move
+      if (lastLoadedGameIdRef.current !== gameState.gameStartTime) {
+        console.log('[useTutorChat] Game changed, reloading chat state', {
+          old: lastLoadedGameIdRef.current,
+          new: gameState.gameStartTime
         });
         
-        // Load chat history and update payment status for this game version
+        // Load chat history and update payment status for this game
         loadChatHistory().then((data) => {
           if (data.success) {
             updatePaymentStatus(data);
           }
         });
         
-        lastLoadedVersionRef.current = gameState.version;
+        lastLoadedGameIdRef.current = gameState.gameStartTime;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.version]); // Reload when game version changes (including initial load and new games)
+  }, [gameState?.gameStartTime]); // Reload when game changes (new game only, not moves)
 
   /**
    * Start a new conversation
