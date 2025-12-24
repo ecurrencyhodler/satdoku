@@ -168,6 +168,14 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
     try {
       // If a conversation is already active, don't start a new one
       // This prevents resetting the conversation start index when reopening chat
+      console.log('[useConversationTracking] startNewConversation called', {
+        conversationStarted: conversationStartedRef.current,
+        userMessageCount: userMessageCountRef.current,
+        conversationLength: conversationLengthRef.current,
+        currentHistoryLength,
+        chatHistoryLength: chatHistory.length
+      });
+      
       if (conversationStartedRef.current) {
         console.log('[useConversationTracking] Conversation already active, not starting new one');
         return { success: true, requiresPayment: false };
