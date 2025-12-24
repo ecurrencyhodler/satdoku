@@ -4,6 +4,7 @@ import { getSessionId } from '../../../../lib/session/cookieSession.js';
 import { getGameState } from '../../../../lib/redis/gameState.js';
 import { checkForAnswerLeak } from '../../../../lib/tutor/answerLeakDetector.js';
 import { getCoachHowiePrompt, getStrategyDescription, formatBoardForPrompt } from '../../../../lib/tutor/strategyPrompts.js';
+import { trackStrategySelection } from '../../../../lib/redis/tutorAnalytics.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -60,6 +61,23 @@ export async function POST(request) {
         { error: 'INVALID_STRATEGY', message: 'Invalid strategy provided' },
         { status: 400 }
       );
+    }
+
+    // Track strategy selection for analytics (non-blocking, only on first message)
+    if (!chatHistory || chatHistory.length === 0) {
+      // Only track strategy on first message of conversation
+      try {
+        const sessionId = await getSessionId();
+        if (sessionId) {
+          trackStrategySelection(sessionId, strategy).catch(error => {
+            console.error('[tutor/coach] Error tracking strategy:', error);
+            // Don't fail the request if tracking fails
+          });
+        }
+      } catch (error) {
+        console.warn('[tutor/coach] Could not track strategy:', error);
+        // Continue without tracking
+      }
     }
 
     // Get solution from game state (for leak detection)
@@ -195,7 +213,6 @@ export async function POST(request) {
     );
   }
 }
-
 
 
 

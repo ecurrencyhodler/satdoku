@@ -5,7 +5,7 @@ A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase ad
 ## Features
 
 - 9×9 Sudoku puzzles with three difficulty levels
-- Lives system - start with 1 free life
+- Lives system - start with 2 free lives
 - Lightning payments to purchase additional lives (1,500 sats per life)
 - Score tracking with animations
 - AI-powered Sudoku tutor (Howie) - get guided help without revealing answers
@@ -85,11 +85,12 @@ satdoku/
 
 ## How It Works
 
-1. Player starts with 1 free life
+1. Player starts with 2 free lives
 2. When a mistake is made, player loses a life
 3. When lives reach 0, a purchase modal appears
 4. Player can purchase a life via Lightning payment (1,500 sats)
 5. After successful payment, life is added and gameplay resumes
+6. AI chatbot tutor (Howie) provides helpful guidance during gameplay without revealing answers
 
 ## Development
 

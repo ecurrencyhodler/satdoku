@@ -46,6 +46,7 @@ export default function GameModals({
   closeNameInputModal,
   completionId,
   qualifiedForLeaderboard,
+  gameState,
 }) {
   return (
     <>
@@ -99,7 +100,10 @@ export default function GameModals({
         }}
         onConfirm={() => {
           setShowNewGameModal(false);
-          startNewGame();
+          // Use current difficulty from gameState when starting new game
+          const difficultyToUse = pendingDifficultyChange || gameState?.difficulty || 'beginner';
+          startNewGame(difficultyToUse);
+          setPendingDifficultyChange(null);
         }}
       />
 

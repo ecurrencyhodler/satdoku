@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getStrategySelectorPrompt, formatBoardForPrompt } from '../../../../lib/tutor/strategyPrompts.js';
+import { getStrategySelectorPrompt, formatBoardForPrompt, calculateGamePhase } from '../../../../lib/tutor/strategyPrompts.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -47,11 +47,14 @@ export async function POST(request) {
       row.every(cell => cell === 0)
     );
 
+    // Calculate game phase based on filled cells
+    const gamePhase = calculateGamePhase(board);
+
     // Format board for prompt
     const boardText = formatBoardForPrompt(board, board, highlightedCell);
 
-    // Get strategy selector prompt
-    const systemPrompt = getStrategySelectorPrompt();
+    // Get strategy selector prompt with game phase
+    const systemPrompt = getStrategySelectorPrompt(gamePhase);
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
@@ -128,7 +131,6 @@ export async function POST(request) {
     );
   }
 }
-
 
 
 

@@ -73,12 +73,14 @@ export default function GamePage() {
   } = useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal);
 
   // Wrapper for startNewGame that handles pending difficulty change
-  const startNewGame = useCallback(() => {
-    startNewGameFromHook(pendingDifficultyChange);
+  const startNewGame = useCallback((difficultyOverride = null) => {
+    // Use override if provided, otherwise use pendingDifficultyChange, otherwise use current difficulty
+    const difficulty = difficultyOverride || pendingDifficultyChange || gameState?.difficulty || 'beginner';
+    startNewGameFromHook(difficulty);
     setPendingDifficultyChange(null);
     setCompletionId(null);
     setQualifiedForLeaderboard(false);
-  }, [startNewGameFromHook, pendingDifficultyChange, setPendingDifficultyChange]);
+  }, [startNewGameFromHook, pendingDifficultyChange, gameState, setPendingDifficultyChange]);
 
   // Stable callbacks for game events
   const handleWin = useCallback((stats) => {
@@ -357,6 +359,7 @@ export default function GamePage() {
         onShowDifficultySelection={openDifficultySelectionModal}
         pendingDifficultyChange={pendingDifficultyChange}
         setPendingDifficultyChange={setPendingDifficultyChange}
+        gameState={gameState}
         handlePurchaseClose={handlePurchaseClose}
         handlePurchaseSuccess={handlePurchaseSuccess}
         closePurchaseModal={closePurchaseModal}

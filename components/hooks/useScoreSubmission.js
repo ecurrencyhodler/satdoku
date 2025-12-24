@@ -106,5 +106,3 @@ export function useScoreSubmission(completionId, qualifiedForLeaderboard, onOpen
 
 
 
-
-

@@ -177,20 +177,16 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
 
   /**
    * End current conversation (called when modal closes)
-   * Increment conversation count if conversation had messages
+   * Don't increment conversation count - that only happens when conversation reaches 5 messages
    */
   const endConversation = useCallback(async () => {
-    // If conversation was started and had user messages, increment count
-    // Only if we haven't already incremented (might have been incremented when conversation closed)
-    if (conversationStartedRef.current && userMessageCountRef.current > 0 && !hasIncrementedForCurrentConversationRef.current) {
-      hasIncrementedForCurrentConversationRef.current = true;
-      await incrementConversationCount();
-    }
-    // Reset for next conversation
+    // Just reset for next conversation - don't increment count
+    // The conversation count should only increment when the conversation
+    // actually reaches 5 messages (handled by useEffect above)
     conversationStartedRef.current = false;
     userMessageCountRef.current = 0;
     hasIncrementedForCurrentConversationRef.current = false;
-  }, [incrementConversationCount]);
+  }, []);
 
   /**
    * Reset conversation state (for new game)

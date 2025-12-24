@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useChatHistory } from './useChatHistory.js';
 import { useConversationTracking } from './useConversationTracking.js';
 
@@ -36,34 +36,47 @@ export function useTutorChat(gameState, selectedCell) {
     incrementUserMessageCount
   } = useConversationTracking(chatHistory, loadChatHistory);
 
-  // Load chat history and conversation count on mount
-  useEffect(() => {
-    loadChatHistory().then((data) => {
-      if (data.success) {
-        updatePaymentStatus(data);
-      }
-    });
-  }, []);
+  // Track if we've done the initial load to distinguish from game version changes
+  const hasInitializedRef = useRef(false);
+  const lastGameVersionRef = useRef(null);
 
-  // Reset conversation when game state changes (new game)
+  // Load chat history and conversation count when gameState becomes available (initial load or refresh)
   useEffect(() => {
     if (gameState?.version !== undefined) {
-      // Reset local conversation tracking state first
-      resetConversation();
-      // Clear chat history when new game starts (server-side)
-      clearChatHistory().then(() => {
-        // Reload to get fresh conversation count for new game version from server
-        // Since conversation count is keyed by gameVersion, new game = count 0 = free conversation
-        // Chat history is already cleared, so this just updates payment status
+      const currentVersion = gameState.version;
+      const isNewGame = lastGameVersionRef.current !== null && lastGameVersionRef.current !== currentVersion;
+      
+      // If this is a new game (version changed), clear and reset
+      if (isNewGame) {
+        // Reset local conversation tracking state first
+        resetConversation();
+        // Clear chat history when new game starts (server-side)
+        clearChatHistory().then(() => {
+          // Reload to get fresh conversation count for new game version from server
+          // Since conversation count is keyed by gameVersion, new game = count 0 = free conversation
+          // Chat history is already cleared, so this just updates payment status
+          loadChatHistory().then((data) => {
+            if (data.success) {
+              updatePaymentStatus(data);
+            }
+          });
+        });
+      } else if (!hasInitializedRef.current) {
+        // Initial load: gameState just became available (page refresh or first load)
+        // Load existing chat history and conversation count
         loadChatHistory().then((data) => {
           if (data.success) {
             updatePaymentStatus(data);
           }
         });
-      });
+        hasInitializedRef.current = true;
+      }
+      
+      // Track the current game version
+      lastGameVersionRef.current = currentVersion;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.version]); // Reset when game version changes (new game)
+  }, [gameState?.version]); // Load when gameState becomes available or version changes
 
   /**
    * Start a new conversation

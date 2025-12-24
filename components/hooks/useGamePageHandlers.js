@@ -42,7 +42,9 @@ export function useGamePageHandlers(
     if (gameState && gameState.gameInProgress) {
       setShowNewGameModal(true);
     } else {
-      startNewGame();
+      // Use current difficulty from gameState, or default to 'beginner' if no gameState
+      const currentDifficulty = gameState?.difficulty || 'beginner';
+      startNewGame(currentDifficulty);
     }
   }, [gameState, setShowNewGameModal, startNewGame]);
 
