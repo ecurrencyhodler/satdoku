@@ -130,6 +130,36 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
   }, [chatHistory, incrementConversationCount, paidConversationsCount, requiresPayment, conversationCount]);
 
   /**
+   * Update payment status from loaded data
+   */
+  const updatePaymentStatus = useCallback((data) => {
+    const count = data.conversationCount || 0;
+    const paidCount = data.paidConversationsCount || 0;
+    const apiRequiresPayment = data.requiresPayment || false;
+    setConversationCount(count);
+    setPaidConversationsCount(paidCount);
+
+    // Unlock chat if payment was made (paidCount >= count)
+    // This ensures chat unlocks after payment
+    if (count > 0 && paidCount >= count) {
+      // Payment was made - unlock the conversation
+      setIsConversationClosed(false);
+      setRequiresPayment(false); // Explicitly set to false when payment confirmed
+    } else if (count === 0) {
+      // First conversation - always unlocked and free
+      setIsConversationClosed(false);
+      setRequiresPayment(false);
+    } else {
+      // Payment is required (count > paidCount) - lock the conversation
+      const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
+      setRequiresPayment(shouldRequirePayment);
+      if (shouldRequirePayment) {
+        setIsConversationClosed(true);
+      }
+    }
+  }, []);
+
+  /**
    * Start a new conversation
    */
   const startNewConversation = useCallback(async () => {
@@ -226,36 +256,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
   }, []);
 
   /**
-   * Update payment status from loaded data
-   */
-  const updatePaymentStatus = useCallback((data) => {
-    const count = data.conversationCount || 0;
-    const paidCount = data.paidConversationsCount || 0;
-    const apiRequiresPayment = data.requiresPayment || false;
-    setConversationCount(count);
-    setPaidConversationsCount(paidCount);
-
-    // Unlock chat if payment was made (paidCount >= count)
-    // This ensures chat unlocks after payment
-    if (count > 0 && paidCount >= count) {
-      // Payment was made - unlock the conversation
-      setIsConversationClosed(false);
-      setRequiresPayment(false); // Explicitly set to false when payment confirmed
-    } else if (count === 0) {
-      // First conversation - always unlocked and free
-      setIsConversationClosed(false);
-      setRequiresPayment(false);
-    } else {
-      // Payment is required (count > paidCount) - lock the conversation
-      const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
-      setRequiresPayment(shouldRequirePayment);
-      if (shouldRequirePayment) {
-        setIsConversationClosed(true);
-      }
-    }
-  }, []);
-
-  /**
    * Increment user message count (called when user sends a message)
    */
   const incrementUserMessageCount = useCallback(() => {
@@ -312,4 +312,3 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     incrementUserMessageCount
   };
 }
-
