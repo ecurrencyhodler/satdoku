@@ -112,8 +112,9 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
         }
       }
 
-      // If we have messages, mark conversation as started
-      if (userMessagesInCurrentConversation > 0) {
+      // If we have messages AND conversation hasn't been completed yet, mark as started
+      // Don't overwrite if conversation was completed (to allow starting new conversation)
+      if (userMessagesInCurrentConversation > 0 && userMessagesInCurrentConversation < 5) {
         conversationStartedRef.current = true;
       }
     } else if (chatHistory && chatHistory.length === 0) {
@@ -161,8 +162,9 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
 
   /**
    * Start a new conversation
+   * @param {number} currentHistoryLength - Optional: current history length to use (for when state hasn't updated yet)
    */
-  const startNewConversation = useCallback(async () => {
+  const startNewConversation = useCallback(async (currentHistoryLength = null) => {
     try {
       // If a conversation is already active, don't start a new one
       // This prevents resetting the conversation start index when reopening chat
@@ -189,7 +191,8 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
         // IMPORTANT: Mark where this NEW conversation starts in history
         // This allows previous conversation messages to remain visible
         // but new message counting starts from this point
-        const conversationStartIndex = chatHistory.length;
+        // Use provided length if available (for when state hasn't updated yet), otherwise use chatHistory.length
+        const conversationStartIndex = currentHistoryLength !== null ? currentHistoryLength : chatHistory.length;
         
         // Reset conversation state for new conversation
         setIsConversationClosed(false);
@@ -203,7 +206,8 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
           conversationCount: currentCount,
           paidCount: data.paidConversationsCount,
           startIndex: conversationStartIndex,
-          existingHistoryLength: chatHistory.length
+          existingHistoryLength: currentHistoryLength !== null ? currentHistoryLength : chatHistory.length,
+          providedLength: currentHistoryLength
         });
         
         // Reload history to get updated conversation count

@@ -262,20 +262,26 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
         console.log('[TutorChat] Reloaded chat history after payment', {
           requiresPayment: data.requiresPayment,
           paidCount: data.paidConversationsCount,
-          conversationCount: data.conversationCount
+          conversationCount: data.conversationCount,
+          historyLength: data.history?.length || 0
         });
         
-        // Try to start conversation with fresh data
-        // No timeout needed - startNewConversation makes a fresh API call
-        startNewConversation().then((started) => {
-          console.log('[TutorChat] Start conversation result:', started);
-          
-          // Always open chat after payment
-          justOpenedRef.current = true;
-          const initialPos = getMiddleRightPosition(size.width, size.height);
-          setPosition(initialPos);
-          setIsOpen(true);
-        });
+        // Pass the history length directly to avoid race condition where state hasn't updated yet
+        const historyLength = data.history?.length || 0;
+        
+        // Wait for state to update before starting conversation
+        // Use setTimeout to ensure chatHistory state has been updated
+        setTimeout(() => {
+          startNewConversation(historyLength).then((started) => {
+            console.log('[TutorChat] Start conversation result:', started);
+            
+            // Always open chat after payment
+            justOpenedRef.current = true;
+            const initialPos = getMiddleRightPosition(size.width, size.height);
+            setPosition(initialPos);
+            setIsOpen(true);
+          });
+        }, 100);
       });
     }
   }, [gameState, isOpen, startNewConversation, reloadChatHistory, size.width, size.height, setPosition]);
