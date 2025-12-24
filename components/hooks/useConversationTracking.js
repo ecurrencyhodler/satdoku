@@ -124,15 +124,24 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
    */
   const startNewConversation = useCallback(async () => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:125',message:'startNewConversation ENTRY',data:{currentRequiresPayment:requiresPayment,currentCount:conversationCount,currentPaidCount:paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       // Mark where this conversation starts in history
       const conversationStartIndex = chatHistory.length;
 
       // Check if payment is required (don't increment count yet)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:131',message:'calling conversation-count API',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       const response = await fetch('/api/tutor/chat-history/conversation-count', {
         method: 'POST'
       });
 
       const data = await response.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:135',message:'conversation-count API response',data:{success:data.success,conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount,requiresPayment:data.requiresPayment,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
 
       if (data.success) {
         const currentCount = data.conversationCount;
@@ -151,6 +160,9 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         lastConversationStartIndexRef.current = conversationStartIndex;
         // Reload history to get updated conversation count
         await loadChatHistory();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:154',message:'startNewConversation SUCCESS',data:{shouldRequirePayment,currentCount,paidCount:data.paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         return { success: true, requiresPayment: shouldRequirePayment };
       } else if (data.error === 'PAYMENT_REQUIRED') {
         const currentCount = data.conversationCount || 0;
@@ -159,12 +171,18 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         const shouldRequirePayment = data.requiresPayment !== undefined ? data.requiresPayment : (currentCount > 0);
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:162',message:'startNewConversation PAYMENT_REQUIRED',data:{shouldRequirePayment,currentCount,paidCount:data.paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         return {
           success: false,
           requiresPayment: shouldRequirePayment,
           error: null // Don't show error message when payment is required
         };
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:168',message:'startNewConversation ERROR',data:{error:data.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         return {
           success: false,
           requiresPayment: false,
@@ -213,9 +231,15 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
    * Update payment status from loaded data
    */
   const updatePaymentStatus = useCallback((data) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:215',message:'updatePaymentStatus ENTRY',data:{conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount,requiresPayment:data.requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     const count = data.conversationCount || 0;
     const paidCount = data.paidConversationsCount || 0;
     const apiRequiresPayment = data.requiresPayment || false;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:218',message:'updatePaymentStatus BEFORE state update',data:{count,paidCount,apiRequiresPayment,unlockCondition:count > 0 && paidCount >= count},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     setConversationCount(count);
     setPaidConversationsCount(paidCount);
 
@@ -223,20 +247,32 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     // This ensures chat unlocks after payment
     if (count > 0 && paidCount >= count) {
       // Payment was made - unlock the conversation
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:224',message:'unlocking conversation (paidCount >= count)',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setIsConversationClosed(false);
       setRequiresPayment(false); // Explicitly set to false when payment confirmed
     } else if (count === 0) {
       // First conversation - always unlocked and free
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:228',message:'first conversation, unlocking',data:{count},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setIsConversationClosed(false);
       setRequiresPayment(false);
     } else {
       // Payment is required (count > paidCount) - lock the conversation
       const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:233',message:'locking conversation (payment required)',data:{count,paidCount,shouldRequirePayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setRequiresPayment(shouldRequirePayment);
       if (shouldRequirePayment) {
         setIsConversationClosed(true);
       }
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:240',message:'updatePaymentStatus EXIT',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   }, [chatHistory]);
 
   /**

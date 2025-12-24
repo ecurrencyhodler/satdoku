@@ -242,12 +242,24 @@ export default function TutorChat({ gameState, selectedCell }) {
     const tutorChatOpen = urlParams.get('tutor_chat_open');
 
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:244',message:'tutor_chat_open detected, starting reload',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Reload chat history first to get updated payment status after payment
       reloadChatHistory().then((data) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:246',message:'reloadChatHistory completed',data:{success:data.success,conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount,requiresPayment:data.requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         // Wait a moment to ensure state updates propagate
         // Then check if we can start a conversation (payment should have unlocked it)
         setTimeout(() => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:249',message:'before startNewConversation',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
           startNewConversation().then((started) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:250',message:'startNewConversation result',data:{started,requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             if (started) {
               justOpenedRef.current = true;
               const initialPos = getMiddleRightPosition(size.width, size.height);
@@ -256,6 +268,9 @@ export default function TutorChat({ gameState, selectedCell }) {
             } else if (requiresPayment) {
               // If still requires payment, open chat anyway to show payment button
               // This handles edge cases where state hasn't updated yet
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:256',message:'conversation not started, still requiresPayment',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
               justOpenedRef.current = true;
               const initialPos = getMiddleRightPosition(size.width, size.height);
               setPosition(initialPos);

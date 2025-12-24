@@ -59,7 +59,13 @@ export async function POST(request) {
     const gameVersion = gameState.version;
 
     // Increment paid conversations count
+    // #region agent log
+    console.log('[tutor/payment] Before incrementPaidConversations', { sessionId, gameVersion, checkoutId });
+    // #endregion
     const result = await incrementPaidConversations(sessionId, gameVersion);
+    // #region agent log
+    console.log('[tutor/payment] After incrementPaidConversations', { success: result.success, newCount: result.newCount, error: result.error });
+    // #endregion
 
     if (!result.success) {
       return NextResponse.json(
@@ -90,6 +96,9 @@ export async function POST(request) {
       console.log('[tutor/payment] Conversation purchase tracked and checkout marked as processed:', checkoutId);
     }
 
+    // #region agent log
+    console.log('[tutor/payment] Returning success', { paidConversationsCount: result.newCount });
+    // #endregion
     return NextResponse.json({
       success: true,
       paidConversationsCount: result.newCount

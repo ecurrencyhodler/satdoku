@@ -57,6 +57,16 @@ export async function GET(request) {
     const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameVersion);
     const requiresPayment = !canStartWithoutPayment && conversationCount > 0;
 
+    // #region agent log
+    console.log('[tutor/chat-history] GET response data', { 
+      conversationCount, 
+      paidConversationsCount, 
+      canStartWithoutPayment, 
+      requiresPayment,
+      gameVersion 
+    });
+    // #endregion
+
     return NextResponse.json({
       success: true,
       history: history,
