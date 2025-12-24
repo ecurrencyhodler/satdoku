@@ -203,6 +203,20 @@ export function useTutorChat(gameState, selectedCell) {
     return data;
   }, [loadChatHistory, updatePaymentStatus]);
 
+  /**
+   * Reset conversation state for a new game
+   * Called when a new game starts to reset client-side state
+   */
+  const resetForNewGame = useCallback(async () => {
+    // Reset client-side conversation state
+    resetConversation();
+    // Reload chat history to get fresh state from server (should be empty with count 0)
+    const data = await loadChatHistory();
+    if (data.success) {
+      updatePaymentStatus(data);
+    }
+  }, [resetConversation, loadChatHistory, updatePaymentStatus]);
+
   return {
     chatHistory,
     isLoading,
@@ -218,6 +232,7 @@ export function useTutorChat(gameState, selectedCell) {
     startNewConversation,
     endConversation,
     reloadChatHistory,
+    resetForNewGame,
     setError
   };
 }

@@ -8,7 +8,7 @@ import { useResizablePanel } from './hooks/useResizablePanel';
 import TutorChatMessage from './TutorChatMessage';
 import { HOWIE_CHAT_PAYMENT } from '../src/js/system/constants.js';
 
-export default function TutorChat({ gameState, selectedCell }) {
+export default function TutorChat({ gameState, selectedCell, onResetReady }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
@@ -77,8 +77,16 @@ export default function TutorChat({ gameState, selectedCell }) {
     startNewConversation,
     endConversation,
     reloadChatHistory,
+    resetForNewGame,
     setError
   } = useTutorChat(gameState, selectedCell);
+
+  // Expose reset function to parent via callback
+  useEffect(() => {
+    if (onResetReady && resetForNewGame) {
+      onResetReady(resetForNewGame);
+    }
+  }, [onResetReady, resetForNewGame]);
 
   const { navigate, isNavigating } = useCheckout();
 
@@ -254,27 +262,28 @@ export default function TutorChat({ gameState, selectedCell }) {
         // #endregion
         // Wait a moment to ensure state updates propagate
         // Then check if we can start a conversation (payment should have unlocked it)
+        // Use data from reloadChatHistory response instead of closure variables to avoid stale values
         setTimeout(() => {
           // #region agent log
-          console.log('[DEBUG TutorChat] before startNewConversation', { requiresPayment, conversationCount, paidConversationsCount });
-          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:249',message:'before startNewConversation',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          console.log('[DEBUG TutorChat] before startNewConversation', { requiresPayment: data.requiresPayment, conversationCount: data.conversationCount, paidConversationsCount: data.paidConversationsCount });
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:249',message:'before startNewConversation',data:{requiresPayment:data.requiresPayment,conversationCount:data.conversationCount,paidConversationsCount:data.paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
           // #endregion
           startNewConversation().then((started) => {
             // #region agent log
-            console.log('[DEBUG TutorChat] startNewConversation result', { started, requiresPayment });
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:250',message:'startNewConversation result',data:{started,requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            console.log('[DEBUG TutorChat] startNewConversation result', { started, requiresPayment: data.requiresPayment });
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:250',message:'startNewConversation result',data:{started,requiresPayment:data.requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
             if (started) {
               justOpenedRef.current = true;
               const initialPos = getMiddleRightPosition(size.width, size.height);
               setPosition(initialPos);
               setIsOpen(true);
-            } else if (requiresPayment) {
-              // If still requires payment, open chat anyway to show payment button
-              // This handles edge cases where state hasn't updated yet
+            } else {
+              // If conversation didn't start, open chat anyway to show payment button or error
+              // This handles both payment-required cases and other errors
               // #region agent log
-              console.log('[DEBUG TutorChat] conversation not started, still requiresPayment', { requiresPayment, conversationCount, paidConversationsCount });
-              fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:256',message:'conversation not started, still requiresPayment',data:{requiresPayment,conversationCount,paidConversationsCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              console.log('[DEBUG TutorChat] conversation not started, opening chat to show status', { requiresPayment: data.requiresPayment });
+              fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TutorChat.jsx:256',message:'conversation not started, opening chat to show status',data:{requiresPayment:data.requiresPayment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
               // #endregion
               justOpenedRef.current = true;
               const initialPos = getMiddleRightPosition(size.width, size.height);
@@ -289,7 +298,7 @@ export default function TutorChat({ gameState, selectedCell }) {
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
       window.history.replaceState({}, '', newUrl);
     }
-  }, [gameState, isOpen, startNewConversation, reloadChatHistory, requiresPayment]);
+  }, [gameState, isOpen, startNewConversation, reloadChatHistory]);
 
   return (
     <>

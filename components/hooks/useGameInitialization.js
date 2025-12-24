@@ -7,7 +7,7 @@ import { usePaymentSuccessHandler } from './usePaymentSuccessHandler.js';
  * Hook for managing game initialization and state loading
  * Now uses server-authoritative actions
  */
-export function useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal) {
+export function useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal, chatResetRef) {
   const hasInitialized = useRef(false);
   const isLoadingStateRef = useRef(false); // Prevent moves during state reload
 
@@ -29,6 +29,15 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
           console.warn('[useGameInitialization] Failed to clear chat history:', error);
         }
 
+        // Reset client-side chat state after server-side clear
+        if (chatResetRef?.current) {
+          try {
+            await chatResetRef.current();
+          } catch (error) {
+            console.warn('[useGameInitialization] Failed to reset chat state:', error);
+          }
+        }
+
         // Transform server state to client format
         const transformedState = transformServerStateToClient(result.state);
         setGameState(transformedState);
@@ -41,7 +50,7 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
     } finally {
       isLoadingStateRef.current = false;
     }
-  }, [setGameState, setSelectedCell]);
+  }, [setGameState, setSelectedCell, chatResetRef]);
 
   // Reset board while preserving stats (for "Keep playing" feature)
   const resetBoardKeepStats = useCallback(async () => {

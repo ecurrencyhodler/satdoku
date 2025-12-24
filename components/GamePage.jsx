@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useGameInitialization } from './hooks/useGameInitialization';
 import { useCellInput } from './hooks/useCellInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -25,6 +25,9 @@ export default function GamePage() {
   const [selectedCell, setSelectedCell] = useState(null);
   const [pendingDifficultyChange, setPendingDifficultyChange] = useState(null);
   const [noteMode, setNoteMode] = useState(false);
+  
+  // Store chat reset function from TutorChat
+  const chatResetRef = useRef(null);
 
   // Mobile detection
   const isMobile = useMobileDetection();
@@ -70,7 +73,7 @@ export default function GamePage() {
     startNewGame: startNewGameFromHook,
     resetBoardKeepStats,
     isLoadingState,
-  } = useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal);
+  } = useGameInitialization(setGameState, setSelectedCell, setShowPurchaseModal, chatResetRef);
 
   // Wrapper for startNewGame that handles pending difficulty change
   const startNewGame = useCallback((difficultyOverride = null) => {
@@ -313,6 +316,9 @@ export default function GamePage() {
       <TutorChat
         gameState={gameState}
         selectedCell={selectedCell}
+        onResetReady={(resetFn) => {
+          chatResetRef.current = resetFn;
+        }}
       />
 
       {/* Hidden input for mobile native keyboard - always render for mobile detection */}

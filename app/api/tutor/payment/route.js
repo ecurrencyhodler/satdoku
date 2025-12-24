@@ -48,7 +48,7 @@ export async function POST(request) {
       });
     }
 
-    // Get game state to determine game version
+    // Get game state to determine game version (required for keying)
     const gameState = await getGameState(sessionId);
     if (!gameState || !gameState.version) {
       return NextResponse.json(
@@ -68,6 +68,7 @@ export async function POST(request) {
       );
     }
 
+    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
     const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
 
@@ -81,7 +82,15 @@ export async function POST(request) {
     const currentPaidCount = paidValue ? parseInt(paidValue, 10) : 0;
 
     // #region agent log
-    console.log('[tutor/payment] Before payment processing', { sessionId, gameVersion, checkoutId, conversationCount, currentPaidCount });
+    console.log('[tutor/payment] Before payment processing', { 
+      sessionId, 
+      gameVersion, 
+      checkoutId, 
+      conversationCount, 
+      currentPaidCount,
+      countKey,
+      paidKey
+    });
     // #endregion
 
     // Ensure paidConversationsCount is at least conversationCount + 1

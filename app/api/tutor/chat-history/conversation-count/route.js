@@ -21,7 +21,7 @@ export async function POST(request) {
       );
     }
 
-    // Get game state to determine game version
+    // Get game state to determine game version (required for keying)
     const gameState = await getGameState(sessionId);
     if (!gameState || !gameState.version) {
       return NextResponse.json(
@@ -40,6 +40,7 @@ export async function POST(request) {
       );
     }
 
+    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
 
     // Get current count (don't increment - that happens when conversation completes)
@@ -120,7 +121,7 @@ export async function PUT(request) {
       );
     }
 
-    // Get game state to determine game version
+    // Get game state to determine game version (required for keying)
     const gameState = await getGameState(sessionId);
     if (!gameState || !gameState.version) {
       return NextResponse.json(
@@ -139,6 +140,7 @@ export async function PUT(request) {
       );
     }
 
+    // Chat follows gameVersion - key includes gameVersion so counts reset on new game
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
 
     // Get current count

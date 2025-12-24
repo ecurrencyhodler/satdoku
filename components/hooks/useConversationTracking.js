@@ -279,7 +279,7 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
     console.log('[DEBUG useConversationTracking] updatePaymentStatus EXIT', { count, paidCount });
     fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useConversationTracking.js:240',message:'updatePaymentStatus EXIT',data:{count,paidCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
-  }, [chatHistory]);
+  }, []);
 
   /**
    * Increment user message count (called when user sends a message)

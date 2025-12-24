@@ -24,11 +24,17 @@ export async function GET(request) {
       return NextResponse.json({ success: true, history: [], conversationCount: 0 });
     }
 
-    // Get game state to determine game version
+    // Get game state to determine game version (required for keying)
     const gameState = await getGameState(sessionId);
-    const gameVersion = gameState?.version || 0;
+    if (!gameState || !gameState.version) {
+      // If no game state, return empty history (user needs to start a game first)
+      return NextResponse.json({ success: true, history: [], conversationCount: 0, paidConversationsCount: 0, requiresPayment: false });
+    }
 
-    const key = `tutor_chat:${sessionId}`;
+    const gameVersion = gameState.version;
+
+    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameVersion}`;
     const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
 
     // Get both history and conversation count
@@ -125,7 +131,19 @@ export async function POST(request) {
       );
     }
 
-    const key = `tutor_chat:${sessionId}`;
+    // Get game state to determine game version (required for keying)
+    const gameState = await getGameState(sessionId);
+    if (!gameState || !gameState.version) {
+      return NextResponse.json(
+        { error: 'Game state not found' },
+        { status: 400 }
+      );
+    }
+
+    const gameVersion = gameState.version;
+
+    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameVersion}`;
 
     // Get existing history
     const existingValue = await redis.get(key);
@@ -178,9 +196,10 @@ export async function POST(request) {
 
 /**
  * DELETE /api/tutor/chat-history
- * Clear chat history for current session
- * NOTE: Conversation count is keyed by gameVersion, so it automatically resets
- * for new games. This endpoint clears the chat history when a new game starts.
+ * Clear chat history for current game version
+ * NOTE: Chat follows gameVersion - conversation count, paid count, and chat history
+ * are all keyed by sessionId:gameVersion, so they reset on new game.
+ * This endpoint clears the chat history when a new game starts.
  */
 export async function DELETE(request) {
   try {
@@ -196,8 +215,26 @@ export async function DELETE(request) {
       return NextResponse.json({ success: true });
     }
 
-    const key = `tutor_chat:${sessionId}`;
+    // Get game state to determine game version (required for keying)
+    const gameState = await getGameState(sessionId);
+    if (!gameState || !gameState.version) {
+      // If no game state, nothing to clear
+      return NextResponse.json({ success: true });
+    }
+
+    const gameVersion = gameState.version;
+
+    // Chat follows gameVersion - key includes gameVersion so chat resets on new game
+    const key = `tutor_chat:${sessionId}:${gameVersion}`;
     await redis.del(key);
+
+    // Also clear conversation count and paid count for this game version
+    const countKey = `tutor_conversation_count:${sessionId}:${gameVersion}`;
+    const paidKey = `tutor_chat_paid_conversations:${sessionId}:${gameVersion}`;
+    await Promise.all([
+      redis.del(countKey),
+      redis.del(paidKey)
+    ]);
 
     // Clear current conversation ID when chat history is cleared (new game started)
     // This enables a new conversation to be started for the new game
