@@ -95,10 +95,15 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         // If conversation hasn't reached limit, check if it should still be closed
         // This handles the case where payment is required (conversation was completed previously)
         // In that case, we want to keep it closed until payment is made
-        if (requiresPayment && conversationCount > 0) {
+        // IMPORTANT: Check paidConversationsCount to avoid race condition where requiresPayment
+        // might be stale after payment unlocks the chat
+        if (requiresPayment && conversationCount > 0 && conversationCount > paidConversationsCount) {
           // Payment is required, so the current conversation should be considered closed
           // (user needs to pay to start a new one)
           setIsConversationClosed(true);
+        } else if (conversationCount > 0 && paidConversationsCount >= conversationCount) {
+          // Payment was made - ensure conversation is unlocked
+          setIsConversationClosed(false);
         }
       }
 
