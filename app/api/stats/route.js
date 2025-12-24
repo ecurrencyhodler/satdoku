@@ -39,9 +39,9 @@ export async function GET(request) {
         .select('id', { count: 'exact', head: true })
         .gte('started_at', startDate.toISOString()),
 
-      // Total mistakes made (filtered by started_at to match games played logic)
+      // Total mistakes made - get from puzzle_sessions (includes all games, not just completed)
       supabase
-        .from('puzzle_completions')
+        .from('puzzle_sessions')
         .select('mistakes')
         .gte('started_at', startDate.toISOString()),
 
