@@ -252,26 +252,18 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
       // Reload chat history first to get updated payment status after payment
       reloadChatHistory().then((data) => {
-        // Wait a moment to ensure state updates propagate
-        // Then check if we can start a conversation (payment should have unlocked it)
-        // Use data from reloadChatHistory response instead of closure variables to avoid stale values
+        // Wait for state updates to propagate before opening chat
+        // Increased timeout to 500ms to ensure React has time to re-render with updated payment status
         setTimeout(() => {
           startNewConversation().then((started) => {
-            if (started) {
-              justOpenedRef.current = true;
-              const initialPos = getMiddleRightPosition(size.width, size.height);
-              setPosition(initialPos);
-              setIsOpen(true);
-            } else {
-              // If conversation didn't start, open chat anyway to show payment button or error
-              // This handles both payment-required cases and other errors
-              justOpenedRef.current = true;
-              const initialPos = getMiddleRightPosition(size.width, size.height);
-              setPosition(initialPos);
-              setIsOpen(true);
-            }
+            // Always open chat after payment - whether conversation started or not
+            // If it started, user can chat. If not, they'll see an error message.
+            justOpenedRef.current = true;
+            const initialPos = getMiddleRightPosition(size.width, size.height);
+            setPosition(initialPos);
+            setIsOpen(true);
           });
-        }, 100);
+        }, 500);
       });
       // Remove query param from URL
       urlParams.delete('tutor_chat_open');
@@ -422,5 +414,3 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
     </>
   );
 }
-
-

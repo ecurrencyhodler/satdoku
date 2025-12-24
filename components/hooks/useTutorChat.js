@@ -36,26 +36,31 @@ export function useTutorChat(gameState, selectedCell) {
     incrementUserMessageCount
   } = useConversationTracking(chatHistory, loadChatHistory);
 
-  // Track if we've done the initial load
-  const hasInitializedRef = useRef(false);
+  // Track the last game version we loaded chat for
+  const lastLoadedVersionRef = useRef(null);
 
-  // Load chat history when gameState becomes available (initial load only)
+  // Load chat history when gameState becomes available or when version changes (new game)
   useEffect(() => {
-    if (gameState?.version !== undefined && !hasInitializedRef.current) {
-      // Initial load: gameState just became available (page refresh or first load)
-      // Load existing chat history and conversation count
-      loadChatHistory().then((data) => {
-        if (data.success) {
-          updatePaymentStatus(data);
-        }
-      });
-      hasInitializedRef.current = true;
+    if (gameState?.version !== undefined) {
+      // If this is a new game version (or initial load), reload chat state
+      if (lastLoadedVersionRef.current !== gameState.version) {
+        console.log('[useTutorChat] Game version changed, reloading chat state', {
+          old: lastLoadedVersionRef.current,
+          new: gameState.version
+        });
+        
+        // Load chat history and update payment status for this game version
+        loadChatHistory().then((data) => {
+          if (data.success) {
+            updatePaymentStatus(data);
+          }
+        });
+        
+        lastLoadedVersionRef.current = gameState.version;
+      }
     }
-    // Chat history is cleared in useGameInitialization.js when startNewGame action is called
-    // We don't need to detect new games here based on version changes
-    // because version increments on every move, not just on new games
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.version]); // Load when gameState becomes available
+  }, [gameState?.version]); // Reload when game version changes (including initial load and new games)
 
   /**
    * Start a new conversation
@@ -227,5 +232,3 @@ export function useTutorChat(gameState, selectedCell) {
     setError
   };
 }
-
-
