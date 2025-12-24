@@ -34,7 +34,7 @@ export function useTutorChat(gameState, selectedCell) {
     resetConversation,
     updatePaymentStatus,
     incrementUserMessageCount
-  } = useConversationTracking(chatHistory, loadChatHistory);
+  } = useConversationTracking(chatHistory, loadChatHistory, clearChatHistory);
 
   // Track the last game version we loaded chat for
   const lastLoadedVersionRef = useRef(null);

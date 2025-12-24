@@ -7,7 +7,7 @@ const MAX_CONVERSATION_LENGTH = 5; // Max assistant messages per conversation
 /**
  * Hook for managing conversation tracking (counts, payment status, conversation state)
  */
-export function useConversationTracking(chatHistory, loadChatHistory) {
+export function useConversationTracking(chatHistory, loadChatHistory, clearChatHistory) {
   const [conversationCount, setConversationCount] = useState(0);
   const [requiresPayment, setRequiresPayment] = useState(false);
   const [paidConversationsCount, setPaidConversationsCount] = useState(0);
@@ -164,9 +164,6 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
    */
   const startNewConversation = useCallback(async () => {
     try {
-      // Mark where this conversation starts in history
-      const conversationStartIndex = chatHistory.length;
-
       // Check if payment is required (don't increment count yet)
       const response = await fetch('/api/tutor/chat-history/conversation-count', {
         method: 'POST'
@@ -181,17 +178,29 @@ export function useConversationTracking(chatHistory, loadChatHistory) {
         const shouldRequirePayment = data.requiresPayment || false;
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
+        
+        // IMPORTANT: Mark where this NEW conversation starts in history
+        // This allows previous conversation messages to remain visible
+        // but new message counting starts from this point
+        const conversationStartIndex = chatHistory.length;
+        
         // Reset conversation state for new conversation
         setIsConversationClosed(false);
         conversationLengthRef.current = 0;
         userMessageCountRef.current = 0;
         conversationStartedRef.current = true;
         hasIncrementedForCurrentConversationRef.current = false;
-        // Mark where this conversation starts in history
         lastConversationStartIndexRef.current = conversationStartIndex;
+        
+        console.log('[useConversationTracking] Started new conversation', {
+          conversationCount: currentCount,
+          paidCount: data.paidConversationsCount,
+          startIndex: conversationStartIndex,
+          existingHistoryLength: chatHistory.length
+        });
+        
         // Reload history to get updated conversation count
-        // IMPORTANT: Load history AFTER resetting refs to prevent useEffect from
-        // incorrectly calculating conversation length based on stale refs
+        // This ensures payment status is current
         const historyData = await loadChatHistory();
         if (historyData.success) {
           // Update payment status from loaded data to ensure consistency
