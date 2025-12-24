@@ -84,16 +84,23 @@ export async function POST(request) {
     console.log('[tutor/payment] Before payment processing', { sessionId, gameVersion, checkoutId, conversationCount, currentPaidCount });
     // #endregion
 
-    // Ensure paidConversationsCount is at least equal to conversationCount
-    // This fixes the issue where conversationCount increments after payment
-    // If conversationCount is 2 and paidCount is 1, we need to set paidCount to 2
-    const targetPaidCount = Math.max(conversationCount, currentPaidCount + 1);
+    // Ensure paidConversationsCount is at least conversationCount + 1
+    // This accounts for the fact that payment unlocks the NEXT conversation
+    // If conversationCount is 1, we need paidCount to be at least 2 to unlock conversation 2
+    // If conversationCount is 2, we need paidCount to be at least 3 to unlock conversation 3
+    // This prevents the race condition where count increments after payment
+    const targetPaidCount = Math.max(conversationCount + 1, currentPaidCount + 1);
     
     // Set paid count to target (use setEx to ensure it's set correctly)
     await redis.setEx(paidKey, 90 * 24 * 60 * 60, targetPaidCount.toString());
 
     // #region agent log
-    console.log('[tutor/payment] After payment processing', { conversationCount, currentPaidCount, targetPaidCount });
+    console.log('[tutor/payment] After payment processing', { 
+      conversationCount, 
+      currentPaidCount, 
+      targetPaidCount,
+      calculation: `max(${conversationCount} + 1, ${currentPaidCount} + 1) = max(${conversationCount + 1}, ${currentPaidCount + 1}) = ${targetPaidCount}`
+    });
     // #endregion
 
     const result = { success: true, newCount: targetPaidCount };
