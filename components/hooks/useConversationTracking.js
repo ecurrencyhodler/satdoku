@@ -140,6 +140,12 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
       // Payment was made - unlock the conversation
       setIsConversationClosed(false);
       setRequiresPayment(false); // Explicitly set to false when payment confirmed
+      // Reset conversation refs to allow starting fresh conversation after payment
+      // This prevents the "conversation already active" check from blocking new conversation
+      conversationStartedRef.current = false;
+      userMessageCountRef.current = 0;
+      hasIncrementedForCurrentConversationRef.current = false;
+      lastConversationStartIndexRef.current = chatHistory.length; // Start from current history length
     } else if (count === 0) {
       // First conversation - always unlocked and free
       setIsConversationClosed(false);
