@@ -27,7 +27,6 @@ export function useTutorChat(gameState, selectedCell) {
     paidConversationsCount,
     isConversationClosed,
     canStartNewConversation,
-    conversationLengthRef,
     userMessageCountRef,
     startNewConversation: startNewConversationTracking,
     endConversation,
@@ -65,11 +64,9 @@ export function useTutorChat(gameState, selectedCell) {
 
   /**
    * Start a new conversation
-   * @param {number} currentHistoryLength - Optional: current history length to use (for when state hasn't updated yet)
-   * @param {boolean} forceReset - Optional: force reset counters even if they show a completed conversation
    */
-  const startNewConversation = useCallback(async (currentHistoryLength = null, forceReset = false) => {
-    const result = await startNewConversationTracking(currentHistoryLength, forceReset);
+  const startNewConversation = useCallback(async () => {
+    const result = await startNewConversationTracking();
     if (result.success) {
       setError(null);
       return true;
@@ -106,8 +103,8 @@ export function useTutorChat(gameState, selectedCell) {
       return;
     }
 
-    // Check conversation length (assistant messages OR user messages)
-    if (conversationLengthRef.current >= 5 || userMessageCountRef.current >= 5) {
+    // Check user message count (5 messages max per conversation)
+    if (userMessageCountRef.current >= 5) {
       setError('Conversation limit reached. Please start a new conversation.');
       return;
     }
@@ -177,7 +174,7 @@ export function useTutorChat(gameState, selectedCell) {
     } finally {
       setIsLoading(false);
     }
-  }, [gameState, selectedCell, chatHistory, isConversationClosed, saveMessage, conversationLengthRef, incrementUserMessageCount]);
+  }, [gameState, selectedCell, chatHistory, isConversationClosed, saveMessage, userMessageCountRef, incrementUserMessageCount]);
 
   /**
    * Get help for selected cell (convenience method)

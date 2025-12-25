@@ -250,40 +250,23 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
     const tutorChatOpen = urlParams.get('tutor_chat_open');
 
     if (tutorChatOpen === 'true' && !isOpen && gameState) {
-      console.log('[TutorChat] Payment redirect detected, reloading and opening chat');
+      console.log('[TutorChat] Payment redirect detected, opening chat');
       
       // Remove query param from URL immediately
       urlParams.delete('tutor_chat_open');
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
       window.history.replaceState({}, '', newUrl);
       
-      // Reload chat history to get updated payment status after payment
-      reloadChatHistory().then((data) => {
-        console.log('[TutorChat] Reloaded chat history after payment', {
-          requiresPayment: data.requiresPayment,
-          paidCount: data.paidConversationsCount,
-          conversationCount: data.conversationCount,
-          historyLength: data.history?.length || 0
+      // Reload chat history to get updated payment status
+      reloadChatHistory().then(() => {
+        // Start new conversation (payment status will be checked automatically)
+        startNewConversation().then(() => {
+          // Open chat
+          justOpenedRef.current = true;
+          const initialPos = getMiddleRightPosition(size.width, size.height);
+          setPosition(initialPos);
+          setIsOpen(true);
         });
-        
-        // Pass the history length directly to avoid race condition where state hasn't updated yet
-        const historyLength = data.history?.length || 0;
-        
-        // Wait for state to update before starting conversation
-        // Use setTimeout to ensure chatHistory state has been updated
-        setTimeout(() => {
-          // Pass forceReset=true to reset counters before useEffect processes the loaded history
-          // This is critical because the useEffect will calculate 5 messages from the previous conversation
-          startNewConversation(historyLength, true).then((started) => {
-            console.log('[TutorChat] Start conversation result:', started);
-            
-            // Always open chat after payment
-            justOpenedRef.current = true;
-            const initialPos = getMiddleRightPosition(size.width, size.height);
-            setPosition(initialPos);
-            setIsOpen(true);
-          });
-        }, 100);
       });
     }
   }, [gameState, isOpen, startNewConversation, reloadChatHistory, size.width, size.height, setPosition]);

@@ -199,10 +199,9 @@ export async function POST(request) {
 
 /**
  * DELETE /api/tutor/chat-history
- * Clear chat history for current game
- * NOTE: Chat follows gameId (gameStartTime) - conversation count, paid count, and chat history
- * are all keyed by sessionId:gameId, so they reset on new game.
- * This endpoint clears the chat history when a new game starts.
+ * Clear ALL chat history for this session (called when new game starts)
+ * Deletes all game-specific keys (chat history and conversation counts for all games)
+ * and the session-level paid conversations count for a complete fresh start
  */
 export async function DELETE(request) {
   try {
@@ -218,55 +217,63 @@ export async function DELETE(request) {
       return NextResponse.json({ success: true });
     }
 
-    // Get game state to determine game identifier (required for keying)
-    const gameState = await getGameState(sessionId);
-    if (!gameState || !gameState.gameStartTime) {
-      // If no game state, nothing to clear
-      return NextResponse.json({ success: true });
-    }
-
-    // Use gameStartTime as stable game identifier
-    const gameId = gameState.gameStartTime;
-
-    // Chat follows gameId (gameStartTime) - key includes gameId so chat resets on new game
-    const key = `tutor_chat:${sessionId}:${gameId}`;
-    const countKey = `tutor_conversation_count:${sessionId}:${gameId}`;
-    // Paid conversations are NOT keyed by gameId - they persist across moves within same game
+    // Find ALL keys for this session using pattern matching
+    // This catches all old games' keys that might be orphaned
+    const chatPattern = `tutor_chat:${sessionId}:*`;
+    const countPattern = `tutor_conversation_count:${sessionId}:*`;
     const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
     
     // #region agent log
-    // Get values before deletion for logging
-    const [beforeCount, beforePaid] = await Promise.all([
-      redis.get(countKey),
-      redis.get(paidKey)
-    ]);
-    console.log('[tutor/chat-history] DELETE before clearing', {
+    console.log('[tutor/chat-history] DELETE scanning for keys', {
       sessionId,
-      gameId,
-      countKey,
-      paidKey,
-      beforeCount: beforeCount || 'null',
-      beforePaid: beforePaid || 'null'
+      chatPattern,
+      countPattern,
+      paidKey
     });
-    // Server-side log (will appear in Vercel logs)
     // #endregion
     
-    await redis.del(key);
-
-    // Also clear conversation count and paid count for this game
-    await Promise.all([
-      redis.del(countKey),
-      redis.del(paidKey)
-    ]);
+    // Scan for all matching keys
+    const chatKeys = [];
+    const countKeys = [];
+    
+    // Scan for chat history keys
+    let chatCursor = '0';
+    do {
+      const result = await redis.scan(chatCursor, { MATCH: chatPattern, COUNT: 100 });
+      chatCursor = result.cursor;
+      chatKeys.push(...result.keys);
+    } while (chatCursor !== '0');
+    
+    // Scan for conversation count keys
+    let countCursor = '0';
+    do {
+      const result = await redis.scan(countCursor, { MATCH: countPattern, COUNT: 100 });
+      countCursor = result.cursor;
+      countKeys.push(...result.keys);
+    } while (countCursor !== '0');
     
     // #region agent log
-    console.log('[tutor/chat-history] DELETE after clearing', {
-      sessionId,
-      gameId,
-      keysDeleted: [key, countKey, paidKey]
+    console.log('[tutor/chat-history] DELETE found keys', {
+      chatKeys: chatKeys.length,
+      countKeys: countKeys.length,
+      chatKeysList: chatKeys,
+      countKeysList: countKeys
     });
-    // Server-side log (will appear in Vercel logs)
     // #endregion
+    
+    // Delete all found keys plus the paid key
+    const allKeys = [...chatKeys, ...countKeys, paidKey];
+    if (allKeys.length > 0) {
+      await redis.del(allKeys);
+      
+      // #region agent log
+      console.log('[tutor/chat-history] DELETE cleared keys', {
+        sessionId,
+        deletedCount: allKeys.length,
+        keys: allKeys
+      });
+      // #endregion
+    }
 
     // Clear current conversation ID when chat history is cleared (new game started)
     // This enables a new conversation to be started for the new game

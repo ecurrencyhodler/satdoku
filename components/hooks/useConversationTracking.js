@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-const MAX_CONVERSATION_LENGTH = 5; // Max assistant messages per conversation
+const MAX_USER_MESSAGES = 5; // Max user messages per conversation
 
 /**
  * Hook for managing conversation tracking (counts, payment status, conversation state)
+ * Only counts USER messages - each conversation allows 5 user messages
  */
 export function useConversationTracking(chatHistory, loadChatHistory, clearChatHistory) {
   const [conversationCount, setConversationCount] = useState(0);
@@ -13,7 +14,6 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
   const [paidConversationsCount, setPaidConversationsCount] = useState(0);
   const [isConversationClosed, setIsConversationClosed] = useState(false);
 
-  const conversationLengthRef = useRef(0);
   const lastConversationStartIndexRef = useRef(0);
   const userMessageCountRef = useRef(0);
   const conversationStartedRef = useRef(false);
@@ -47,26 +47,20 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
   // Update conversation state when chat history changes
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0) {
-      // Calculate current conversation length (assistant messages since last conversation start)
+      // Calculate user messages in current conversation
       const currentConversationMessages = chatHistory.slice(lastConversationStartIndexRef.current);
-      const assistantMessagesInCurrentConversation = currentConversationMessages.filter(
-        msg => msg.role === 'assistant'
-      ).length;
       const userMessagesInCurrentConversation = currentConversationMessages.filter(
         msg => msg.role === 'user'
       ).length;
 
-      conversationLengthRef.current = assistantMessagesInCurrentConversation;
-      // Don't overwrite userMessageCountRef if it's been incremented (to avoid race condition)
-      // Only update from chat history if calculated value is higher (handles page refresh)
-      // This prevents the useEffect from overwriting the incremented value after saveMessage
+      // Update user message count from history (handles page refresh)
+      // Only update if calculated value is higher to avoid race conditions
       if (userMessagesInCurrentConversation > userMessageCountRef.current) {
         userMessageCountRef.current = userMessagesInCurrentConversation;
       }
 
-      // Check if current conversation should be closed (reached limit)
-      // Close if either 5 assistant messages OR 5 user messages
-      if (conversationLengthRef.current >= MAX_CONVERSATION_LENGTH || userMessageCountRef.current >= 5) {
+      // Check if current conversation should be closed (reached 5 user messages)
+      if (userMessageCountRef.current >= MAX_USER_MESSAGES) {
         setIsConversationClosed(true);
 
         // If conversation reached limit and had user messages, increment count immediately
@@ -106,7 +100,7 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
         } else if (conversationCount > 0 && paidConversationsCount >= conversationCount) {
           // Payment was made - ensure conversation is unlocked
           setIsConversationClosed(false);
-        } else if (conversationStartedRef.current && userMessageCountRef.current < 5 && conversationLengthRef.current < MAX_CONVERSATION_LENGTH) {
+        } else if (conversationStartedRef.current && userMessageCountRef.current < MAX_USER_MESSAGES) {
           // Active conversation that hasn't reached limit - ensure it's open
           setIsConversationClosed(false);
         }
@@ -162,29 +156,14 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
 
   /**
    * Start a new conversation
-   * @param {number} currentHistoryLength - Optional: current history length to use (for when state hasn't updated yet)
-   * @param {boolean} forceReset - Optional: force reset counters even if they show a completed conversation
    */
-  const startNewConversation = useCallback(async (currentHistoryLength = null, forceReset = false) => {
+  const startNewConversation = useCallback(async () => {
     try {
       console.log('[useConversationTracking] startNewConversation called', {
         conversationStarted: conversationStartedRef.current,
         userMessageCount: userMessageCountRef.current,
-        conversationLength: conversationLengthRef.current,
-        currentHistoryLength,
-        chatHistoryLength: chatHistory.length,
-        forceReset
+        chatHistoryLength: chatHistory.length
       });
-      
-      // If force reset is true (after payment), reset counters even if conversation appears complete
-      // This handles the case where useEffect has already processed the old conversation's messages
-      if (forceReset) {
-        console.log('[useConversationTracking] Force resetting counters after payment');
-        conversationLengthRef.current = 0;
-        userMessageCountRef.current = 0;
-        conversationStartedRef.current = false;
-        hasIncrementedForCurrentConversationRef.current = false;
-      }
       
       // If a conversation is already active, don't start a new one
       // This prevents resetting the conversation start index when reopening chat
@@ -208,15 +187,13 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
         setRequiresPayment(shouldRequirePayment);
         setPaidConversationsCount(data.paidConversationsCount || 0);
         
-        // IMPORTANT: Mark where this NEW conversation starts in history
+        // Mark where this NEW conversation starts in history
         // This allows previous conversation messages to remain visible
         // but new message counting starts from this point
-        // Use provided length if available (for when state hasn't updated yet), otherwise use chatHistory.length
-        const conversationStartIndex = currentHistoryLength !== null ? currentHistoryLength : chatHistory.length;
+        const conversationStartIndex = chatHistory.length;
         
         // Reset conversation state for new conversation
         setIsConversationClosed(false);
-        conversationLengthRef.current = 0;
         userMessageCountRef.current = 0;
         conversationStartedRef.current = true;
         hasIncrementedForCurrentConversationRef.current = false;
@@ -226,8 +203,7 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
           conversationCount: currentCount,
           paidCount: data.paidConversationsCount,
           startIndex: conversationStartIndex,
-          existingHistoryLength: currentHistoryLength !== null ? currentHistoryLength : chatHistory.length,
-          providedLength: currentHistoryLength
+          historyLength: chatHistory.length
         });
         
         // Reload history to get updated conversation count
@@ -284,7 +260,6 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
    */
   const resetConversation = useCallback(() => {
     setIsConversationClosed(false);
-    conversationLengthRef.current = 0;
     lastConversationStartIndexRef.current = 0;
     userMessageCountRef.current = 0;
     conversationStartedRef.current = false;
@@ -342,7 +317,6 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
     paidConversationsCount,
     isConversationClosed,
     canStartNewConversation: actualCanStartNewConversation,
-    conversationLengthRef,
     userMessageCountRef,
     startNewConversation,
     endConversation,
