@@ -66,9 +66,10 @@ export function useTutorChat(gameState, selectedCell) {
   /**
    * Start a new conversation
    * @param {number} currentHistoryLength - Optional: current history length to use (for when state hasn't updated yet)
+   * @param {boolean} forceReset - Optional: force reset counters even if they show a completed conversation
    */
-  const startNewConversation = useCallback(async (currentHistoryLength = null) => {
-    const result = await startNewConversationTracking(currentHistoryLength);
+  const startNewConversation = useCallback(async (currentHistoryLength = null, forceReset = false) => {
+    const result = await startNewConversationTracking(currentHistoryLength, forceReset);
     if (result.success) {
       setError(null);
       return true;

@@ -272,7 +272,9 @@ export default function TutorChat({ gameState, selectedCell, onResetReady }) {
         // Wait for state to update before starting conversation
         // Use setTimeout to ensure chatHistory state has been updated
         setTimeout(() => {
-          startNewConversation(historyLength).then((started) => {
+          // Pass forceReset=true to reset counters before useEffect processes the loaded history
+          // This is critical because the useEffect will calculate 5 messages from the previous conversation
+          startNewConversation(historyLength, true).then((started) => {
             console.log('[TutorChat] Start conversation result:', started);
             
             // Always open chat after payment

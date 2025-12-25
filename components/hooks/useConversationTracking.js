@@ -163,19 +163,31 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
   /**
    * Start a new conversation
    * @param {number} currentHistoryLength - Optional: current history length to use (for when state hasn't updated yet)
+   * @param {boolean} forceReset - Optional: force reset counters even if they show a completed conversation
    */
-  const startNewConversation = useCallback(async (currentHistoryLength = null) => {
+  const startNewConversation = useCallback(async (currentHistoryLength = null, forceReset = false) => {
     try {
-      // If a conversation is already active, don't start a new one
-      // This prevents resetting the conversation start index when reopening chat
       console.log('[useConversationTracking] startNewConversation called', {
         conversationStarted: conversationStartedRef.current,
         userMessageCount: userMessageCountRef.current,
         conversationLength: conversationLengthRef.current,
         currentHistoryLength,
-        chatHistoryLength: chatHistory.length
+        chatHistoryLength: chatHistory.length,
+        forceReset
       });
       
+      // If force reset is true (after payment), reset counters even if conversation appears complete
+      // This handles the case where useEffect has already processed the old conversation's messages
+      if (forceReset) {
+        console.log('[useConversationTracking] Force resetting counters after payment');
+        conversationLengthRef.current = 0;
+        userMessageCountRef.current = 0;
+        conversationStartedRef.current = false;
+        hasIncrementedForCurrentConversationRef.current = false;
+      }
+      
+      // If a conversation is already active, don't start a new one
+      // This prevents resetting the conversation start index when reopening chat
       if (conversationStartedRef.current) {
         console.log('[useConversationTracking] Conversation already active, not starting new one');
         return { success: true, requiresPayment: false };
