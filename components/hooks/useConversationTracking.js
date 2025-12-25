@@ -131,12 +131,27 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
     const count = data.conversationCount || 0;
     const paidCount = data.paidConversationsCount || 0;
     const apiRequiresPayment = data.requiresPayment || false;
+    
+    console.log('[useConversationTracking] updatePaymentStatus called', {
+      count,
+      paidCount,
+      apiRequiresPayment,
+      historyLength: chatHistory.length,
+      currentRefs: {
+        conversationStarted: conversationStartedRef.current,
+        userMessageCount: userMessageCountRef.current,
+        hasIncremented: hasIncrementedForCurrentConversationRef.current,
+        lastStartIndex: lastConversationStartIndexRef.current
+      }
+    });
+    
     setConversationCount(count);
     setPaidConversationsCount(paidCount);
 
     // Unlock chat if payment was made (paidCount >= count)
     // This ensures chat unlocks after payment
     if (count > 0 && paidCount >= count) {
+      console.log('[useConversationTracking] Payment confirmed, unlocking and resetting refs');
       // Payment was made - unlock the conversation
       setIsConversationClosed(false);
       setRequiresPayment(false); // Explicitly set to false when payment confirmed
@@ -144,21 +159,26 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
       // This prevents the "conversation already active" check from blocking new conversation
       conversationStartedRef.current = false;
       userMessageCountRef.current = 0;
-      hasIncrementedForCurrentConversationRef.current = false;
+      // CRITICAL FIX: Mark as incremented to prevent the useEffect from double-incrementing
+      // when it sees the old completed conversation in chatHistory
+      hasIncrementedForCurrentConversationRef.current = true;
       lastConversationStartIndexRef.current = chatHistory.length; // Start from current history length
     } else if (count === 0) {
       // First conversation - always unlocked and free
       setIsConversationClosed(false);
       setRequiresPayment(false);
     } else {
+      console.log('[useConversationTracking] Payment required', { count, paidCount });
       // Payment is required (count > paidCount) - lock the conversation
       const shouldRequirePayment = apiRequiresPayment || (count > paidCount);
       setRequiresPayment(shouldRequirePayment);
       if (shouldRequirePayment) {
         setIsConversationClosed(true);
+        // Mark as incremented to prevent double-counting when reloading history
+        hasIncrementedForCurrentConversationRef.current = true;
       }
     }
-  }, []);
+  }, [chatHistory.length]);
 
   /**
    * Start a new conversation
