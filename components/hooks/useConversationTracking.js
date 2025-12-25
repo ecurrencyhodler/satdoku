@@ -239,6 +239,11 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
           // Update payment status from loaded data to ensure consistency
           updatePaymentStatus(historyData);
         }
+        
+        // Explicitly ensure conversation is open after all async operations complete
+        // This prevents "Conversation closed" from showing when chat first opens after payment
+        setIsConversationClosed(false);
+        
         return { success: true, requiresPayment: shouldRequirePayment };
       } else if (data.error === 'PAYMENT_REQUIRED') {
         const currentCount = data.conversationCount || 0;
