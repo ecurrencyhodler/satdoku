@@ -151,18 +151,27 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
     // Unlock chat if payment was made (paidCount >= count)
     // This ensures chat unlocks after payment
     if (count > 0 && paidCount >= count) {
-      console.log('[useConversationTracking] Payment confirmed, unlocking and resetting refs');
+      console.log('[useConversationTracking] Payment confirmed, unlocking', {
+        conversationAlreadyStarted: conversationStartedRef.current
+      });
       // Payment was made - unlock the conversation
       setIsConversationClosed(false);
       setRequiresPayment(false); // Explicitly set to false when payment confirmed
-      // Reset conversation refs to allow starting fresh conversation after payment
-      // This prevents the "conversation already active" check from blocking new conversation
-      conversationStartedRef.current = false;
-      userMessageCountRef.current = 0;
+      
+      // CRITICAL: Only reset refs if a conversation hasn't already been started
+      // If startNewConversation already ran and set conversationStarted=true, preserve it
+      if (!conversationStartedRef.current) {
+        console.log('[useConversationTracking] Resetting refs for new conversation');
+        conversationStartedRef.current = false;
+        userMessageCountRef.current = 0;
+        lastConversationStartIndexRef.current = chatHistory.length;
+      } else {
+        console.log('[useConversationTracking] Conversation already active, preserving refs');
+      }
+      
       // CRITICAL FIX: Mark as incremented to prevent the useEffect from double-incrementing
       // when it sees the old completed conversation in chatHistory
       hasIncrementedForCurrentConversationRef.current = true;
-      lastConversationStartIndexRef.current = chatHistory.length; // Start from current history length
     } else if (count === 0) {
       // First conversation - always unlocked and free
       setIsConversationClosed(false);
@@ -232,17 +241,9 @@ export function useConversationTracking(chatHistory, loadChatHistory, clearChatH
           historyLength: chatHistory.length
         });
         
-        // Reload history to get updated conversation count
-        // This ensures payment status is current
-        const historyData = await loadChatHistory();
-        if (historyData.success) {
-          // Update payment status from loaded data to ensure consistency
-          updatePaymentStatus(historyData);
-        }
-        
-        // Explicitly ensure conversation is open after all async operations complete
-        // This prevents "Conversation closed" from showing when chat first opens after payment
-        setIsConversationClosed(false);
+        // Don't reload history here - it's already been loaded by the caller
+        // (TutorChat calls reloadChatHistory() before calling startNewConversation)
+        // Reloading here causes updatePaymentStatus to run again and potentially reset our refs
         
         return { success: true, requiresPayment: shouldRequirePayment };
       } else if (data.error === 'PAYMENT_REQUIRED') {
