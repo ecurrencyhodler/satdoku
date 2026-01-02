@@ -94,27 +94,87 @@ export class BoardGenerator {
         }
     }
 
-    // Remove cells based on difficulty
-    // Simplified version: removes cells randomly without checking for unique solution
-    // This is faster and acceptable for MVP
+    // Count the number of solutions for a puzzle
+    // Returns as soon as it finds more than 1 solution for efficiency
+    countSolutions(board, maxSolutions = 2) {
+        let count = 0;
+        
+        const countHelper = (grid) => {
+            // If we've already found enough solutions, stop searching
+            if (count >= maxSolutions) return;
+            
+            // Find next empty cell
+            for (let row = 0; row < this.size; row++) {
+                for (let col = 0; col < this.size; col++) {
+                    if (grid[row][col] === 0) {
+                        // Try each number 1-9
+                        for (let num = 1; num <= 9; num++) {
+                            if (this.isValid(grid, row, col, num)) {
+                                grid[row][col] = num;
+                                countHelper(grid);
+                                grid[row][col] = 0;
+                            }
+                        }
+                        return; // Backtrack
+                    }
+                }
+            }
+            // Found a complete solution
+            count++;
+        };
+        
+        const gridCopy = board.map(row => [...row]);
+        countHelper(gridCopy);
+        return count;
+    }
+
+    // Check if puzzle has a unique solution
+    hasUniqueSolution(board) {
+        return this.countSolutions(board, 2) === 1;
+    }
+
+    // Remove cells based on difficulty while ensuring unique solution
     removeCells(board, cellsToRemove) {
+        const puzzle = board.map(row => [...row]);
+        
+        // Create list of all positions
         const positions = [];
         for (let i = 0; i < this.size; i++) {
             for (let j = 0; j < this.size; j++) {
                 positions.push([i, j]);
             }
         }
-
+        
         this.shuffle(positions);
-
-        const puzzle = board.map(row => [...row]);
-
-        // Remove cells randomly up to the target count
-        for (let i = 0; i < Math.min(cellsToRemove, positions.length); i++) {
+        
+        let removedCount = 0;
+        let attempts = 0;
+        const maxAttempts = positions.length;
+        
+        // Try to remove cells one by one
+        for (let i = 0; i < positions.length && removedCount < cellsToRemove && attempts < maxAttempts; i++) {
             const [row, col] = positions[i];
+            attempts++;
+            
+            // Skip if already empty
+            if (puzzle[row][col] === 0) continue;
+            
+            // Save the value
+            const temp = puzzle[row][col];
+            
+            // Try removing it
             puzzle[row][col] = 0;
+            
+            // Check if puzzle still has unique solution
+            if (this.hasUniqueSolution(puzzle)) {
+                // Keep it removed
+                removedCount++;
+            } else {
+                // Restore the value
+                puzzle[row][col] = temp;
+            }
         }
-
+        
         return puzzle;
     }
 
@@ -130,4 +190,3 @@ export class BoardGenerator {
         };
     }
 }
-
