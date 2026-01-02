@@ -80,6 +80,15 @@ export default function Navigation() {
       >
         Help
       </a>
+      <a
+        href="https://x.com/intent/user?screen_name=satdoku"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="nav-link"
+        onClick={closeMenu}
+      >
+        X
+      </a>
     </>
   );
 
@@ -121,16 +130,3 @@ export default function Navigation() {
     </nav>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
