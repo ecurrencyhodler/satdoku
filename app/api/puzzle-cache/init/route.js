@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { initializePuzzleCache } from '../../../../lib/redis/puzzleGenerator.js';
+import { clearPuzzleCache } from '../../../../lib/redis/puzzleCache.js';
 
 /**
  * POST /api/puzzle-cache/init
@@ -54,9 +55,43 @@ export async function GET(request) {
   }
 }
 
-
-
-
-
-
-
+/**
+ * DELETE /api/puzzle-cache/init
+ * Clear puzzle cache (useful after fixing puzzle generation bugs)
+ * Can optionally specify a difficulty to clear only that difficulty
+ */
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const difficulty = searchParams.get('difficulty');
+    
+    console.log(`[puzzle-cache/init] Clearing cache${difficulty ? ` for ${difficulty}` : ' for all difficulties'}...`);
+    const result = await clearPuzzleCache(difficulty);
+    
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        message: `Cache cleared for: ${result.cleared.join(', ')}`,
+        cleared: result.cleared
+      });
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to clear puzzle cache'
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error('[puzzle-cache/init] Error clearing cache:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to clear puzzle cache',
+        details: error.message
+      },
+      { status: 500 }
+    );
+  }
+}
