@@ -72,16 +72,7 @@ export default function Navigation() {
         Github
       </a>
       <a
-        href="https://forms.gle/wzuHjAJAVb4PJK7d9"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="nav-link"
-        onClick={closeMenu}
-      >
-        Help
-      </a>
-      <a
-        href="https://x.com/intent/user?screen_name=satdoku"
+        href="https://x.com/satdoku"
         target="_blank"
         rel="noopener noreferrer"
         className="nav-link"
