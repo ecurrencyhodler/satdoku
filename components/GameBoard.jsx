@@ -11,7 +11,8 @@ export default function GameBoard({
   onCellClick,
   hasLives,
   notes = [],
-  noteMode = false
+  noteMode = false,
+  opponentSelectedCell = null
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -57,6 +58,7 @@ export default function GameBoard({
             const value = board[row]?.[col] ?? 0;
             const isPrefilled = puzzle?.[row]?.[col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+            const isOpponentSelected = opponentSelectedCell?.row === row && opponentSelectedCell?.col === col;
 
             // Determine if the value is incorrect (user-entered but doesn't match solution)
             const isIncorrect = !isPrefilled && value !== 0 && solution && solution[row]?.[col] !== 0 && value !== solution[row]?.[col];
@@ -93,6 +95,7 @@ export default function GameBoard({
                 isPrefilled={isPrefilled}
                 isIncorrect={isIncorrect}
                 isSelected={isSelected}
+                isOpponentSelected={isOpponentSelected}
                 isHighlightedRow={isHighlightedRow}
                 isHighlightedColumn={isHighlightedColumn}
                 isHighlightedBox={isHighlightedBox}

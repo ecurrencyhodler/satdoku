@@ -7,6 +7,7 @@ export default function Cell({
   isPrefilled,
   isIncorrect,
   isSelected,
+  isOpponentSelected = false,
   isHighlightedRow,
   isHighlightedColumn,
   isHighlightedBox,
@@ -48,7 +49,7 @@ export default function Cell({
 
   return (
     <div
-      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isIncorrect ? 'cell-incorrect' : ''} ${isSelected ? 'cell-selected' : ''} ${isHighlightedRow ? 'cell-highlighted-row' : ''} ${isHighlightedColumn ? 'cell-highlighted-column' : ''} ${isHighlightedBox ? 'cell-highlighted-box' : ''} ${isHighlightedSameNumber ? 'cell-highlighted-same-number' : ''}`}
+      className={`cell ${isPrefilled ? 'cell-prefilled' : ''} ${isLocked && !isPrefilled ? 'cell-locked' : ''} ${isIncorrect ? 'cell-incorrect' : ''} ${isSelected ? 'cell-selected' : ''} ${isOpponentSelected ? 'cell-opponent-selected' : ''} ${isHighlightedRow ? 'cell-highlighted-row' : ''} ${isHighlightedColumn ? 'cell-highlighted-column' : ''} ${isHighlightedBox ? 'cell-highlighted-box' : ''} ${isHighlightedSameNumber ? 'cell-highlighted-same-number' : ''}`}
       data-row={row}
       data-col={col}
       onClick={handleClick}
