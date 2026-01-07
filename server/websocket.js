@@ -1,10 +1,63 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import { getRoom, updateRoomState } from '../lib/redis/versusRooms.js';
+import { getRedisClient } from '../lib/redis/client.js';
+
+// Load environment variables from .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = resolve(__dirname, '../.env');
+
+// #region agent log
+console.log(`[WebSocket Server] Loading env from: ${envPath}`);
+// #endregion
+
+const result = config({ path: envPath });
+
+// #region agent log
+if (result.error) {
+  console.error(`[WebSocket Server] Error loading .env:`, result.error);
+} else {
+  console.log(`[WebSocket Server] .env loaded successfully`);
+}
+console.log(`[WebSocket Server] REDIS_URL is set: ${!!process.env.REDIS_URL}`);
+if (process.env.REDIS_URL) {
+  // Mask the URL for security (show first 20 chars and last 10)
+  const url = process.env.REDIS_URL;
+  const masked = url.substring(0, 20) + '...' + url.substring(url.length - 10);
+  console.log(`[WebSocket Server] REDIS_URL: ${masked}`);
+}
+// #endregion
 
 const PORT = process.env.WS_PORT || 3001;
 const server = http.createServer();
 const wss = new WebSocketServer({ server });
+
+// Verify Redis connection on startup
+(async () => {
+  try {
+    const redis = await getRedisClient();
+    if (redis) {
+      console.log(`[WebSocket Server] Redis connected, URL: ${process.env.REDIS_URL || 'not set'}`);
+    } else {
+      console.error('[WebSocket Server] Redis not available!');
+    }
+  } catch (error) {
+    console.error('[WebSocket Server] Redis connection error:', error);
+  }
+})();
+
+// Handle server startup errors (e.g. port already in use) so we don't crash with an unhandled event
+server.on('error', (error) => {
+  if (error?.code === 'EADDRINUSE') {
+    console.error(`[WebSocket Server] Port ${PORT} is already in use. You probably already have a ws server running.`);
+    console.error(`[WebSocket Server] Fix: stop the other process, OR set WS_PORT=3002 and NEXT_PUBLIC_WS_URL=ws://localhost:3002 then restart both servers.`);
+    process.exit(1);
+  }
+});
 
 // Store connections by room ID and player ID
 const roomConnections = new Map(); // roomId -> Map(playerId -> WebSocket)
@@ -234,9 +287,52 @@ wss.on('connection', async (ws, req) => {
       const { type, roomId, playerId, sessionId } = message;
 
       if (type === 'join') {
-        // Validate room and player
-        const room = await getRoom(roomId);
+        // #region agent log
+        const joinStartTime = Date.now();
+        console.log(`[WebSocket] Join request - roomId: ${roomId}, sessionId: ${sessionId}, playerId: ${playerId}, time: ${joinStartTime}`);
+        // #endregion
+        
+        // Validate room and player - retry a few times in case of Redis propagation delay
+        let room = await getRoom(roomId);
+        let retries = 0;
+        const maxRetries = 5;
+        
+        // #region agent log
+        console.log(`[WebSocket] Initial room lookup - roomId: ${roomId}, room exists: ${!!room}, time: ${Date.now()}`);
+        // #endregion
+        
+        while (!room && retries < maxRetries) {
+          // #region agent log
+          const retryStartTime = Date.now();
+          console.log(`[WebSocket] Room not found, retrying... (attempt ${retries + 1}/${maxRetries}), time: ${retryStartTime}`);
+          // #endregion
+          
+          await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1))); // Exponential backoff
+          
+          // #region agent log
+          const retryEndTime = Date.now();
+          console.log(`[WebSocket] Retry delay complete, looking up room again, time: ${retryEndTime}`);
+          // #endregion
+          
+          room = await getRoom(roomId);
+          
+          // #region agent log
+          console.log(`[WebSocket] Retry ${retries + 1} result - roomId: ${roomId}, room exists: ${!!room}, time: ${Date.now()}`);
+          // #endregion
+          
+          retries++;
+        }
+        
+        // #region agent log
+        const joinEndTime = Date.now();
+        console.log(`[WebSocket] Room lookup final result - roomId: ${roomId}, room exists: ${!!room}, retries: ${retries}, total time: ${joinEndTime - joinStartTime}ms`);
+        // #endregion
+        
         if (!room) {
+          // #region agent log
+          console.error(`[WebSocket] Room not found after ${maxRetries} retries - roomId: ${roomId}, sessionId: ${sessionId}, total time: ${Date.now() - joinStartTime}ms`);
+          // #endregion
+          
           ws.send(JSON.stringify({
             type: 'error',
             error: 'Room not found'

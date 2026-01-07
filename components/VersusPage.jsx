@@ -182,7 +182,6 @@ export default function VersusPage({
     }
   }, [gameState, isSpectator, roomId]);
 
-
   // Show difficulty selection if creating room
   if (mode === 'create' && showDifficultySelection) {
     return (
@@ -229,7 +228,8 @@ export default function VersusPage({
   const yourData = isPlayer1 ? player1Data : isPlayer2 ? player2Data : null;
   const opponentData = isPlayer1 ? player2Data : isPlayer2 ? player1Data : null;
 
-  const boardVisible = gameState?.gameStatus === 'playing' || gameState?.gameStatus === 'finished';
+  // Board should be visible in 'waiting', 'playing', and 'finished' states so players can see the puzzle
+  const boardVisible = gameState && (gameState.gameStatus === 'waiting' || gameState.gameStatus === 'playing' || gameState.gameStatus === 'finished');
   const showCountdown = gameState?.gameStatus === 'countdown' && gameState?.countdown !== null && gameState?.countdown > 0;
 
   return (
@@ -302,7 +302,7 @@ export default function VersusPage({
                             });
                             const result = await response.json();
                             if (result.success && result.state) {
-                              const { transformVersusStateToClient } = await import('../../lib/game/versusGameState.js');
+                              const { transformVersusStateToClient } = await import('../lib/game/versusGameStateClient.js');
                               const clientState = transformVersusStateToClient(result.state, playerId);
                               setGameState(clientState);
                             }
@@ -385,7 +385,7 @@ export default function VersusPage({
                             });
                             const result = await response.json();
                             if (result.success && result.state) {
-                              const { transformVersusStateToClient } = await import('../../lib/game/versusGameState.js');
+                              const { transformVersusStateToClient } = await import('../lib/game/versusGameStateClient.js');
                               const clientState = transformVersusStateToClient(result.state, playerId);
                               setGameState(clientState);
                             }

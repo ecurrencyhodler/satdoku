@@ -38,3 +38,4 @@ next-env.d.ts
 
 .scripts
 .npm-cache 
+.supabase/migrations

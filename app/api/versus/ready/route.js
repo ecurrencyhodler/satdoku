@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getSessionId } from '../../../lib/session/cookieSession.js';
-import { getRoom, setPlayerReady, updateRoomState } from '../../../lib/redis/versusRooms.js';
-import { broadcastToWebSocket } from '../../../lib/websocket/broadcast.js';
+import { getSessionId } from '../../../../lib/session/cookieSession.js';
+import { getRoom, setPlayerReady, updateRoomState } from '../../../../lib/redis/versusRooms.js';
+import { broadcastToWebSocket } from '../../../../lib/websocket/broadcast.js';
 
 /**
  * POST /api/versus/ready - Mark player as ready

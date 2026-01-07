@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getSessionId } from '../../../lib/session/cookieSession.js';
-import { handleVersusPlaceNumber } from '../../../lib/game/actionHandlers/versusPlaceNumber.js';
-import { handleVersusToggleNote } from '../../../lib/game/actionHandlers/versusToggleNote.js';
-import { handleVersusSelectCell } from '../../../lib/game/actionHandlers/versusSelectCell.js';
-import { handleVersusPurchaseLife } from '../../../lib/game/actionHandlers/versusPurchaseLife.js';
-import { handleVersusClearNotes } from '../../../lib/game/actionHandlers/versusClearNotes.js';
+import { getSessionId } from '../../../../lib/session/cookieSession.js';
+import { handleVersusPlaceNumber } from '../../../../lib/game/actionHandlers/versusPlaceNumber.js';
+import { handleVersusToggleNote } from '../../../../lib/game/actionHandlers/versusToggleNote.js';
+import { handleVersusSelectCell } from '../../../../lib/game/actionHandlers/versusSelectCell.js';
+import { handleVersusPurchaseLife } from '../../../../lib/game/actionHandlers/versusPurchaseLife.js';
+import { handleVersusClearNotes } from '../../../../lib/game/actionHandlers/versusClearNotes.js';
 
 /**
  * POST /api/versus/action - Process game actions

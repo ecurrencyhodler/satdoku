@@ -40,7 +40,7 @@ export function useVersusCellInput(
 
         const result = await response.json();
         if (result.success && result.state) {
-          const { transformVersusStateToClient } = await import('../../../lib/game/versusGameState.js');
+          const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
           const clientState = transformVersusStateToClient(result.state, gameState.playerId);
           setGameState(clientState);
         }
@@ -80,7 +80,7 @@ export function useVersusCellInput(
       }
 
       if (result.state) {
-        const { transformVersusStateToClient } = await import('../../../lib/game/versusGameState.js');
+        const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
         const clientState = transformVersusStateToClient(result.state, gameState.playerId);
         setGameState(clientState);
 

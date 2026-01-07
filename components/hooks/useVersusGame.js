@@ -36,7 +36,7 @@ export function useVersusGame(roomId, sessionId, playerId) {
 
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback(async (message) => {
-    const { transformVersusStateToClient } = await import('../../../lib/game/versusGameState.js');
+    const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
     
     if (message.type === 'state_update' && message.room) {
       const clientState = transformVersusStateToClient(message.room, playerId);
@@ -74,6 +74,10 @@ export function useVersusGame(roomId, sessionId, playerId) {
         gameStatus: 'playing',
         countdown: 0
       } : null);
+    } else if (message.type === 'joined' && message.room) {
+      // Update state when WebSocket join is confirmed (includes connection status)
+      const clientState = transformVersusStateToClient(message.room, playerId);
+      setGameState(clientState);
     } else if (message.type === 'player_connected' || message.type === 'player_disconnected') {
       // Reload state to get updated connection status
       loadState();

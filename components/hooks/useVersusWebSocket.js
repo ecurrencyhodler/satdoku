@@ -41,14 +41,17 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
         setIsReconnecting(false);
         reconnectAttemptRef.current = 0;
 
-        // Join room
-        if (roomId && sessionId) {
+        // Join room - only if we have both roomId and sessionId
+        // sessionId must be a real session ID, not a placeholder
+        if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
           ws.send(JSON.stringify({
             type: 'join',
             roomId,
             sessionId,
             playerId
           }));
+        } else {
+          console.warn('[useVersusWebSocket] Cannot join room - missing roomId or valid sessionId', { roomId, sessionId });
         }
       };
 
@@ -57,8 +60,12 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           const message = JSON.parse(event.data);
           
           if (message.type === 'joined') {
-            // Successfully joined room
+            // Successfully joined room - forward to message handler to update state
             console.log('[useVersusWebSocket] Joined room:', message.roomId);
+            // Forward joined message to handler to update connection status
+            if (onMessageRef.current) {
+              onMessageRef.current(message);
+            }
           } else if (message.type === 'state_update' || 
                      message.type === 'countdown' ||
                      message.type === 'countdown_start' ||
@@ -112,8 +119,8 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
                 console.error('[useVersusWebSocket] Error fetching state on reconnect:', error);
               }
             }
-            // Only reconnect if still should reconnect and have room/session
-            if (shouldReconnectRef.current && roomId && sessionId) {
+            // Only reconnect if still should reconnect and have room/session (with valid sessionId)
+            if (shouldReconnectRef.current && roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
               connect();
             } else {
               setIsReconnecting(false);
@@ -130,20 +137,37 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
         INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current),
         MAX_RECONNECT_DELAY
       );
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (shouldReconnectRef.current && roomId && sessionId) {
-          reconnectAttemptRef.current++;
-          connect();
-        } else {
-          setIsReconnecting(false);
-        }
-      }, delay);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (shouldReconnectRef.current && roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
+              reconnectAttemptRef.current++;
+              connect();
+            } else {
+              setIsReconnecting(false);
+            }
+          }, delay);
     }
   }, [roomId, sessionId, playerId]);
 
   useEffect(() => {
-    if (roomId && sessionId) {
-      connect();
+        // Only connect if we have both roomId and a valid sessionId (not placeholder)
+        // Add a small delay to ensure room is fully created before connecting
+        if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
+          // Small delay to ensure room is fully saved to Redis
+          const connectTimer = setTimeout(() => {
+            connect();
+          }, 200);
+      
+      return () => {
+        clearTimeout(connectTimer);
+        shouldReconnectRef.current = false;
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+      };
     }
 
     return () => {

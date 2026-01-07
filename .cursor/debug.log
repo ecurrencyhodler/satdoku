@@ -1,0 +1,2 @@
+{"location":"server/websocket.js:389","message":"Connection status updated to true","data":{"roomId":"room_1767825663818_wuabsqq5","actualPlayerId":"player1","sessionId":"session_1765641981554_t514u7bd9a"},"timestamp":1767825665859,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"server/websocket.js:394","message":"Sending joined message","data":{"roomId":"room_1767825663818_wuabsqq5","actualPlayerId":"player1","hasRoom":true,"player1Connected":true},"timestamp":1767825665899,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}

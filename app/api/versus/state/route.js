@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getSessionIdIfExists } from '../../../lib/session/cookieSession.js';
-import { getRoom } from '../../../lib/redis/versusRooms.js';
-import { transformVersusStateToClient } from '../../../lib/game/versusGameState.js';
+import { getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
+import { getRoom } from '../../../../lib/redis/versusRooms.js';
+import { transformVersusStateToClient } from '../../../../lib/game/versusGameState.js';
 
 /**
  * GET /api/versus/state?room=abc123 - Get current room state

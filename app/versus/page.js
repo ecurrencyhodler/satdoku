@@ -8,11 +8,6 @@ function VersusPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const roomId = searchParams.get('room');
-
-function VersusPageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const roomId = searchParams.get('room');
   const [sessionId, setSessionId] = useState(null);
   const [playerId, setPlayerId] = useState(null);
   const [isSpectator, setIsSpectator] = useState(false);
@@ -21,13 +16,24 @@ function VersusPageContent() {
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState('Player 1');
 
-  // Session ID is handled via cookies in API routes
-  // We just need to ensure we have a session - it will be created automatically
+  // Get sessionId when there's no roomId (for creating new room)
   useEffect(() => {
-    // Session is managed via cookies, API routes will handle it
-    // We can use a placeholder that indicates session exists
-    setSessionId('active'); // API routes will get actual session from cookies
-  }, []);
+    if (!roomId && !sessionId) {
+      // Call API to get/create sessionId
+      fetch('/api/versus/init', { method: 'GET' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.sessionId) {
+            setSessionId(data.sessionId);
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error getting sessionId:', err);
+          setLoading(false);
+        });
+    }
+  }, [roomId, sessionId]);
 
   // Initialize room
   useEffect(() => {
@@ -54,6 +60,9 @@ function VersusPageContent() {
           setPlayerId(data.playerId);
           setIsSpectator(data.isSpectator || false);
           setDifficulty(data.room?.difficulty);
+          if (data.sessionId) {
+            setSessionId(data.sessionId);
+          }
           if (data.playerId === 'player2') {
             setPlayerName('Player 2');
           }
@@ -89,9 +98,14 @@ function VersusPageContent() {
       });
 
       const data = await response.json();
+      
       if (data.success) {
         setDifficulty(selectedDifficulty);
         setPlayerName(name || 'Player 1');
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
+        
         router.push(`/versus?room=${data.roomId}`);
       } else {
         setError(data.error);

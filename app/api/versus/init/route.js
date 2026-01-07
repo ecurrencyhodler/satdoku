@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getSessionId, getSessionIdIfExists } from '../../../lib/session/cookieSession.js';
-import { createRoom, joinRoom, getRoom } from '../../../lib/redis/versusRooms.js';
-import { createVersusGameState } from '../../../lib/game/versusGameState.js';
-import { updateRoomState } from '../../../lib/redis/versusRooms.js';
+import { getSessionId, getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
+import { createRoom, joinRoom, getRoom } from '../../../../lib/redis/versusRooms.js';
+import { createVersusGameState } from '../../../../lib/game/versusGameState.js';
+import { updateRoomState } from '../../../../lib/redis/versusRooms.js';
 
 /**
  * POST /api/versus/init - Create a new room
@@ -47,12 +47,16 @@ export async function POST(request) {
         solution: gameState.currentSolution // Alias for compatibility
       };
       await updateRoomState(result.roomId, updatedRoom, room.version);
+      
+      // Small delay to ensure Redis write is fully propagated
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     return NextResponse.json({
       success: true,
       roomId: result.roomId,
-      roomUrl: `/versus?room=${result.roomId}`
+      roomUrl: `/versus?room=${result.roomId}`,
+      sessionId: sessionId
     });
   } catch (error) {
     console.error('[versus/init] POST Error:', error);
@@ -65,12 +69,21 @@ export async function POST(request) {
 
 /**
  * GET /api/versus/init?room=abc123 - Join a room
+ * GET /api/versus/init (no room) - Get sessionId for creating a room
  */
 export async function GET(request) {
   try {
     const sessionId = await getSessionId();
     const { searchParams } = new URL(request.url);
     const roomId = searchParams.get('room');
+
+    // If no roomId, just return sessionId for creating a room
+    if (!roomId) {
+      return NextResponse.json({
+        success: true,
+        sessionId: sessionId
+      });
+    }
 
     if (!roomId) {
       return NextResponse.json(
@@ -95,7 +108,8 @@ export async function GET(request) {
         roomId,
         playerId: 'player1',
         isSpectator: false,
-        room
+        room,
+        sessionId: sessionId
       });
     }
 
@@ -106,7 +120,8 @@ export async function GET(request) {
         roomId,
         playerId: 'player2',
         isSpectator: false,
-        room
+        room,
+        sessionId: sessionId
       });
     }
 
@@ -121,7 +136,8 @@ export async function GET(request) {
           roomId,
           playerId: null,
           isSpectator: true,
-          room
+          room,
+          sessionId: sessionId
         });
       }
       return NextResponse.json(
@@ -138,7 +154,8 @@ export async function GET(request) {
       roomId,
       playerId: 'player2',
       isSpectator: false,
-      room: updatedRoom
+      room: updatedRoom,
+      sessionId: sessionId
     });
   } catch (error) {
     console.error('[versus/init] GET Error:', error);

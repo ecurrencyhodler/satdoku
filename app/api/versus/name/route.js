@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSessionId } from '../../../lib/session/cookieSession.js';
-import { updatePlayerName } from '../../../lib/redis/versusRooms.js';
+import { getSessionId } from '../../../../lib/session/cookieSession.js';
+import { updatePlayerName } from '../../../../lib/redis/versusRooms.js';
 
 /**
  * POST /api/versus/name - Update player name
@@ -27,7 +27,7 @@ export async function POST(request) {
     }
 
     // Get room to determine player ID
-    const { getRoom } = await import('../../../lib/redis/versusRooms.js');
+    const { getRoom } = await import('../../../../lib/redis/versusRooms.js');
     const room = await getRoom(roomId);
     
     if (!room) {
