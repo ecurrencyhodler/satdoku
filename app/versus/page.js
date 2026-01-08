@@ -16,9 +16,9 @@ function VersusPageContent() {
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState('Player 1');
 
-  // Get sessionId when there's no roomId (for creating new room)
+  // Get sessionId - needed for both creating and joining rooms
   useEffect(() => {
-    if (!roomId && !sessionId) {
+    if (!sessionId) {
       // Call API to get/create sessionId
       fetch('/api/versus/init', { method: 'GET' })
         .then(res => res.json())
@@ -26,7 +26,10 @@ function VersusPageContent() {
           if (data.sessionId) {
             setSessionId(data.sessionId);
           }
-          setLoading(false);
+          // Only set loading to false if we're not joining a room (roomId will trigger initRoom)
+          if (!roomId) {
+            setLoading(false);
+          }
         })
         .catch(err => {
           console.error('Error getting sessionId:', err);
@@ -38,7 +41,9 @@ function VersusPageContent() {
   // Initialize room
   useEffect(() => {
     async function initRoom() {
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
 
       try {
         setLoading(true);

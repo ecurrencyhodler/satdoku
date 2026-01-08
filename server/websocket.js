@@ -11,26 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const envPath = resolve(__dirname, '../.env');
 
-// #region agent log
-console.log(`[WebSocket Server] Loading env from: ${envPath}`);
-// #endregion
-
 const result = config({ path: envPath });
-
-// #region agent log
-if (result.error) {
-  console.error(`[WebSocket Server] Error loading .env:`, result.error);
-} else {
-  console.log(`[WebSocket Server] .env loaded successfully`);
-}
-console.log(`[WebSocket Server] REDIS_URL is set: ${!!process.env.REDIS_URL}`);
-if (process.env.REDIS_URL) {
-  // Mask the URL for security (show first 20 chars and last 10)
-  const url = process.env.REDIS_URL;
-  const masked = url.substring(0, 20) + '...' + url.substring(url.length - 10);
-  console.log(`[WebSocket Server] REDIS_URL: ${masked}`);
-}
-// #endregion
 
 const PORT = process.env.WS_PORT || 3001;
 const server = http.createServer();
@@ -287,52 +268,18 @@ wss.on('connection', async (ws, req) => {
       const { type, roomId, playerId, sessionId } = message;
 
       if (type === 'join') {
-        // #region agent log
-        const joinStartTime = Date.now();
-        console.log(`[WebSocket] Join request - roomId: ${roomId}, sessionId: ${sessionId}, playerId: ${playerId}, time: ${joinStartTime}`);
-        // #endregion
-        
         // Validate room and player - retry a few times in case of Redis propagation delay
         let room = await getRoom(roomId);
         let retries = 0;
         const maxRetries = 5;
         
-        // #region agent log
-        console.log(`[WebSocket] Initial room lookup - roomId: ${roomId}, room exists: ${!!room}, time: ${Date.now()}`);
-        // #endregion
-        
         while (!room && retries < maxRetries) {
-          // #region agent log
-          const retryStartTime = Date.now();
-          console.log(`[WebSocket] Room not found, retrying... (attempt ${retries + 1}/${maxRetries}), time: ${retryStartTime}`);
-          // #endregion
-          
           await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1))); // Exponential backoff
-          
-          // #region agent log
-          const retryEndTime = Date.now();
-          console.log(`[WebSocket] Retry delay complete, looking up room again, time: ${retryEndTime}`);
-          // #endregion
-          
           room = await getRoom(roomId);
-          
-          // #region agent log
-          console.log(`[WebSocket] Retry ${retries + 1} result - roomId: ${roomId}, room exists: ${!!room}, time: ${Date.now()}`);
-          // #endregion
-          
           retries++;
         }
         
-        // #region agent log
-        const joinEndTime = Date.now();
-        console.log(`[WebSocket] Room lookup final result - roomId: ${roomId}, room exists: ${!!room}, retries: ${retries}, total time: ${joinEndTime - joinStartTime}ms`);
-        // #endregion
-        
         if (!room) {
-          // #region agent log
-          console.error(`[WebSocket] Room not found after ${maxRetries} retries - roomId: ${roomId}, sessionId: ${sessionId}, total time: ${Date.now() - joinStartTime}ms`);
-          // #endregion
-          
           ws.send(JSON.stringify({
             type: 'error',
             error: 'Room not found'
@@ -341,15 +288,47 @@ wss.on('connection', async (ws, req) => {
           return;
         }
 
-        // Determine if this is player1, player2, or spectator
+        // Simple identification: player1 by sessionId match, otherwise assign as player2 if slot is available
         let actualPlayerId = null;
+        
         if (room.players.player1?.sessionId === sessionId) {
           actualPlayerId = 'player1';
-        } else if (room.players.player2?.sessionId === sessionId) {
-          actualPlayerId = 'player2';
         } else {
-          // Spectator
-          actualPlayerId = `spectator_${sessionId}`;
+          // If not player1, assign as player2 if player2 slot is not filled/connected
+          // Simple logic: first person to join gets player2, spectators only if player2 is taken AND connected
+          const player2Exists = !!room.players.player2;
+          const player2IsConnected = room.players.player2?.connected === true;
+          const player2SessionMatches = room.players.player2?.sessionId === sessionId;
+          
+          // Assign as player2 if: player2 doesn't exist, OR player2 exists but not connected, OR sessionId matches
+          // Only make spectator if player2 exists, is connected, AND sessionId doesn't match
+          if (!player2Exists || !player2IsConnected || player2SessionMatches) {
+            actualPlayerId = 'player2';
+            
+            // Ensure player2 slot exists and has correct sessionId
+            if (!room.players.player2) {
+              // Create player2 slot
+              room.players.player2 = {
+                sessionId,
+                name: 'Player 2',
+                score: 0,
+                lives: 2,
+                mistakes: 0,
+                ready: false,
+                connected: false,
+                selectedCell: null,
+                notes: Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => []))
+              };
+              await updateRoomState(roomId, room, room.version);
+            } else if (room.players.player2.sessionId !== sessionId) {
+              // Update sessionId if it doesn't match (handles Redis propagation delay)
+              room.players.player2.sessionId = sessionId;
+              await updateRoomState(roomId, room, room.version);
+            }
+          } else {
+            // Player2 exists, is connected, and has different sessionId - make spectator
+            actualPlayerId = `spectator_${sessionId}`;
+          }
         }
 
         // Add connection
@@ -371,6 +350,12 @@ wss.on('connection', async (ws, req) => {
 
         // Broadcast player joined (if player, not spectator)
         if (actualPlayerId === 'player1' || actualPlayerId === 'player2') {
+          // Also send full room state update to all players in the room
+          const updatedRoom = await getRoom(roomId);
+          broadcastToRoom(roomId, {
+            type: 'state_update',
+            room: updatedRoom
+          });
           broadcastToRoom(roomId, {
             type: 'player_connected',
             playerId: actualPlayerId

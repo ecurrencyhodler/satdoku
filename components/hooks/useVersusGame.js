@@ -11,11 +11,14 @@ export function useVersusGame(roomId, sessionId, playerId) {
 
   // Load initial state
   const loadState = useCallback(async () => {
-    if (!roomId || isLoadingRef.current) return;
+    if (!roomId || isLoadingRef.current) {
+      return;
+    }
 
     try {
       isLoadingRef.current = true;
       setLoading(true);
+      
       const response = await fetch(`/api/versus/state?room=${roomId}`);
       const data = await response.json();
 

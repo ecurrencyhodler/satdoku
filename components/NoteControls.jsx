@@ -1,6 +1,6 @@
 'use client';
 
-export default function NoteControls({ noteMode, onToggleNoteMode, onClear, disabled }) {
+export default function NoteControls({ noteMode, onToggleNoteMode, onClear, disabled, versus = false }) {
   // Pencil icon SVG
   const PencilIcon = () => (
     <svg
@@ -36,7 +36,7 @@ export default function NoteControls({ noteMode, onToggleNoteMode, onClear, disa
   );
 
   return (
-    <div className="note-controls">
+    <div className={`note-controls ${versus ? 'note-controls-versus' : ''}`}>
       <button
         className={`btn btn-note-toggle ${noteMode ? 'btn-note-toggle-active' : ''}`}
         onClick={onToggleNoteMode}

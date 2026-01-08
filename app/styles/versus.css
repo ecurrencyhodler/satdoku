@@ -3,7 +3,34 @@
 .versus-page {
   min-height: 100vh;
   padding: 20px;
-  background: var(--bg-color, #f5f5f5);
+  background: white;
+}
+
+.versus-page.desktop {
+  border-radius: 16px;
+  background: #f7fafc;
+}
+
+.dark .versus-page.desktop {
+  background: #2d3748;
+}
+
+.versus-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.versus-header h1 {
+  font-size: 2.25em;
+  color: #4a5568;
+  font-weight: 300;
+  letter-spacing: 2px;
+  transition: color 0.2s;
+  margin: 0;
+}
+
+.dark .versus-header h1 {
+  color: #e2e8f0;
 }
 
 .versus-page.loading,
@@ -35,9 +62,51 @@
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  border-radius: 16px !important;
+  padding: 20px;
+  background: #f7fafc;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.dark .versus-board-container {
+  background: #2d3748;
+}
+
+/* Versus Controls Container - keypad on left, note controls on right, centered */
+.versus-controls-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Versus Note Controls - vertical layout */
+.note-controls-versus {
+  flex-direction: column;
+  height: auto;
+  width: auto;
+  gap: 12px;
+  margin: 0;
+}
+
+/* Versus Number Pad - left aligned */
+.versus-controls-container .number-pad-versus {
+  flex-shrink: 0;
 }
 
 /* Mobile Layout */
+.versus-page.mobile {
+  background: #f7fafc;
+}
+
+.dark .versus-page.mobile {
+  background: #2d3748;
+}
+
 .versus-page.mobile .versus-layout {
   display: flex;
   flex-direction: column;
@@ -61,6 +130,7 @@
   justify-content: center;
   padding: 10px;
   overflow: auto;
+  border-radius: 12px;
 }
 
 .versus-page.mobile .versus-panel.mobile-bottom {
@@ -84,15 +154,27 @@
   gap: 10px;
 }
 
+.versus-player-panel.compact .player-name {
+  text-align: center;
+  flex: 1;
+}
+
 .player-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .player-name {
   font-size: 1.2em;
   font-weight: bold;
+  text-align: center;
+  width: 100%;
+}
+
+.player-name span {
+  display: block;
+  text-align: center;
 }
 
 .name-input {
@@ -100,6 +182,9 @@
   border-radius: 4px;
   padding: 5px 10px;
   font-size: 1em;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .player-stats {
@@ -127,9 +212,32 @@
   background: #3182ce;
 }
 
+.copy-url-button {
+  background: #90cdf4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 1em;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.copy-url-button:hover {
+  background: #63b3ed;
+}
+
 .ready-indicator {
   color: #48bb78;
   font-weight: bold;
+}
+
+.waiting-indicator {
+  color: #718096;
+  font-size: 0.9em;
+  font-style: italic;
+  text-align: center;
 }
 
 .disconnected-indicator {

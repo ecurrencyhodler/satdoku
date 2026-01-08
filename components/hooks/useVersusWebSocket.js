@@ -29,7 +29,9 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
   }, [onMessage, onReconnect]);
 
   const connect = useCallback(() => {
-    if (!roomId || !sessionId) return;
+    if (!roomId || !sessionId) {
+      return;
+    }
 
     try {
       const ws = new WebSocket(WS_URL);
@@ -63,6 +65,10 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
             // Successfully joined room - forward to message handler to update state
             console.log('[useVersusWebSocket] Joined room:', message.roomId);
             // Forward joined message to handler to update connection status
+            if (onMessageRef.current) {
+              onMessageRef.current(message);
+            }
+          } else if (message.type === 'player_connected' || message.type === 'player_disconnected') {
             if (onMessageRef.current) {
               onMessageRef.current(message);
             }
@@ -150,12 +156,14 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
 
   useEffect(() => {
         // Only connect if we have both roomId and a valid sessionId (not placeholder)
-        // Add a small delay to ensure room is fully created before connecting
+        // Add a delay to ensure room is fully created/updated before connecting
+        // Longer delay for player2 to allow room update to propagate
         if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-          // Small delay to ensure room is fully saved to Redis
+          // Longer delay for player2 to ensure room update from API join has propagated
+          const delay = playerId === 'player2' ? 800 : 200;
           const connectTimer = setTimeout(() => {
             connect();
-          }, 200);
+          }, delay);
       
       return () => {
         clearTimeout(connectTimer);

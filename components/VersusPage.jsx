@@ -33,9 +33,12 @@ export default function VersusPage({
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState(initialPlayerName);
   const [showDifficultySelection, setShowDifficultySelection] = useState(mode === 'create');
+  const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
   
   const isMobile = useMobileDetection();
   const isLoadingStateRef = useRef(false);
+  // Track if this is a newly created room - true if player1 and no connection yet
+  const isNewlyCreatedRoomRef = useRef(false);
 
   // Game state management
   const {
@@ -56,6 +59,13 @@ export default function VersusPage({
 
   // Wrap WebSocket message handler to capture notifications
   const handleWebSocketMessage = useCallback((message) => {
+    // Track when player successfully joins room via WebSocket
+    if (message.type === 'joined') {
+      setHasJoinedRoom(true);
+      // Once joined, no longer treat as newly created room
+      isNewlyCreatedRoomRef.current = false;
+    }
+    
     const result = handleWebSocketMessageFromHook(message);
     // If the handler returns a notification, display it
     if (result && typeof result === 'object' && result.type) {
@@ -143,6 +153,7 @@ export default function VersusPage({
           name: newName
         })
       });
+      
       // Reload state to get updated name
       loadState();
     } catch (error) {
@@ -153,10 +164,36 @@ export default function VersusPage({
   // Handle difficulty selection and room creation
   const handleDifficultySelect = useCallback(async (selectedDifficulty) => {
     setDifficulty(selectedDifficulty);
+    // Reset join status when creating a new room
+    setHasJoinedRoom(false);
+    isNewlyCreatedRoomRef.current = true;
     if (onCreateRoom) {
       await onCreateRoom(selectedDifficulty, playerName);
     }
   }, [onCreateRoom, playerName]);
+
+  // Determine if this is a newly created room - player1 who created it
+  // For player1, wait for WebSocket connection and join before showing game
+  // For player2, they can see the game immediately (joining existing room)
+  useEffect(() => {
+    if (roomId && playerId === 'player1' && !hasJoinedRoom) {
+      // Player1 in a new room - wait for connection
+      // Only mark as newly created if WebSocket not connected yet
+      // (if already connected, likely a page refresh, so show game immediately)
+      if (!isConnected) {
+        isNewlyCreatedRoomRef.current = true;
+      } else {
+        // Already connected - likely a refresh, show game immediately
+        // The 'joined' message should arrive soon or has already been handled
+        isNewlyCreatedRoomRef.current = false;
+        setHasJoinedRoom(true);
+      }
+    } else if (roomId && playerId === 'player2') {
+      // Player2 joining - show immediately (not a newly created room from their perspective)
+      isNewlyCreatedRoomRef.current = false;
+      setHasJoinedRoom(true);
+    }
+  }, [roomId, playerId, hasJoinedRoom, isConnected]);
 
   // Handle cell selection
   const handleCellClick = useCallback(async (row, col) => {
@@ -217,6 +254,12 @@ export default function VersusPage({
     return <div className="versus-page error">Error: {error}</div>;
   }
 
+  // For newly created rooms (player1), wait for WebSocket connection and room join before showing game
+  // This prevents the "disconnected" message from briefly appearing
+  if (mode === 'play' && isNewlyCreatedRoomRef.current && (!isConnected || !hasJoinedRoom)) {
+    return <div className="versus-page loading">Connecting...</div>;
+  }
+
   if (!gameState && mode === 'play') {
     return <div className="versus-page loading">Loading...</div>;
   }
@@ -228,8 +271,8 @@ export default function VersusPage({
   const yourData = isPlayer1 ? player1Data : isPlayer2 ? player2Data : null;
   const opponentData = isPlayer1 ? player2Data : isPlayer2 ? player1Data : null;
 
-  // Board should be visible in 'waiting', 'playing', and 'finished' states so players can see the puzzle
-  const boardVisible = gameState && (gameState.gameStatus === 'waiting' || gameState.gameStatus === 'playing' || gameState.gameStatus === 'finished');
+  // Board should only be visible when the game is playing or finished, not during waiting
+  const boardVisible = gameState && (gameState.gameStatus === 'playing' || gameState.gameStatus === 'finished');
   const showCountdown = gameState?.gameStatus === 'countdown' && gameState?.countdown !== null && gameState?.countdown > 0;
 
   return (
@@ -240,6 +283,10 @@ export default function VersusPage({
         onClose={() => setNotification(null)}
       />
       
+      <header className="versus-header">
+        <h1>Satdoku</h1>
+      </header>
+
       {mode === 'create' && roomId && (
         <div className="versus-invite-section">
           <VersusInviteUrl roomUrl={`/versus?room=${roomId}`} />
@@ -258,6 +305,8 @@ export default function VersusPage({
                 gameStatus={gameState?.gameStatus}
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
+                roomUrl={roomId ? `/versus?room=${roomId}` : null}
+                showCopyUrl={isPlayer1}
               />
             </div>
             <div className="versus-board-container">
@@ -267,24 +316,39 @@ export default function VersusPage({
                   visible={true}
                 />
               )}
-              {boardVisible && gameState && (
+              {gameState ? (
                 <>
-                  <GameBoard
-                    board={gameState.board}
-                    puzzle={gameState.puzzle}
-                    solution={gameState.solution}
-                    selectedCell={selectedCell}
-                    onCellClick={handleCellClick}
-                    hasLives={yourData?.lives > 0}
-                    notes={gameState.notes || []}
-                    noteMode={noteMode}
-                    opponentSelectedCell={gameState.opponentSelectedCell}
-                  />
+                  {boardVisible ? (
+                    <GameBoard
+                      board={gameState.board}
+                      puzzle={gameState.puzzle}
+                      solution={gameState.solution}
+                      selectedCell={selectedCell}
+                      onCellClick={handleCellClick}
+                      hasLives={yourData?.lives > 0}
+                      notes={gameState.notes || []}
+                      noteMode={noteMode}
+                      opponentSelectedCell={gameState.opponentSelectedCell}
+                    />
+                  ) : (
+                    <GameBoard
+                      board={Array(9).fill(null).map(() => Array(9).fill(0))}
+                      puzzle={Array(9).fill(null).map(() => Array(9).fill(0))}
+                      solution={null}
+                      selectedCell={null}
+                      onCellClick={() => {}}
+                      hasLives={true}
+                      notes={[]}
+                      noteMode={false}
+                      opponentSelectedCell={null}
+                    />
+                  )}
                   {!isSpectator && (
-                    <>
+                    <div className="versus-controls-container">
                       <NumberPad
                         onNumberClick={handleCellInput}
                         disabled={!selectedCell || gameState.gameStatus !== 'playing'}
+                        versus={true}
                       />
                       <NoteControls
                         noteMode={noteMode}
@@ -311,26 +375,28 @@ export default function VersusPage({
                           }
                         }}
                         disabled={gameState.gameStatus !== 'playing'}
+                        versus={true}
                       />
-                    </>
+                    </div>
                   )}
                 </>
-              )}
+              ) : null}
             </div>
             <div className="versus-panel right">
-              {player2Data ? (
-                <VersusPlayerPanel
-                  player={player2Data}
-                  isYou={isPlayer2}
-                  gameStatus={gameState?.gameStatus}
-                  onNameChange={handleNameChange}
-                  onReadyClick={handleReadyClick}
-                />
-              ) : (
-                <div className="waiting-for-player">
-                  <p>Waiting for Player 2...</p>
-                </div>
-              )}
+              <VersusPlayerPanel
+                player={player2Data || {
+                  name: 'Player 2',
+                  score: 0,
+                  lives: 2,
+                  ready: false,
+                  connected: false
+                }}
+                isYou={isPlayer2}
+                gameStatus={gameState?.gameStatus}
+                onNameChange={handleNameChange}
+                onReadyClick={handleReadyClick}
+                isWaiting={!player2Data}
+              />
             </div>
           </>
         ) : (
@@ -350,24 +416,39 @@ export default function VersusPage({
                   visible={true}
                 />
               )}
-              {boardVisible && gameState && (
+              {gameState ? (
                 <>
-                  <GameBoard
-                    board={gameState.board}
-                    puzzle={gameState.puzzle}
-                    solution={gameState.solution}
-                    selectedCell={selectedCell}
-                    onCellClick={handleCellClick}
-                    hasLives={yourData?.lives > 0}
-                    notes={gameState.notes || []}
-                    noteMode={noteMode}
-                    opponentSelectedCell={gameState.opponentSelectedCell}
-                  />
+                  {boardVisible ? (
+                    <GameBoard
+                      board={gameState.board}
+                      puzzle={gameState.puzzle}
+                      solution={gameState.solution}
+                      selectedCell={selectedCell}
+                      onCellClick={handleCellClick}
+                      hasLives={yourData?.lives > 0}
+                      notes={gameState.notes || []}
+                      noteMode={noteMode}
+                      opponentSelectedCell={gameState.opponentSelectedCell}
+                    />
+                  ) : (
+                    <GameBoard
+                      board={Array(9).fill(null).map(() => Array(9).fill(0))}
+                      puzzle={Array(9).fill(null).map(() => Array(9).fill(0))}
+                      solution={null}
+                      selectedCell={null}
+                      onCellClick={() => {}}
+                      hasLives={true}
+                      notes={[]}
+                      noteMode={false}
+                      opponentSelectedCell={null}
+                    />
+                  )}
                   {!isSpectator && (
-                    <>
+                    <div className="versus-controls-container">
                       <NumberPad
                         onNumberClick={handleCellInput}
                         disabled={!selectedCell || gameState.gameStatus !== 'playing'}
+                        versus={true}
                       />
                       <NoteControls
                         noteMode={noteMode}
@@ -394,11 +475,12 @@ export default function VersusPage({
                           }
                         }}
                         disabled={gameState.gameStatus !== 'playing'}
+                        versus={true}
                       />
-                    </>
+                    </div>
                   )}
                 </>
-              )}
+              ) : null}
             </div>
             <div className="versus-panel mobile-bottom">
               <VersusPlayerPanel

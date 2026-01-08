@@ -327,6 +327,69 @@
     cursor: not-allowed;
 }
 
+/* Versus Mode Number Pad (3x3 layout) */
+.number-pad-versus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.number-pad-versus-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 240px;
+}
+
+.number-pad-button-versus {
+    padding: 0;
+    font-size: 24px;
+    font-weight: 600;
+    border: 2px solid #4299e1;
+    border-radius: 8px;
+    background: white;
+    color: #4299e1;
+    cursor: pointer;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    aspect-ratio: 1;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark .number-pad-button-versus {
+    background: #4a5568;
+    border-color: #4299e1;
+    color: #e2e8f0;
+}
+
+.number-pad-button-versus:active {
+    background: #4299e1;
+    color: white;
+    transform: scale(0.95);
+}
+
+.number-pad-button-versus:hover {
+    background: #bee3f8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(66, 153, 225, 0.2);
+}
+
+.dark .number-pad-button-versus:hover {
+    background: #5a6478;
+}
+
+.number-pad-button-versus:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 
 /* Leaderboard styles */
 .leaderboard-loading {
