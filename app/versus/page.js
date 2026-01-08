@@ -15,13 +15,19 @@ function VersusPageContent() {
   const [error, setError] = useState(null);
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState('Player 1');
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Get sessionId - needed for both creating and joining rooms
   useEffect(() => {
     if (!sessionId) {
       // Call API to get/create sessionId
       fetch('/api/versus/init', { method: 'GET' })
-        .then(res => res.json())
+        .then(async res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
           if (data.sessionId) {
             setSessionId(data.sessionId);
@@ -33,8 +39,12 @@ function VersusPageContent() {
         })
         .catch(err => {
           console.error('Error getting sessionId:', err);
+          setError(err.message);
           setLoading(false);
         });
+    } else if (!roomId) {
+      // If we have sessionId but no roomId, show difficulty selection
+      setLoading(false);
     }
   }, [roomId, sessionId]);
 
@@ -46,31 +56,52 @@ function VersusPageContent() {
       }
 
       try {
-        setLoading(true);
+        // If we already have playerId (e.g., from room creation), skip API call
+        const alreadyHavePlayerId = playerId !== null;
+        if (!alreadyHavePlayerId) {
+          setLoading(true);
+        }
         
         if (roomId) {
-          // Join existing room
-          const response = await fetch(`/api/versus/init?room=${roomId}`);
-          const data = await response.json();
-          
-          if (!data.success) {
-            if (data.error === 'Room not found') {
-              router.push('/versus/not-found');
+          // Only call API if we don't already have playerId
+          if (!alreadyHavePlayerId) {
+            // Join existing room
+            const response = await fetch(`/api/versus/init?room=${roomId}`);
+            
+            // Check if response is ok before parsing
+            if (!response.ok) {
+              if (response.status === 404) {
+                router.push('/versus/not-found');
+                return;
+              }
+              setError(`HTTP error! status: ${response.status}`);
+              setLoading(false);
               return;
             }
-            setError(data.error);
-            return;
-          }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+              if (data.error === 'Room not found') {
+                router.push('/versus/not-found');
+                return;
+              }
+              setError(data.error);
+              setLoading(false);
+              return;
+            }
 
-          setPlayerId(data.playerId);
-          setIsSpectator(data.isSpectator || false);
-          setDifficulty(data.room?.difficulty);
-          if (data.sessionId) {
-            setSessionId(data.sessionId);
+            setPlayerId(data.playerId);
+            setIsSpectator(data.isSpectator || false);
+            setDifficulty(data.room?.difficulty);
+            if (data.sessionId) {
+              setSessionId(data.sessionId);
+            }
+            if (data.playerId === 'player2') {
+              setPlayerName('Player 2');
+            }
           }
-          if (data.playerId === 'player2') {
-            setPlayerName('Player 2');
-          }
+          setLoading(false);
         } else {
           // Show difficulty selection - will be handled by component
           setLoading(false);
@@ -79,7 +110,6 @@ function VersusPageContent() {
       } catch (err) {
         console.error('Error initializing room:', err);
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     }
@@ -87,7 +117,7 @@ function VersusPageContent() {
     if (sessionId) {
       initRoom();
     }
-  }, [roomId, sessionId, router]);
+  }, [roomId, sessionId, playerId, router]);
 
   // Handle creating new room
   const handleCreateRoom = useCallback(async (selectedDifficulty, name) => {
@@ -102,6 +132,12 @@ function VersusPageContent() {
         })
       });
 
+      if (!response.ok) {
+        setError(`HTTP error! status: ${response.status}`);
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
       
       if (data.success) {
@@ -110,18 +146,27 @@ function VersusPageContent() {
         if (data.sessionId) {
           setSessionId(data.sessionId);
         }
+        // Set playerId and navigating flag before navigation
+        setPlayerId('player1');
+        setIsNavigating(true); // Mark that we're navigating to prevent re-rendering create screen
         
+        // Navigate immediately - loading screen will show during transition
         router.push(`/versus?room=${data.roomId}`);
       } else {
         setError(data.error);
+        setLoading(false);
       }
     } catch (err) {
       console.error('Error creating room:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   }, [router]);
+
+  // If navigating to room after creation, show loading instead of create screen
+  if (isNavigating && !roomId) {
+    return <div>Loading...</div>;
+  }
 
   if (loading && !roomId) {
     return <div>Loading...</div>;
@@ -136,6 +181,9 @@ function VersusPageContent() {
     return (
       <VersusPage
         mode="create"
+        roomId={null}
+        sessionId={sessionId}
+        playerId={null}
         onCreateRoom={handleCreateRoom}
         initialPlayerName={playerName}
         onPlayerNameChange={setPlayerName}
@@ -144,7 +192,7 @@ function VersusPageContent() {
   }
 
   if (loading) {
-    return <div>Loading room...</div>;
+    return <div>Loading...</div>;
   }
 
   if (error) {
@@ -171,4 +219,3 @@ export default function VersusPageRoute() {
     </Suspense>
   );
 }
-

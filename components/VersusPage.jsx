@@ -32,15 +32,24 @@ export default function VersusPage({
   const [notification, setNotification] = useState(null);
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState(initialPlayerName);
-  const [showDifficultySelection, setShowDifficultySelection] = useState(mode === 'create');
+  // Only show difficulty selection if creating AND no roomId exists yet
+  const [showDifficultySelection, setShowDifficultySelection] = useState(mode === 'create' && !roomId);
   const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
   
   const isMobile = useMobileDetection();
   const isLoadingStateRef = useRef(false);
-  // Track if this is a newly created room - true if player1 and no connection yet
-  const isNewlyCreatedRoomRef = useRef(false);
+  const hasSeenPlayer1ConnectedRef = useRef(false);
+  const [hasJoinedRoomViaWS, setHasJoinedRoomViaWS] = useState(false);
+  
+  // For player1 creating a room, delay initial state load until WebSocket connects
+  // For player2 joining, load immediately
+  const [enableInitialLoad, setEnableInitialLoad] = useState(() => {
+    return !(roomId && playerId === 'player1');
+  });
 
-  // Game state management
+  // Game state management - must be defined before WebSocket handlers so loadState is available
+  // For newly created rooms (player1), delay initial state load until WebSocket connects and joins
+  // This prevents the "disconnected" message from flashing
   const {
     gameState,
     loading,
@@ -48,9 +57,10 @@ export default function VersusPage({
     loadState,
     handleWebSocketMessage: handleWebSocketMessageFromHook,
     setGameState
-  } = useVersusGame(roomId, sessionId, playerId);
+  } = useVersusGame(roomId, sessionId, playerId, enableInitialLoad);
 
-  // WebSocket connection
+
+  // WebSocket connection handlers - must be defined before useVersusWebSocket hook
   const handleReconnect = useCallback(async () => {
     if (roomId) {
       return loadState();
@@ -61,9 +71,11 @@ export default function VersusPage({
   const handleWebSocketMessage = useCallback((message) => {
     // Track when player successfully joins room via WebSocket
     if (message.type === 'joined') {
-      setHasJoinedRoom(true);
-      // Once joined, no longer treat as newly created room
-      isNewlyCreatedRoomRef.current = false;
+      setHasJoinedRoomViaWS(true);
+      // If this is player1 who hasn't loaded yet, enable loading now
+      if (playerId === 'player1' && !enableInitialLoad) {
+        setEnableInitialLoad(true);
+      }
     }
     
     const result = handleWebSocketMessageFromHook(message);
@@ -75,8 +87,9 @@ export default function VersusPage({
     if (message.type === 'notification' && message.notification) {
       setNotification(message.notification);
     }
-  }, [handleWebSocketMessageFromHook]);
+  }, [handleWebSocketMessageFromHook, playerId, enableInitialLoad]);
 
+  // WebSocket connection - must be called before useEffect that uses isConnected
   const { isConnected, isReconnecting, sendMessage } = useVersusWebSocket(
     roomId,
     sessionId,
@@ -85,6 +98,26 @@ export default function VersusPage({
     handleReconnect
   );
 
+
+
+
+  // Track if we've ever seen player1 connected for this room
+  useEffect(() => {
+    const player1Connected = gameState?.players?.player1?.connected === true;
+    if (roomId && player1Connected && !hasSeenPlayer1ConnectedRef.current) {
+      hasSeenPlayer1ConnectedRef.current = true;
+      // Force a single re-render to show the game
+      setShowDifficultySelection(false);
+    }
+  }, [roomId, gameState?.players?.player1?.connected]);
+
+  // Reset the ref when roomId changes
+  useEffect(() => {
+    if (roomId) {
+      // Reset for new room
+      hasSeenPlayer1ConnectedRef.current = false;
+    }
+  }, [roomId]);
 
   // Cell input handling
   const { handleCellInput } = useVersusCellInput(
@@ -164,36 +197,14 @@ export default function VersusPage({
   // Handle difficulty selection and room creation
   const handleDifficultySelect = useCallback(async (selectedDifficulty) => {
     setDifficulty(selectedDifficulty);
-    // Reset join status when creating a new room
-    setHasJoinedRoom(false);
-    isNewlyCreatedRoomRef.current = true;
+    setHasJoinedRoomViaWS(false);
+    setEnableInitialLoad(false); // Prevent loading until WebSocket connected
+    // Immediately hide difficulty selection to prevent re-showing during navigation
+    setShowDifficultySelection(false);
     if (onCreateRoom) {
       await onCreateRoom(selectedDifficulty, playerName);
     }
   }, [onCreateRoom, playerName]);
-
-  // Determine if this is a newly created room - player1 who created it
-  // For player1, wait for WebSocket connection and join before showing game
-  // For player2, they can see the game immediately (joining existing room)
-  useEffect(() => {
-    if (roomId && playerId === 'player1' && !hasJoinedRoom) {
-      // Player1 in a new room - wait for connection
-      // Only mark as newly created if WebSocket not connected yet
-      // (if already connected, likely a page refresh, so show game immediately)
-      if (!isConnected) {
-        isNewlyCreatedRoomRef.current = true;
-      } else {
-        // Already connected - likely a refresh, show game immediately
-        // The 'joined' message should arrive soon or has already been handled
-        isNewlyCreatedRoomRef.current = false;
-        setHasJoinedRoom(true);
-      }
-    } else if (roomId && playerId === 'player2') {
-      // Player2 joining - show immediately (not a newly created room from their perspective)
-      isNewlyCreatedRoomRef.current = false;
-      setHasJoinedRoom(true);
-    }
-  }, [roomId, playerId, hasJoinedRoom, isConnected]);
 
   // Handle cell selection
   const handleCellClick = useCallback(async (row, col) => {
@@ -219,8 +230,15 @@ export default function VersusPage({
     }
   }, [gameState, isSpectator, roomId]);
 
-  // Show difficulty selection if creating room
-  if (mode === 'create' && showDifficultySelection) {
+  // CRITICAL: If roomId exists, NEVER show difficulty selection - prevents flashing during navigation
+  if (roomId) {
+    // If we have a roomId but no gameState yet, return null (parent shows loading)
+    if (!gameState) {
+      return null;
+    }
+    // Continue to render game board below
+  } else if (mode === 'create' && showDifficultySelection) {
+    // Show difficulty selection ONLY if no roomId exists
     return (
       <div className="versus-page create-mode">
         <div className="versus-container">
@@ -244,24 +262,13 @@ export default function VersusPage({
         </div>
       </div>
     );
-  }
-
-  if (loading && mode === 'play') {
-    return <div className="versus-page loading">Loading game...</div>;
+  } else {
+    // No roomId and no difficulty selection - return null
+    return null;
   }
 
   if (error) {
     return <div className="versus-page error">Error: {error}</div>;
-  }
-
-  // For newly created rooms (player1), wait for WebSocket connection and room join before showing game
-  // This prevents the "disconnected" message from briefly appearing
-  if (mode === 'play' && isNewlyCreatedRoomRef.current && (!isConnected || !hasJoinedRoom)) {
-    return <div className="versus-page loading">Connecting...</div>;
-  }
-
-  if (!gameState && mode === 'play') {
-    return <div className="versus-page loading">Loading...</div>;
   }
 
   const isPlayer1 = playerId === 'player1';
@@ -504,4 +511,3 @@ export default function VersusPage({
     </div>
   );
 }
-
