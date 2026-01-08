@@ -16,6 +16,7 @@ function VersusPageContent() {
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState('Player 1');
   const [isNavigating, setIsNavigating] = useState(false);
+  const prevRoomIdRef = useRef(null);
 
   // Get sessionId - needed for both creating and joining rooms
   useEffect(() => {
@@ -118,6 +119,20 @@ function VersusPageContent() {
       initRoom();
     }
   }, [roomId, sessionId, playerId, router]);
+
+  // Reset isNavigating when user navigates back (roomId goes from truthy to null)
+  useEffect(() => {
+    const prevRoomId = prevRoomIdRef.current;
+    prevRoomIdRef.current = roomId;
+    
+    if (roomId) {
+      // When we successfully navigate to a room, reset the flag
+      setIsNavigating(false);
+    } else if (prevRoomId && !roomId && isNavigating) {
+      // User navigated back (roomId went from truthy to null), reset the flag
+      setIsNavigating(false);
+    }
+  }, [roomId, isNavigating]);
 
   // Handle creating new room
   const handleCreateRoom = useCallback(async (selectedDifficulty, name) => {

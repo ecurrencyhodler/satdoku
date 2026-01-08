@@ -119,6 +119,14 @@ export default function VersusPage({
     }
   }, [roomId]);
 
+  // Reset showDifficultySelection when navigating back (roomId becomes null)
+  useEffect(() => {
+    if (mode === 'create' && !roomId) {
+      // When user navigates back to create screen, show difficulty selection
+      setShowDifficultySelection(true);
+    }
+  }, [mode, roomId]);
+
   // Cell input handling
   const { handleCellInput } = useVersusCellInput(
     roomId,
