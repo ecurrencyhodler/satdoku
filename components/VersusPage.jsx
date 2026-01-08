@@ -41,15 +41,17 @@ export default function VersusPage({
   const hasSeenPlayer1ConnectedRef = useRef(false);
   const [hasJoinedRoomViaWS, setHasJoinedRoomViaWS] = useState(false);
   
-  // For player1 creating a room, delay initial state load until WebSocket connects
-  // For player2 joining, load immediately
+  // For both players, delay initial state load until WebSocket connects
+  // Player1: waits for WebSocket connection before loading
+  // Player2: waits for WebSocket connection before loading
   const [enableInitialLoad, setEnableInitialLoad] = useState(() => {
-    return !(roomId && playerId === 'player1');
+    // Only enable immediate load if we don't have a roomId yet (before room creation)
+    return !roomId;
   });
 
   // Game state management - must be defined before WebSocket handlers so loadState is available
-  // For newly created rooms (player1), delay initial state load until WebSocket connects and joins
-  // This prevents the "disconnected" message from flashing
+  // Delay initial state load until WebSocket connects and joins for both players
+  // This prevents the "disconnected" message from flashing and ensures connection is ready
   const {
     gameState,
     loading,
@@ -72,8 +74,8 @@ export default function VersusPage({
     // Track when player successfully joins room via WebSocket
     if (message.type === 'joined') {
       setHasJoinedRoomViaWS(true);
-      // If this is player1 who hasn't loaded yet, enable loading now
-      if (playerId === 'player1' && !enableInitialLoad) {
+      // Enable loading for both players once WebSocket connection is established
+      if (!enableInitialLoad) {
         setEnableInitialLoad(true);
       }
     }
@@ -87,7 +89,7 @@ export default function VersusPage({
     if (message.type === 'notification' && message.notification) {
       setNotification(message.notification);
     }
-  }, [handleWebSocketMessageFromHook, playerId, enableInitialLoad]);
+  }, [handleWebSocketMessageFromHook, enableInitialLoad]);
 
   // WebSocket connection - must be called before useEffect that uses isConnected
   const { isConnected, isReconnecting, sendMessage } = useVersusWebSocket(
