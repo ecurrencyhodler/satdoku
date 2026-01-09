@@ -57,14 +57,15 @@ function VersusPageContent() {
       }
 
       try {
-        // If we already have playerId (e.g., from room creation), skip API call
-        const alreadyHavePlayerId = playerId !== null;
+        // If we already have a valid playerId (player1 or player2), skip API call
+        // This prevents overwriting valid playerId with null from spectator responses
+        const alreadyHavePlayerId = playerId === 'player1' || playerId === 'player2';
         if (!alreadyHavePlayerId) {
           setLoading(true);
         }
         
         if (roomId) {
-          // Only call API if we don't already have playerId
+          // Only call API if we don't already have a valid playerId
           if (!alreadyHavePlayerId) {
             // Join existing room
             const response = await fetch(`/api/versus/init?room=${roomId}`);
@@ -92,8 +93,24 @@ function VersusPageContent() {
               return;
             }
 
-            setPlayerId(data.playerId);
-            setIsSpectator(data.isSpectator || false);
+            // Only update playerId if we don't already have a valid one, or if API returns a valid one
+            // This prevents overwriting 'player1' or 'player2' with null from spectator responses
+            if (data.playerId && (playerId === null || playerId === undefined)) {
+              setPlayerId(data.playerId);
+            } else if (data.playerId) {
+              // API returned a valid playerId, use it even if we had one before (might be correcting)
+              setPlayerId(data.playerId);
+            }
+            // Don't overwrite playerId with null if we already have a valid value
+            // Only set isSpectator if we have a valid playerId OR if API returns a valid playerId
+            // This prevents overwriting isSpectator=false with isSpectator=true from spectator responses
+            const hasValidPlayerId = playerId === 'player1' || playerId === 'player2';
+            const apiReturnsValidPlayerId = data.playerId === 'player1' || data.playerId === 'player2';
+            if (hasValidPlayerId || apiReturnsValidPlayerId) {
+              // Only update isSpectator if we have or are getting a valid playerId
+              setIsSpectator(data.isSpectator || false);
+            }
+            // If we already have a valid playerId and API returns null/spectator, don't overwrite isSpectator
             setDifficulty(data.room?.difficulty);
             if (data.sessionId) {
               setSessionId(data.sessionId);
@@ -118,7 +135,9 @@ function VersusPageContent() {
     if (sessionId) {
       initRoom();
     }
-  }, [roomId, sessionId, playerId, router]);
+    // Only depend on roomId and sessionId - don't re-run when playerId changes
+    // This prevents overwriting valid playerId when effect re-runs
+  }, [roomId, sessionId, router]);
 
   // Reset isNavigating when user navigates back (roomId goes from truthy to null)
   useEffect(() => {

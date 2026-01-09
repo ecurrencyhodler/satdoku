@@ -83,19 +83,6 @@ export async function POST(request) {
     const conversationCount = countValue ? parseInt(countValue, 10) : 0;
     const currentPaidCount = paidValue ? parseInt(paidValue, 10) : 0;
 
-    // #region agent log
-    console.log('[tutor/payment] Before payment processing', { 
-      sessionId, 
-      gameId, 
-      checkoutId, 
-      conversationCount, 
-      currentPaidCount,
-      countKey,
-      paidKey
-    });
-    // Server-side log (will appear in Vercel logs)
-    // #endregion
-
     // Increment paidConversationsCount by 1
     // Each payment unlocks exactly ONE conversation
     // Don't use conversationCount in calculation to avoid unlocking multiple conversations
@@ -103,16 +90,6 @@ export async function POST(request) {
     
     // Set paid count to target (use setEx to ensure it's set correctly)
     await redis.setEx(paidKey, 90 * 24 * 60 * 60, targetPaidCount.toString());
-
-    // #region agent log
-    console.log('[tutor/payment] After payment processing', { 
-      conversationCount, 
-      currentPaidCount, 
-      targetPaidCount,
-      calculation: `${currentPaidCount} + 1 = ${targetPaidCount}`
-    });
-    // Server-side log (will appear in Vercel logs)
-    // #endregion
 
     const result = { success: true, newCount: targetPaidCount };
 
@@ -138,14 +115,6 @@ export async function POST(request) {
       console.log('[tutor/payment] Conversation purchase tracked and checkout marked as processed:', checkoutId);
     }
 
-    // #region agent log
-    console.log('[tutor/payment] Returning success', { 
-      paidConversationsCount: result.newCount,
-      conversationCount,
-      unlockCondition: `paidCount (${result.newCount}) >= count (${conversationCount}) = ${result.newCount >= conversationCount}`
-    });
-    // Server-side log (will appear in Vercel logs)
-    // #endregion
     return NextResponse.json({
       success: true,
       paidConversationsCount: result.newCount

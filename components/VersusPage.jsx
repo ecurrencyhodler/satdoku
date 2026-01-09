@@ -5,6 +5,7 @@ import { useVersusWebSocket } from './hooks/useVersusWebSocket.js';
 import { useVersusGame } from './hooks/useVersusGame.js';
 import { useVersusCellInput } from './hooks/useVersusCellInput.js';
 import { useMobileDetection } from './hooks/useMobileDetection.js';
+import { useVersusCountdown } from './hooks/useVersusCountdown.js';
 import { transformVersusStateToClient } from '../lib/game/versusGameStateClient.js';
 import VersusPlayerPanel from './VersusPlayerPanel.jsx';
 import VersusCountdown from './VersusCountdown.jsx';
@@ -72,17 +73,15 @@ export default function VersusPage({
 
   // Wrap WebSocket message handler to capture notifications
   const handleWebSocketMessage = useCallback((message) => {
-    // #region agent log
-    if (message.type === 'state_update' && message.room) {
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VersusPage.jsx:78',message:'WebSocket state_update received',data:{messageType:message.type,gameStatus:message.room?.gameStatus,winner:message.room?.winner,hasPlayers:!!message.room?.players?.player1&&!!message.room?.players?.player2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    }
-    // #endregion
     // Track when player successfully joins room via WebSocket
     if (message.type === 'joined') {
       setHasJoinedRoomViaWS(true);
       // Enable loading for both players once WebSocket connection is established
       if (!enableInitialLoad) {
         setEnableInitialLoad(true);
+        // Explicitly load state for player 2 when they first join
+        // This ensures gameState is populated so controls are visible
+        loadState();
       }
     }
     
@@ -95,7 +94,7 @@ export default function VersusPage({
     if (message.type === 'notification' && message.notification) {
       setNotification(message.notification);
     }
-  }, [handleWebSocketMessageFromHook, enableInitialLoad]);
+  }, [handleWebSocketMessageFromHook, enableInitialLoad, loadState]);
 
   // WebSocket connection - must be called before useEffect that uses isConnected
   const { isConnected, isReconnecting, sendMessage } = useVersusWebSocket(
@@ -154,9 +153,20 @@ export default function VersusPage({
   // Track opponent-filled cells
   const [opponentFilledCells, setOpponentFilledCells] = useState(new Set());
 
+  // Calculate countdown from start_at timestamp using the hook
+  // MUST be called before any conditional returns to follow Rules of Hooks
+  const { countdown: calculatedCountdown, isActive: countdownFinished } = useVersusCountdown(gameState?.start_at);
+  
+  // Track when start_at changes
+  useEffect(() => {
+    // start_at changes are handled by useVersusCountdown hook
+  }, [gameState?.start_at, playerId, calculatedCountdown, countdownFinished]);
+
+
   // Reset player filled cells when game starts
   useEffect(() => {
-    if (gameState?.gameStatus === 'playing' && previousBoardRef.current === null) {
+    const currentStatus = gameState?.status || gameState?.gameStatus;
+    if ((currentStatus === 'active' || currentStatus === 'playing') && previousBoardRef.current === null) {
       // Game just started, clear any previous tracking
       playerFilledCellsRef.current.clear();
     }
@@ -249,6 +259,11 @@ export default function VersusPage({
       return;
     }
 
+    // Player 1 cannot start until player 2 has joined
+    if (playerId === 'player1' && !gameState?.players?.player2) {
+      return;
+    }
+
     isReadyRequestInProgressRef.current = true;
 
     try {
@@ -263,24 +278,19 @@ export default function VersusPage({
 
       const result = await response.json();
 
-      if (result.success && result.room) {
-        // Update state directly from API response instead of calling loadState
-        // This avoids race conditions and ensures immediate state update
-        const clientState = transformVersusStateToClient(result.room, playerId);
-        setGameState(clientState);
-
-        // Trigger ready check on WebSocket server
-        sendMessage({ type: 'ready_check', roomId });
-      } else if (result.success) {
-        // Fallback: if API doesn't return room, reload state
-        await loadState();
+      // API response is just a nudge - fetch authoritative state from Postgres
+      // Postgres is the authority, Realtime will notify us of changes
+      if (result.success) {
+        // Fetch authoritative state from Postgres (will be triggered by broadcasts)
+        // The broadcast from the API will trigger a Postgres fetch in useVersusGame
+        // No need to update state here - Postgres subscription and broadcasts handle it
       }
     } catch (error) {
       console.error('Error setting ready:', error);
     } finally {
       isReadyRequestInProgressRef.current = false;
     }
-  }, [roomId, sendMessage, loadState, gameState, playerId, setGameState]);
+  }, [roomId, gameState, playerId]);
 
   // Handle name change
   const handleNameChange = useCallback(async (newName) => {
@@ -322,7 +332,8 @@ export default function VersusPage({
 
   // Handle cell selection
   const handleCellClick = useCallback(async (row, col) => {
-    if (gameState?.gameStatus !== 'playing' || isSpectator) return;
+    const currentStatus = gameState?.status || gameState?.gameStatus;
+    if (currentStatus !== 'active' && currentStatus !== 'playing' || isSpectator) return;
     setSelectedCell({ row, col });
 
     // Broadcast cell selection via API
@@ -397,8 +408,11 @@ export default function VersusPage({
   const opponentData = isPlayer1 ? player2Data : isPlayer2 ? player1Data : null;
 
   // Board should only be visible when the game is playing or finished, not during waiting
-  const boardVisible = gameState && (gameState.gameStatus === 'playing' || gameState.gameStatus === 'finished');
-  const showCountdown = gameState?.gameStatus === 'countdown' && gameState?.countdown !== null && gameState?.countdown > 0;
+  const currentStatus = gameState?.status || gameState?.gameStatus;
+  // Board is visible when game is active/playing/finished AND countdown has finished
+  const boardVisible = gameState && ((currentStatus === 'active' || currentStatus === 'playing') || currentStatus === 'finished') && countdownFinished;
+  // Show countdown when we have start_at, countdown hasn't finished, and status is active
+  const showCountdown = gameState?.start_at && !countdownFinished && currentStatus === 'active';
 
   return (
     <div className={`versus-page ${isMobile ? 'mobile' : 'desktop'}`}>
@@ -427,18 +441,18 @@ export default function VersusPage({
               <VersusPlayerPanel
                 player={player1Data}
                 isYou={isPlayer1}
-                gameStatus={gameState?.gameStatus}
+                gameStatus={gameState?.status || gameState?.gameStatus}
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer1}
-                player2Connected={player2Data?.connected === true}
+                player2Connected={isPlayer1 ? !!player2Data : undefined}
               />
             </div>
             <div className="versus-board-container">
               {showCountdown && (
                 <VersusCountdown 
-                  countdown={gameState.countdown} 
+                  countdown={calculatedCountdown} 
                   visible={true}
                 />
               )}
@@ -475,7 +489,7 @@ export default function VersusPage({
                     <div className="versus-controls-container">
                       <NumberPad
                         onNumberClick={handleCellInput}
-                        disabled={!selectedCell || gameState.gameStatus !== 'playing'}
+                        disabled={!selectedCell || (gameState.status !== 'active' && gameState.gameStatus !== 'playing')}
                         versus={true}
                       />
                       <NoteControls
@@ -501,7 +515,7 @@ export default function VersusPage({
                             console.error('Error clearing notes:', error);
                           }
                         }}
-                        disabled={gameState.gameStatus !== 'playing'}
+                        disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
                         versus={true}
                       />
                     </div>
@@ -515,11 +529,10 @@ export default function VersusPage({
                   name: 'Player 2',
                   score: 0,
                   lives: 2,
-                  ready: false,
-                  connected: false
+                  ready: false
                 }}
                 isYou={isPlayer2}
-                gameStatus={gameState?.gameStatus}
+                gameStatus={gameState?.status || gameState?.gameStatus}
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 isWaiting={!player2Data}
@@ -539,7 +552,7 @@ export default function VersusPage({
             <div className="versus-board-container mobile">
               {showCountdown && (
                 <VersusCountdown 
-                  countdown={gameState.countdown} 
+                  countdown={calculatedCountdown} 
                   visible={true}
                 />
               )}
@@ -576,7 +589,7 @@ export default function VersusPage({
                     <div className="versus-controls-container">
                       <NumberPad
                         onNumberClick={handleCellInput}
-                        disabled={!selectedCell || gameState.gameStatus !== 'playing'}
+                        disabled={!selectedCell || (gameState.status !== 'active' && gameState.gameStatus !== 'playing')}
                         versus={true}
                       />
                       <NoteControls
@@ -602,7 +615,7 @@ export default function VersusPage({
                             console.error('Error clearing notes:', error);
                           }
                         }}
-                        disabled={gameState.gameStatus !== 'playing'}
+                        disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
                         versus={true}
                       />
                     </div>
@@ -618,7 +631,7 @@ export default function VersusPage({
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 compact={true}
-                player2Connected={isPlayer1 ? (player2Data?.connected === true) : undefined}
+                player2Connected={isPlayer1 ? !!player2Data : undefined}
               />
             </div>
           </>

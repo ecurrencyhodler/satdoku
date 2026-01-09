@@ -65,16 +65,6 @@ export async function GET(request) {
     const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameId);
     const requiresPayment = !canStartWithoutPayment && conversationCount > 0;
 
-    // #region agent log
-    console.log('[tutor/chat-history] GET response data', { 
-      conversationCount, 
-      paidConversationsCount, 
-      canStartWithoutPayment, 
-      requiresPayment,
-      gameId 
-    });
-    // #endregion
-
     return NextResponse.json({
       success: true,
       history: history,
@@ -223,15 +213,6 @@ export async function DELETE(request) {
     const countPattern = `tutor_conversation_count:${sessionId}:*`;
     const paidKey = `tutor_chat_paid_conversations:${sessionId}`;
     
-    // #region agent log
-    console.log('[tutor/chat-history] DELETE scanning for keys', {
-      sessionId,
-      chatPattern,
-      countPattern,
-      paidKey
-    });
-    // #endregion
-    
     // Scan for all matching keys
     const chatKeys = [];
     const countKeys = [];
@@ -252,27 +233,10 @@ export async function DELETE(request) {
       countKeys.push(...result.keys);
     } while (countCursor !== '0');
     
-    // #region agent log
-    console.log('[tutor/chat-history] DELETE found keys', {
-      chatKeys: chatKeys.length,
-      countKeys: countKeys.length,
-      chatKeysList: chatKeys,
-      countKeysList: countKeys
-    });
-    // #endregion
-    
     // Delete all found keys plus the paid key
     const allKeys = [...chatKeys, ...countKeys, paidKey];
     if (allKeys.length > 0) {
       await redis.del(allKeys);
-      
-      // #region agent log
-      console.log('[tutor/chat-history] DELETE cleared keys', {
-        sessionId,
-        deletedCount: allKeys.length,
-        keys: allKeys
-      });
-      // #endregion
     }
 
     // Clear current conversation ID when chat history is cleared (new game started)

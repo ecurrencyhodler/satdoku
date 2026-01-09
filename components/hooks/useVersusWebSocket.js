@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createSupabaseBrowserClient } from '../../../lib/supabase/client-browser.js';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client-browser.js';
 
 /**
  * Hook for managing Supabase Realtime connection in versus mode
@@ -37,6 +37,26 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
 
       // Create channel for this room
       const channel = supabase.channel(`room:${roomId}`)
+        // Subscribe to versus_rooms table changes (source of truth for start_at)
+        // Broadcasts are just a nudge - actual data comes from Postgres
+        .on('postgres_changes', {
+          event: '*',  // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'versus_rooms',
+          filter: `room_id=eq.${roomId}`
+        }, async (payload) => {
+          console.log('[useVersusWebSocket] Postgres change received:', payload.eventType, payload.new);
+          // Handle direct room update from Postgres (source of truth)
+          // Only update start_at if it was just set (was null, now has a value)
+          if (onMessageRef.current) {
+            onMessageRef.current({
+              type: 'room_update',
+              room: payload.new,
+              old: payload.old,
+              eventType: payload.eventType
+            });
+          }
+        })
         // Subscribe to broadcast messages (postgres_changes)
         .on('postgres_changes', {
           event: 'INSERT',
@@ -44,22 +64,16 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           table: 'versus_messages',
           filter: `room_id=eq.${roomId}`
         }, async (payload) => {
+          console.log('[useVersusWebSocket] Broadcast message INSERT received:', payload.new?.message?.type);
           // Handle broadcast message
           const message = payload.new.message;
           if (onMessageRef.current) {
             onMessageRef.current(message);
           }
-          
-          // Delete message after processing (fire and forget)
-          // Using WHERE id = $1 is idempotent - safe if multiple clients process same message
-          supabase
-            .from('versus_messages')
-            .delete()
-            .eq('id', payload.new.id)
-            .then(() => {})
-            .catch(err => console.warn('[useVersusWebSocket] Failed to delete message:', err));
+          // Note: Messages are cleaned up by the cron job at /api/cron/cleanup-versus-rooms/
+          // No client-side deletion needed
         })
-        // Track presence (set up handlers before tracking)
+        // Set up presence handlers
         .on('presence', { event: 'sync' }, () => {
           const presenceState = channel.presenceState();
           // Update connection status from presence
@@ -92,60 +106,62 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
               playerId: leftPresences[0]?.playerId
             });
           }
-        })
-        // Track own presence (must be called before subscribe)
-        .track({
-          playerId: playerId,
-          sessionId: sessionId
-        })
-        // Subscribe to channel (activates both postgres_changes and presence)
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('[useVersusWebSocket] Connected to room:', roomId);
-            setIsConnected(true);
-            setIsReconnecting(false);
-            reconnectAttemptRef.current = 0;
-            
-            // Send joined message to handler
-            if (onMessageRef.current) {
-              onMessageRef.current({
-                type: 'joined',
-                roomId
-              });
-            }
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.log('[useVersusWebSocket] Channel error or closed:', status);
-            setIsConnected(false);
-            
-            // Attempt reconnection
-            if (shouldReconnectRef.current && roomId && sessionId) {
-              const delay = Math.min(
-                1000 * Math.pow(2, reconnectAttemptRef.current),
-                30000 // 30 seconds max
-              );
-              
-              setIsReconnecting(true);
-              reconnectAttemptRef.current++;
-              
-              reconnectTimeoutRef.current = setTimeout(async () => {
-                // Fetch full state snapshot before reconnecting
-                if (onReconnectRef.current) {
-                  try {
-                    await onReconnectRef.current();
-                  } catch (error) {
-                    console.error('[useVersusWebSocket] Error fetching state on reconnect:', error);
-                  }
-                }
-                // Only reconnect if still should reconnect
-                if (shouldReconnectRef.current && roomId && sessionId) {
-                  connect();
-                } else {
-                  setIsReconnecting(false);
-                }
-              }, delay);
-            }
-          }
         });
+
+      // Subscribe to channel first (must be done before tracking presence)
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[useVersusWebSocket] Connected to room:', roomId);
+          setIsConnected(true);
+          setIsReconnecting(false);
+          reconnectAttemptRef.current = 0;
+          
+          // Track presence AFTER subscription is confirmed
+          channel.track({
+            playerId: playerId,
+            sessionId: sessionId
+          });
+          
+          // Send joined message to handler
+          if (onMessageRef.current) {
+            onMessageRef.current({
+              type: 'joined',
+              roomId
+            });
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.log('[useVersusWebSocket] Channel error or closed:', status);
+          setIsConnected(false);
+          
+          // Attempt reconnection
+          if (shouldReconnectRef.current && roomId && sessionId) {
+            const delay = Math.min(
+              1000 * Math.pow(2, reconnectAttemptRef.current),
+              30000 // 30 seconds max
+            );
+            
+            setIsReconnecting(true);
+            reconnectAttemptRef.current++;
+            
+            reconnectTimeoutRef.current = setTimeout(async () => {
+              // Fetch full state snapshot before reconnecting
+              if (onReconnectRef.current) {
+                try {
+                  await onReconnectRef.current();
+                } catch (error) {
+                  console.error('[useVersusWebSocket] Error fetching state on reconnect:', error);
+                }
+              }
+              // Only reconnect if still should reconnect
+              if (shouldReconnectRef.current && roomId && sessionId) {
+                connect();
+              } else {
+                setIsReconnecting(false);
+              }
+            }, delay);
+          }
+        }
+      });
 
       channelRef.current = channel;
     } catch (error) {

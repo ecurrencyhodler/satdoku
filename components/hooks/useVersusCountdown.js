@@ -20,7 +20,6 @@ export function useVersusCountdown(startAt) {
       const startTime = new Date(startAt).getTime();
       const now = Date.now();
       const diff = Math.max(0, Math.ceil((startTime - now) / 1000));
-      
       setCountdown(diff);
       setIsActive(now >= startTime);
     };

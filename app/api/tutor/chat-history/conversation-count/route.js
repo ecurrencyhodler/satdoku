@@ -52,22 +52,7 @@ export async function POST(request) {
     const canStartWithoutPayment = await canStartConversationWithoutPayment(sessionId, gameId);
     const paidConversationsCount = await getPaidConversationsCount(sessionId, gameId);
 
-    // #region agent log
-    console.log('[tutor/chat-history/conversation-count] POST check', { 
-      currentCount, 
-      paidConversationsCount, 
-      canStartWithoutPayment,
-      gameId 
-    });
-    // #endregion
-
     if (!canStartWithoutPayment) {
-      // #region agent log
-      console.log('[tutor/chat-history/conversation-count] Payment required', { 
-        currentCount, 
-        paidConversationsCount 
-      });
-      // #endregion
       return NextResponse.json({
         success: false,
         error: 'PAYMENT_REQUIRED',
@@ -84,13 +69,6 @@ export async function POST(request) {
       console.error('[tutor/chat-history] Error tracking conversation analytics:', error);
       // Don't fail the request if analytics tracking fails
     });
-
-    // #region agent log
-    console.log('[tutor/chat-history/conversation-count] Can start without payment', { 
-      currentCount, 
-      paidConversationsCount 
-    });
-    // #endregion
 
     return NextResponse.json({
       success: true,
