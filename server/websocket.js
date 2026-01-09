@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { getRoom, updateRoomState, cleanupAbandonedGames } from '../lib/redis/versusRooms.js';
 import { getRedisClient } from '../lib/redis/client.js';
+import { trackPuzzleStart } from '../lib/supabase/puzzleSessions.js';
 
 // Load environment variables from .env
 const __filename = fileURLToPath(import.meta.url);
@@ -217,6 +218,19 @@ async function startCountdown(roomId) {
         type: 'game_start',
         gameStartTime
       });
+      
+      // Track puzzle start for both players (fire and forget)
+      if (currentRoom.players.player1?.sessionId) {
+        trackPuzzleStart(currentRoom.players.player1.sessionId, currentRoom.difficulty).catch(err => {
+          console.error('[WebSocket] Failed to track puzzle start for player1:', err);
+        });
+      }
+      if (currentRoom.players.player2?.sessionId) {
+        trackPuzzleStart(currentRoom.players.player2.sessionId, currentRoom.difficulty).catch(err => {
+          console.error('[WebSocket] Failed to track puzzle start for player2:', err);
+        });
+      }
+      
       clearInterval(countdownInterval);
     }
   }, 1000);
