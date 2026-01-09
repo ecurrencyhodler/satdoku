@@ -57,6 +57,10 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.dark .versus-panel {
+  background: #4a5568;
+}
+
 .versus-board-container {
   display: flex;
   flex-direction: column;
@@ -121,6 +125,11 @@
   border-bottom: 1px solid #ddd;
 }
 
+.dark .versus-page.mobile .versus-panel.mobile-top {
+  background: #4a5568;
+  border-bottom: 1px solid #ddd;
+}
+
 .versus-page.mobile .versus-board-container.mobile {
   flex: 1 1 auto;
   min-height: 0;
@@ -137,6 +146,11 @@
   flex: 0 0 auto;
   padding: 10px;
   background: white;
+  border-top: 1px solid #ddd;
+}
+
+.dark .versus-page.mobile .versus-panel.mobile-bottom {
+  background: #4a5568;
   border-top: 1px solid #ddd;
 }
 
@@ -170,6 +184,12 @@
   font-weight: bold;
   text-align: center;
   width: 100%;
+  color: #2d3748;
+  transition: color 0.2s;
+}
+
+.dark .player-name {
+  color: #e2e8f0;
 }
 
 .player-name span {
@@ -185,6 +205,15 @@
   text-align: center;
   width: 100%;
   box-sizing: border-box;
+  background: white;
+  color: #2d3748;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.dark .name-input {
+  background: #4a5568;
+  border-color: #718096;
+  color: #e2e8f0;
 }
 
 .player-stats {
@@ -196,6 +225,31 @@
 .stat {
   display: flex;
   justify-content: space-between;
+  color: #4a5568;
+  transition: color 0.2s;
+}
+
+.dark .stat {
+  color: #e2e8f0;
+}
+
+.stat-label {
+  color: #718096;
+  transition: color 0.2s;
+}
+
+.dark .stat-label {
+  color: #cbd5e0;
+}
+
+.stat-value {
+  color: #2d3748;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.dark .stat-value {
+  color: #e2e8f0;
 }
 
 .start-button {
@@ -247,9 +301,22 @@
   text-align: center;
 }
 
+.dark .waiting-indicator {
+  color: #cbd5e0;
+}
+
 .disconnected-indicator {
   color: #f56565;
   font-size: 0.9em;
+}
+
+.player-score {
+  color: #4a5568;
+  transition: color 0.2s;
+}
+
+.dark .player-score {
+  color: #e2e8f0;
 }
 
 /* Countdown */
@@ -297,6 +364,10 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.dark .versus-invite-url {
+  background: #2d3748;
+}
+
 .invite-url-container {
   display: flex;
   gap: 10px;
@@ -329,6 +400,10 @@
   color: #666;
   text-align: center;
   margin: 0;
+}
+
+.dark .invite-url-hint {
+  color: #9ca3af;
 }
 
 /* Notification */
@@ -371,6 +446,11 @@
   padding: 30px;
   border-radius: 8px;
   text-align: center;
+}
+
+.dark .reconnecting-content {
+  background: #2d3748;
+  color: #e2e8f0;
 }
 
 .reconnecting-spinner {
