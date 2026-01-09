@@ -11,7 +11,8 @@ export default function VersusPlayerPanel({
   compact = false,
   roomUrl = null,
   showCopyUrl = false,
-  isWaiting = false
+  isWaiting = false,
+  player2Connected = undefined
 }) {
   const [copied, setCopied] = useState(false);
   const [localName, setLocalName] = useState(player?.name || '');
@@ -78,9 +79,13 @@ export default function VersusPlayerPanel({
           )}
         </div>
         <div className="player-score">Score: {player?.score || 0}</div>
-        {canStart && (
-          <button onClick={onReadyClick} className="start-button">
-            Start
+        {isYou && gameStatus === 'waiting' && (
+          <button 
+            onClick={onReadyClick} 
+            className="start-button"
+            disabled={player?.ready || (player2Connected !== undefined && !player2Connected)}
+          >
+            Start Game
           </button>
         )}
         {player?.ready && gameStatus === 'waiting' && (
@@ -132,14 +137,18 @@ export default function VersusPlayerPanel({
           <span className="stat-value">{player?.lives || 0}</span>
         </div>
       </div>
-      {canStart && (
-        <button onClick={onReadyClick} className="start-button">
-          Start
+      {showCopyUrl && roomUrl && (
+        <button onClick={handleCopyUrl} className="copy-url-button">
+          {copied ? 'Copied!' : (gameStatus === 'waiting' ? 'Invite Challenger' : 'Invite Spectator')}
         </button>
       )}
-      {showCopyUrl && gameStatus === 'waiting' && roomUrl && (
-        <button onClick={handleCopyUrl} className="copy-url-button">
-          {copied ? 'Copied!' : 'Invite Challenger'}
+      {isYou && gameStatus === 'waiting' && (
+        <button 
+          onClick={onReadyClick} 
+          className="start-button"
+          disabled={player?.ready || (player2Connected !== undefined && !player2Connected)}
+        >
+          Start Game
         </button>
       )}
       {isWaiting && (

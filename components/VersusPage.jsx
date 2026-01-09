@@ -5,6 +5,7 @@ import { useVersusWebSocket } from './hooks/useVersusWebSocket.js';
 import { useVersusGame } from './hooks/useVersusGame.js';
 import { useVersusCellInput } from './hooks/useVersusCellInput.js';
 import { useMobileDetection } from './hooks/useMobileDetection.js';
+import { transformVersusStateToClient } from '../lib/game/versusGameStateClient.js';
 import VersusPlayerPanel from './VersusPlayerPanel.jsx';
 import VersusCountdown from './VersusCountdown.jsx';
 import VersusInviteUrl from './VersusInviteUrl.jsx';
@@ -40,6 +41,9 @@ export default function VersusPage({
   const isLoadingStateRef = useRef(false);
   const hasSeenPlayer1ConnectedRef = useRef(false);
   const [hasJoinedRoomViaWS, setHasJoinedRoomViaWS] = useState(false);
+  // Track which cells the current player has filled
+  const playerFilledCellsRef = useRef(new Set());
+  const previousBoardRef = useRef(null);
   
   // For both players, delay initial state load until WebSocket connects
   // Player1: waits for WebSocket connection before loading
@@ -130,7 +134,7 @@ export default function VersusPage({
   }, [mode, roomId]);
 
   // Cell input handling
-  const { handleCellInput } = useVersusCellInput(
+  const { handleCellInput: originalHandleCellInput } = useVersusCellInput(
     roomId,
     selectedCell,
     gameState,
@@ -152,9 +156,105 @@ export default function VersusPage({
     noteMode
   );
 
+  // Track opponent-filled cells
+  const [opponentFilledCells, setOpponentFilledCells] = useState(new Set());
+
+  // Reset player filled cells when game starts
+  useEffect(() => {
+    if (gameState?.gameStatus === 'playing' && previousBoardRef.current === null) {
+      // Game just started, clear any previous tracking
+      playerFilledCellsRef.current.clear();
+    }
+  }, [gameState?.gameStatus]);
+
+  // Compute opponent-filled cells based on board state
+  useEffect(() => {
+    if (!gameState?.board || !gameState?.puzzle) return;
+
+    const board = gameState.board;
+    const puzzle = gameState.puzzle;
+    const opponentFilled = new Set();
+    const previousBoard = previousBoardRef.current;
+
+    // Check if our last move attempt succeeded
+    if (lastMoveAttemptRef.current && previousBoard) {
+      const { row, col, value } = lastMoveAttemptRef.current;
+      const currentValue = board[row]?.[col] ?? 0;
+      const previousValue = previousBoard[row]?.[col] ?? 0;
+      
+      // If the cell now has the value we tried to place, it was our move
+      if (currentValue === value && previousValue !== value) {
+        const cellKey = `${row},${col}`;
+        playerFilledCellsRef.current.add(cellKey);
+      }
+      
+      // Clear the move attempt after processing
+      lastMoveAttemptRef.current = null;
+    }
+
+    // A cell is opponent-filled if:
+    // 1. It has a value (not 0)
+    // 2. It's not prefilled (not in puzzle)
+    // 3. It's not in the player's filled cells set
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const value = board[row]?.[col] ?? 0;
+        const isPrefilled = puzzle[row]?.[col] !== 0;
+        const cellKey = `${row},${col}`;
+        const isInPlayerSet = playerFilledCellsRef.current.has(cellKey);
+        
+        if (value !== 0 && !isPrefilled && !isInPlayerSet) {
+          opponentFilled.add(cellKey);
+        }
+      }
+    }
+
+    // Clean up: if a cell in playerFilledCellsRef is now empty, remove it
+    for (const cellKey of playerFilledCellsRef.current) {
+      const [row, col] = cellKey.split(',').map(Number);
+      if (board[row]?.[col] === 0) {
+        playerFilledCellsRef.current.delete(cellKey);
+      }
+    }
+
+    setOpponentFilledCells(opponentFilled);
+    previousBoardRef.current = board.map(row => [...row]);
+  }, [gameState?.board, gameState?.puzzle]);
+
+  // Track last attempted move
+  const lastMoveAttemptRef = useRef(null);
+
+  // Wrapper for handleCellInput to track player moves
+  const handleCellInput = useCallback(async (value) => {
+    if (!selectedCell) return;
+    
+    // Track the move attempt
+    const cellKey = `${selectedCell.row},${selectedCell.col}`;
+    lastMoveAttemptRef.current = value !== 0 ? { row: selectedCell.row, col: selectedCell.col, value } : null;
+    
+    // Call the original handler
+    await originalHandleCellInput(value);
+  }, [selectedCell, originalHandleCellInput]);
+
+  // Track if ready request is in progress to prevent duplicate clicks
+  const isReadyRequestInProgressRef = useRef(false);
+
   // Handle ready button click
   const handleReadyClick = useCallback(async () => {
     if (!roomId) return;
+    
+    // Prevent duplicate clicks while request is in progress
+    if (isReadyRequestInProgressRef.current) {
+      return;
+    }
+
+    // Check current ready status - if already ready, don't make another request
+    const currentReady = gameState?.players?.[playerId]?.ready;
+    if (currentReady) {
+      return;
+    }
+
+    isReadyRequestInProgressRef.current = true;
 
     try {
       const response = await fetch('/api/versus/ready', {
@@ -167,16 +267,25 @@ export default function VersusPage({
       });
 
       const result = await response.json();
-      if (result.success) {
+
+      if (result.success && result.room) {
+        // Update state directly from API response instead of calling loadState
+        // This avoids race conditions and ensures immediate state update
+        const clientState = transformVersusStateToClient(result.room, playerId);
+        setGameState(clientState);
+
         // Trigger ready check on WebSocket server
         sendMessage({ type: 'ready_check', roomId });
-        // Reload state to get updated ready status
-        loadState();
+      } else if (result.success) {
+        // Fallback: if API doesn't return room, reload state
+        await loadState();
       }
     } catch (error) {
       console.error('Error setting ready:', error);
+    } finally {
+      isReadyRequestInProgressRef.current = false;
     }
-  }, [roomId, sendMessage, loadState]);
+  }, [roomId, sendMessage, loadState, gameState, playerId, setGameState]);
 
   // Handle name change
   const handleNameChange = useCallback(async (newName) => {
@@ -324,6 +433,7 @@ export default function VersusPage({
                 onReadyClick={handleReadyClick}
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer1}
+                player2Connected={player2Data?.connected === true}
               />
             </div>
             <div className="versus-board-container">
@@ -346,6 +456,7 @@ export default function VersusPage({
                       notes={gameState.notes || []}
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
+                      opponentFilledCells={opponentFilledCells}
                     />
                   ) : (
                     <GameBoard
@@ -358,6 +469,7 @@ export default function VersusPage({
                       notes={[]}
                       noteMode={false}
                       opponentSelectedCell={null}
+                      opponentFilledCells={null}
                     />
                   )}
                   {!isSpectator && (
@@ -383,7 +495,6 @@ export default function VersusPage({
                             });
                             const result = await response.json();
                             if (result.success && result.state) {
-                              const { transformVersusStateToClient } = await import('../lib/game/versusGameStateClient.js');
                               const clientState = transformVersusStateToClient(result.state, playerId);
                               setGameState(clientState);
                             }
@@ -446,6 +557,7 @@ export default function VersusPage({
                       notes={gameState.notes || []}
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
+                      opponentFilledCells={opponentFilledCells}
                     />
                   ) : (
                     <GameBoard
@@ -458,6 +570,7 @@ export default function VersusPage({
                       notes={[]}
                       noteMode={false}
                       opponentSelectedCell={null}
+                      opponentFilledCells={null}
                     />
                   )}
                   {!isSpectator && (
@@ -483,7 +596,6 @@ export default function VersusPage({
                             });
                             const result = await response.json();
                             if (result.success && result.state) {
-                              const { transformVersusStateToClient } = await import('../lib/game/versusGameStateClient.js');
                               const clientState = transformVersusStateToClient(result.state, playerId);
                               setGameState(clientState);
                             }
@@ -507,6 +619,7 @@ export default function VersusPage({
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 compact={true}
+                player2Connected={isPlayer1 ? (player2Data?.connected === true) : undefined}
               />
             </div>
           </>

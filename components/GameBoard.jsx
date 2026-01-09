@@ -12,7 +12,8 @@ export default function GameBoard({
   hasLives,
   notes = [],
   noteMode = false,
-  opponentSelectedCell = null
+  opponentSelectedCell = null,
+  opponentFilledCells = null
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -59,6 +60,8 @@ export default function GameBoard({
             const isPrefilled = puzzle?.[row]?.[col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
             const isOpponentSelected = opponentSelectedCell?.row === row && opponentSelectedCell?.col === col;
+            const cellKey = `${row},${col}`;
+            const isOpponentFilled = opponentFilledCells && opponentFilledCells.has(cellKey);
 
             // Determine if the value is incorrect (user-entered but doesn't match solution)
             const isIncorrect = !isPrefilled && value !== 0 && solution && solution[row]?.[col] !== 0 && value !== solution[row]?.[col];
@@ -96,6 +99,7 @@ export default function GameBoard({
                 isIncorrect={isIncorrect}
                 isSelected={isSelected}
                 isOpponentSelected={isOpponentSelected}
+                isOpponentFilled={isOpponentFilled}
                 isHighlightedRow={isHighlightedRow}
                 isHighlightedColumn={isHighlightedColumn}
                 isHighlightedBox={isHighlightedBox}

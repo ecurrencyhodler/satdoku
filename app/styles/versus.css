@@ -199,21 +199,28 @@
 }
 
 .start-button {
-  background: #4299e1;
+  background: #90cdf4;
   color: white;
   border: none;
   border-radius: 4px;
   padding: 10px 20px;
   font-size: 1em;
   cursor: pointer;
+  width: 100%;
 }
 
-.start-button:hover {
-  background: #3182ce;
+.start-button:hover:not(:disabled) {
+  background: #63b3ed;
+}
+
+.start-button:disabled {
+  background: #90cdf4;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .copy-url-button {
-  background: #90cdf4;
+  background: #4299e1;
   color: white;
   border: none;
   border-radius: 4px;
@@ -225,7 +232,7 @@
 }
 
 .copy-url-button:hover {
-  background: #63b3ed;
+  background: #3182ce;
 }
 
 .ready-indicator {
@@ -431,6 +438,23 @@
 .cell-opponent-selected {
   border: 2px solid #ed8936 !important;
   box-shadow: 0 0 5px rgba(237, 137, 54, 0.5);
+}
+
+/* Opponent filled cell - must override cell-locked background */
+.cell-opponent-filled {
+  background-color: #fff5e6 !important;
+}
+
+.cell-locked.cell-opponent-filled {
+  background-color: #fff5e6 !important;
+}
+
+.dark .cell-opponent-filled {
+  background-color: rgba(237, 137, 54, 0.15) !important;
+}
+
+.dark .cell-locked.cell-opponent-filled {
+  background-color: rgba(237, 137, 54, 0.15) !important;
 }
 
 /* Not Found Page */

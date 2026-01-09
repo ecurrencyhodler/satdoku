@@ -106,11 +106,13 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
       // Return notification to parent component
       return message.notification;
     } else if (message.type === 'cell_selected') {
-      // Update opponent's selected cell
-      setGameState(prev => prev ? {
-        ...prev,
-        opponentSelectedCell: message.selectedCell
-      } : null);
+      // Update opponent's selected cell (only if it's from the opponent, not ourselves)
+      if (message.playerId !== playerId) {
+        setGameState(prev => prev ? {
+          ...prev,
+          opponentSelectedCell: message.selectedCell
+        } : null);
+      }
     }
   }, [playerId, roomId]);
 

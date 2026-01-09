@@ -108,11 +108,11 @@
 }
 
 /* Override selected background for locked (filled) cells when not selected and not highlighted */
-.cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number) {
+.cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number):not(.cell-opponent-filled) {
     background: #f7fafc !important;
 }
 
-.dark .cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number) {
+.dark .cell-locked:not(.cell-selected):not(.cell-highlighted-row):not(.cell-highlighted-column):not(.cell-highlighted-box):not(.cell-highlighted-same-number):not(.cell-opponent-filled) {
     background: #2d3748 !important;
 }
 

@@ -15,7 +15,7 @@ export function useVersusCellInput(
   noteMode
 ) {
   const handleCellInput = useCallback(async (value) => {
-    if (!selectedCell || !gameState || isLoadingState || gameState.isSpectator) {
+    if (!selectedCell || !gameState || (typeof isLoadingState === 'function' ? isLoadingState() : isLoadingState) || gameState.isSpectator) {
       return;
     }
 
@@ -39,11 +39,11 @@ export function useVersusCellInput(
         });
 
         const result = await response.json();
-        if (result.success && result.state) {
-          const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
-          const clientState = transformVersusStateToClient(result.state, gameState.playerId);
-          setGameState(clientState);
-        }
+      if (result.success && result.state) {
+        const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
+        const clientState = transformVersusStateToClient(result.state, gameState.playerId);
+        setGameState(clientState);
+      }
       } catch (error) {
         console.error('[useVersusCellInput] Error toggling note:', error);
       }
