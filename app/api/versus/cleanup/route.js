@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { cleanupAbandonedGames } from '../../../../lib/redis/versusRooms.js';
+import { cleanupExpiredRooms } from '../../../../lib/supabase/versusRooms.js';
 
 /**
- * POST /api/versus/cleanup - Manually trigger cleanup of abandoned games
+ * POST /api/versus/cleanup - Manually trigger cleanup of expired rooms
  * This endpoint can be called manually or by a cron job
  */
 export async function POST(request) {
   try {
-    const result = await cleanupAbandonedGames();
+    const result = await cleanupExpiredRooms();
     
     return NextResponse.json({
       success: true,

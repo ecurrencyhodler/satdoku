@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
-import { updatePlayerName } from '../../../../lib/supabase/versusRooms.js';
+import { joinRoom, getRoom } from '../../../../lib/supabase/versusRooms.js';
 
 /**
- * POST /api/versus/name - Update player name
- * Body: { roomId: string, name: string }
+ * POST /api/versus/join - Join a room as player 2
+ * Body: { roomId: string, playerName?: string }
  */
 export async function POST(request) {
   try {
     const sessionId = await getSessionId();
     const body = await request.json();
-    const { roomId, name } = body;
+    const { roomId, playerName } = body;
 
     if (!roomId) {
       return NextResponse.json(
@@ -19,39 +19,8 @@ export async function POST(request) {
       );
     }
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Name is required' },
-        { status: 400 }
-      );
-    }
-
-    // Get room to determine player ID
-    const { getRoom } = await import('../../../../lib/redis/versusRooms.js');
-    const room = await getRoom(roomId);
-    
-    if (!room) {
-      return NextResponse.json(
-        { success: false, error: 'Room not found' },
-        { status: 404 }
-      );
-    }
-
-    // Determine which player this is
-    let playerId = null;
-    if (room.players.player1?.sessionId === sessionId) {
-      playerId = 'player1';
-    } else if (room.players.player2?.sessionId === sessionId) {
-      playerId = 'player2';
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Player not found in room' },
-        { status: 403 }
-      );
-    }
-
-    // Update name
-    const result = await updatePlayerName(roomId, playerId, name.trim());
+    // Join room
+    const result = await joinRoom(roomId, sessionId, playerName || 'Player 2');
     
     if (!result.success) {
       return NextResponse.json(
@@ -60,15 +29,34 @@ export async function POST(request) {
       );
     }
 
+    // Get updated room
+    const room = await getRoom(roomId);
+    if (!room) {
+      return NextResponse.json(
+        { success: false, error: 'Room not found' },
+        { status: 404 }
+      );
+    }
+
+    // Determine player ID
+    let playerId = null;
+    if (room.players.player1?.sessionId === sessionId) {
+      playerId = 'player1';
+    } else if (room.players.player2?.sessionId === sessionId) {
+      playerId = 'player2';
+    }
+
     return NextResponse.json({
-      success: true
+      success: true,
+      playerId: playerId || (result.isSpectator ? null : 'player2'),
+      isSpectator: result.isSpectator || false,
+      room
     });
   } catch (error) {
-    console.error('[versus/name] POST Error:', error);
+    console.error('[versus/join] POST Error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
-

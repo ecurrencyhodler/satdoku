@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
-const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
-const INITIAL_RECONNECT_DELAY = 1000; // 1 second initial
+import { createSupabaseBrowserClient } from '../../../lib/supabase/client-browser.js';
 
 /**
- * Hook for managing WebSocket connection in versus mode
+ * Hook for managing Supabase Realtime connection in versus mode
  * @param {string} roomId - Room ID
  * @param {string} sessionId - Session ID
  * @param {string} playerId - Player ID ('player1' or 'player2')
- * @param {function} onMessage - Callback for WebSocket messages
+ * @param {function} onMessage - Callback for Realtime messages
  * @param {function} onReconnect - Callback to fetch state snapshot on reconnect
  */
 export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onReconnect) {
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const wsRef = useRef(null);
+  const channelRef = useRef(null);
+  const supabaseRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
   const shouldReconnectRef = useRef(true);
@@ -34,136 +32,150 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
     }
 
     try {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+      const supabase = createSupabaseBrowserClient();
+      supabaseRef.current = supabase;
 
-      ws.onopen = () => {
-        console.log('[useVersusWebSocket] Connected');
-        setIsConnected(true);
-        setIsReconnecting(false);
-        reconnectAttemptRef.current = 0;
-
-        // Join room - only if we have both roomId and sessionId
-        // sessionId must be a real session ID, not a placeholder
-        if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-          ws.send(JSON.stringify({
-            type: 'join',
-            roomId,
-            sessionId,
-            playerId
-          }));
-        } else {
-          console.warn('[useVersusWebSocket] Cannot join room - missing roomId or valid sessionId', { roomId, sessionId });
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          
-          if (message.type === 'joined') {
-            // Successfully joined room - forward to message handler to update state
-            console.log('[useVersusWebSocket] Joined room:', message.roomId);
-            // Forward joined message to handler to update connection status
-            if (onMessageRef.current) {
-              onMessageRef.current(message);
-            }
-          } else if (message.type === 'player_connected' || message.type === 'player_disconnected') {
-            if (onMessageRef.current) {
-              onMessageRef.current(message);
-            }
-          } else if (message.type === 'state_update' || 
-                     message.type === 'countdown' ||
-                     message.type === 'countdown_start' ||
-                     message.type === 'countdown_paused' ||
-                     message.type === 'countdown_reset' ||
-                     message.type === 'game_start' ||
-                     message.type === 'notification' ||
-                     message.type === 'cell_selected' ||
-                     message.type === 'player_connected' ||
-                     message.type === 'player_disconnected') {
-            // Handle state updates
-            if (onMessageRef.current) {
-              onMessageRef.current(message);
-            }
-          } else if (message.type === 'pong') {
-            // Heartbeat response
-          } else if (message.type === 'error') {
-            console.error('[useVersusWebSocket] Error from server:', message.error);
+      // Create channel for this room
+      const channel = supabase.channel(`room:${roomId}`)
+        // Subscribe to broadcast messages (postgres_changes)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'versus_messages',
+          filter: `room_id=eq.${roomId}`
+        }, async (payload) => {
+          // Handle broadcast message
+          const message = payload.new.message;
+          if (onMessageRef.current) {
+            onMessageRef.current(message);
           }
-        } catch (error) {
-          console.error('[useVersusWebSocket] Error parsing message:', error);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('[useVersusWebSocket] WebSocket error:', error);
-      };
-
-      ws.onclose = () => {
-        console.log('[useVersusWebSocket] Disconnected');
-        setIsConnected(false);
-        wsRef.current = null;
-
-        // Attempt reconnection with exponential backoff
-        // Only reconnect if shouldReconnectRef is true (game hasn't ended, user hasn't left)
-        if (shouldReconnectRef.current && roomId && sessionId) {
-          const delay = Math.min(
-            INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current),
-            MAX_RECONNECT_DELAY
-          );
           
-          setIsReconnecting(true);
-          reconnectAttemptRef.current++;
+          // Delete message after processing (fire and forget)
+          // Using WHERE id = $1 is idempotent - safe if multiple clients process same message
+          supabase
+            .from('versus_messages')
+            .delete()
+            .eq('id', payload.new.id)
+            .then(() => {})
+            .catch(err => console.warn('[useVersusWebSocket] Failed to delete message:', err));
+        })
+        // Track presence (set up handlers before tracking)
+        .on('presence', { event: 'sync' }, () => {
+          const presenceState = channel.presenceState();
+          // Update connection status from presence
+          // presenceState format: { [sessionId]: [{ playerId, sessionId }] }
+          if (onMessageRef.current) {
+            onMessageRef.current({
+              type: 'presence_sync',
+              presenceState
+            });
+          }
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          // Player joined (key is sessionId)
+          // newPresences contains [{ playerId, sessionId }]
+          if (onMessageRef.current) {
+            onMessageRef.current({
+              type: 'player_connected',
+              sessionId: key,
+              playerId: newPresences[0]?.playerId
+            });
+          }
+        })
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+          // Player left (key is sessionId)
+          // leftPresences contains [{ playerId, sessionId }]
+          if (onMessageRef.current) {
+            onMessageRef.current({
+              type: 'player_disconnected',
+              sessionId: key,
+              playerId: leftPresences[0]?.playerId
+            });
+          }
+        })
+        // Track own presence (must be called before subscribe)
+        .track({
+          playerId: playerId,
+          sessionId: sessionId
+        })
+        // Subscribe to channel (activates both postgres_changes and presence)
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[useVersusWebSocket] Connected to room:', roomId);
+            setIsConnected(true);
+            setIsReconnecting(false);
+            reconnectAttemptRef.current = 0;
+            
+            // Send joined message to handler
+            if (onMessageRef.current) {
+              onMessageRef.current({
+                type: 'joined',
+                roomId
+              });
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.log('[useVersusWebSocket] Channel error or closed:', status);
+            setIsConnected(false);
+            
+            // Attempt reconnection
+            if (shouldReconnectRef.current && roomId && sessionId) {
+              const delay = Math.min(
+                1000 * Math.pow(2, reconnectAttemptRef.current),
+                30000 // 30 seconds max
+              );
+              
+              setIsReconnecting(true);
+              reconnectAttemptRef.current++;
+              
+              reconnectTimeoutRef.current = setTimeout(async () => {
+                // Fetch full state snapshot before reconnecting
+                if (onReconnectRef.current) {
+                  try {
+                    await onReconnectRef.current();
+                  } catch (error) {
+                    console.error('[useVersusWebSocket] Error fetching state on reconnect:', error);
+                  }
+                }
+                // Only reconnect if still should reconnect
+                if (shouldReconnectRef.current && roomId && sessionId) {
+                  connect();
+                } else {
+                  setIsReconnecting(false);
+                }
+              }, delay);
+            }
+          }
+        });
 
-          reconnectTimeoutRef.current = setTimeout(async () => {
-            // Fetch full state snapshot before reconnecting
-            if (onReconnectRef.current) {
-              try {
-                await onReconnectRef.current();
-              } catch (error) {
-                console.error('[useVersusWebSocket] Error fetching state on reconnect:', error);
-              }
-            }
-            // Only reconnect if still should reconnect and have room/session (with valid sessionId)
-            if (shouldReconnectRef.current && roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-              connect();
-            } else {
-              setIsReconnecting(false);
-            }
-          }, delay);
-        }
-      };
+      channelRef.current = channel;
     } catch (error) {
-      console.error('[useVersusWebSocket] Error creating WebSocket:', error);
+      console.error('[useVersusWebSocket] Error creating Realtime connection:', error);
       setIsReconnecting(true);
       
       // Retry connection
       const delay = Math.min(
-        INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttemptRef.current),
-        MAX_RECONNECT_DELAY
+        1000 * Math.pow(2, reconnectAttemptRef.current),
+        30000
       );
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (shouldReconnectRef.current && roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-              reconnectAttemptRef.current++;
-              connect();
-            } else {
-              setIsReconnecting(false);
-            }
-          }, delay);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (shouldReconnectRef.current && roomId && sessionId) {
+          reconnectAttemptRef.current++;
+          connect();
+        } else {
+          setIsReconnecting(false);
+        }
+      }, delay);
     }
   }, [roomId, sessionId, playerId]);
 
   useEffect(() => {
-        // Only connect if we have both roomId and a valid sessionId (not placeholder)
-        // Add a delay to ensure room is fully created/updated before connecting
-        // Longer delay for player2 to allow room update to propagate
-        if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-          // Longer delay for player2 to ensure room update from API join has propagated
-          const delay = playerId === 'player2' ? 800 : 200;
-          const connectTimer = setTimeout(() => {
-            connect();
-          }, delay);
+    // Only connect if we have both roomId and a valid sessionId
+    if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
+      // Delay for player2 to ensure room update from API join has propagated
+      const delay = playerId === 'player2' ? 800 : 200;
+      const connectTimer = setTimeout(() => {
+        connect();
+      }, delay);
       
       return () => {
         clearTimeout(connectTimer);
@@ -171,9 +183,10 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
-        if (wsRef.current) {
-          wsRef.current.close();
-          wsRef.current = null;
+        if (channelRef.current) {
+          channelRef.current.unsubscribe();
+          channelRef.current.untrack();
+          channelRef.current = null;
         }
       };
     }
@@ -183,33 +196,21 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current.untrack();
+        channelRef.current = null;
       }
     };
-  }, [roomId, sessionId, connect]);
+  }, [roomId, sessionId, connect, playerId]);
 
-
-  // Send message helper
+  // Send message helper (not needed for Supabase, but kept for compatibility)
   const sendMessage = useCallback((message) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-      return true;
-    }
+    // Supabase Realtime doesn't support sending custom messages
+    // Messages are sent via server-side broadcasts to versus_messages table
+    console.warn('[useVersusWebSocket] sendMessage called but Supabase Realtime uses server-side broadcasts');
     return false;
   }, []);
-
-  // Ping to keep connection alive
-  useEffect(() => {
-    if (!isConnected) return;
-
-    const pingInterval = setInterval(() => {
-      sendMessage({ type: 'ping' });
-    }, 30000); // Ping every 30 seconds
-
-    return () => clearInterval(pingInterval);
-  }, [isConnected, sendMessage]);
 
   return {
     isConnected,
@@ -217,4 +218,3 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
     sendMessage
   };
 }
-

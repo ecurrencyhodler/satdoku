@@ -1,3 +1,14 @@
+/**
+ * @deprecated This WebSocket server is deprecated and will be removed in a future version.
+ * Versus mode has been migrated to Supabase Realtime. This server is kept for backward
+ * compatibility during the migration period but should not be used for new features.
+ * 
+ * Migration status: Complete
+ * - All versus room operations now use Supabase Postgres
+ * - Real-time communication uses Supabase Realtime channels
+ * - This server can be safely removed after verifying migration success
+ */
+
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { config } from 'dotenv';

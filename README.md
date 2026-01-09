@@ -26,15 +26,22 @@ A Sudoku game with Lightning payments via Money Dev Kit. Players can purchase ad
 npm install
 ```
 
-2. Create `.env.local` file with your Money Dev Kit credentials and OpenAI API key:
+2. Create `.env.local` file with your Money Dev Kit credentials, Supabase credentials, and OpenAI API key:
 ```env
 MDK_ACCESS_TOKEN=your_api_key_here
 MDK_MNEMONIC=your_mnemonic_here
 REDIS_URL=your_redis_url_here
 OPENAI_API_KEY=your_openai_api_key_here
+
+# Supabase (required for versus mode)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-**Note:** For local development, you can use a local Redis instance or a service like [Upstash](https://upstash.com/) for a free Redis database. The `REDIS_URL` is required for payment verification webhooks to work.
+**Note:** 
+- For local development, you can use a local Redis instance or a service like [Upstash](https://upstash.com/) for a free Redis database. The `REDIS_URL` is required for payment verification webhooks to work.
+- Supabase is required for versus mode (real-time multiplayer). Get your credentials from [supabase.com](https://supabase.com).
 
 3. Run the development server:
 ```bash
@@ -52,6 +59,9 @@ npm run dev
    - `MDK_MNEMONIC`
    - `REDIS_URL` (required for payment verification - use Vercel Redis or Upstash)
    - `OPENAI_API_KEY` (required for the Sudoku tutor chatbot feature)
+   - `NEXT_PUBLIC_SUPABASE_URL` (required for versus mode)
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (required for versus mode)
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for versus mode - server-side operations)
 4. Configure webhook in MoneyDevKit dashboard:
    - Go to your MoneyDevKit dashboard
    - Set webhook URL to: `https://your-domain.com` (root URL)

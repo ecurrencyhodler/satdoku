@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionId, getSessionIdIfExists } from '../../../../lib/session/cookieSession.js';
-import { createRoom, joinRoom, getRoom } from '../../../../lib/redis/versusRooms.js';
-import { createVersusGameState } from '../../../../lib/game/versusGameState.js';
-import { updateRoomState } from '../../../../lib/redis/versusRooms.js';
+import { createRoom, joinRoom, getRoom } from '../../../../lib/supabase/versusRooms.js';
 
 /**
  * POST /api/versus/init - Create a new room
@@ -21,7 +19,7 @@ export async function POST(request) {
       );
     }
 
-    // Create room
+    // Create room (puzzle generation happens inside createRoom)
     const result = await createRoom(sessionId, difficulty, playerName || 'Player 1');
     
     if (!result.success) {
@@ -29,27 +27,6 @@ export async function POST(request) {
         { success: false, error: result.error },
         { status: 500 }
       );
-    }
-
-    // Generate puzzle for the room
-    const gameState = await createVersusGameState(difficulty);
-    
-    // Update room with puzzle data
-    const room = await getRoom(result.roomId);
-    if (room) {
-      const updatedRoom = {
-        ...room,
-        currentBoard: gameState.currentBoard,
-        currentPuzzle: gameState.currentPuzzle,
-        currentSolution: gameState.currentSolution,
-        board: gameState.currentBoard, // Alias for compatibility
-        puzzle: gameState.currentPuzzle, // Alias for compatibility
-        solution: gameState.currentSolution // Alias for compatibility
-      };
-      await updateRoomState(result.roomId, updatedRoom, room.version);
-      
-      // Small delay to ensure Redis write is fully propagated
-      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     return NextResponse.json({
