@@ -12,6 +12,7 @@ import VersusCountdown from './VersusCountdown.jsx';
 import VersusInviteUrl from './VersusInviteUrl.jsx';
 import VersusNotification from './VersusNotification.jsx';
 import VersusReconnecting from './VersusReconnecting.jsx';
+import VersusWinModal from './Modals/VersusWinModal.jsx';
 import GameBoard from './GameBoard.jsx';
 import NumberPad from './NumberPad.jsx';
 import NoteControls from './NoteControls.jsx';
@@ -34,6 +35,10 @@ export default function VersusPage({
   // Only show difficulty selection if creating AND no roomId exists yet
   const [showDifficultySelection, setShowDifficultySelection] = useState(mode === 'create' && !roomId);
   const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
+  // Win modal state
+  const [showWinModal, setShowWinModal] = useState(false);
+  const [winStats, setWinStats] = useState(null);
+  const [hasDismissedWinModal, setHasDismissedWinModal] = useState(false);
   
   const isMobile = useMobileDetection();
   const isLoadingStateRef = useRef(false);
@@ -123,6 +128,9 @@ export default function VersusPage({
     if (roomId) {
       // Reset for new room
       hasSeenPlayer1ConnectedRef.current = false;
+      // Reset win modal dismissed state for new game
+      setHasDismissedWinModal(false);
+      setShowWinModal(false);
     }
   }, [roomId]);
 
@@ -133,6 +141,20 @@ export default function VersusPage({
       setShowDifficultySelection(true);
     }
   }, [mode, roomId]);
+
+  // Detect game completion and show win modal
+  useEffect(() => {
+    if (gameState?.status === 'finished' && gameState?.winner && !showWinModal && !hasDismissedWinModal) {
+      // Build win stats
+      const winStatsData = {
+        winner: gameState.winner,
+        player1: gameState.players?.player1,
+        player2: gameState.players?.player2
+      };
+      setWinStats(winStatsData);
+      setShowWinModal(true);
+    }
+  }, [gameState?.status, gameState?.winner, showWinModal, hasDismissedWinModal]);
 
   // Cell input handling
   const { handleCellInput: originalHandleCellInput } = useVersusCellInput(
@@ -421,6 +443,14 @@ export default function VersusPage({
         notification={notification} 
         onClose={() => setNotification(null)}
       />
+      <VersusWinModal
+        show={showWinModal}
+        winStats={winStats}
+        onClose={() => {
+          setShowWinModal(false);
+          setHasDismissedWinModal(true);
+        }}
+      />
       
       <header className="versus-header">
         <h1>Satdoku</h1>
@@ -536,6 +566,8 @@ export default function VersusPage({
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 isWaiting={!player2Data}
+                roomUrl={roomId ? `/versus?room=${roomId}` : null}
+                showCopyUrl={isPlayer2 && roomId && (gameState?.status === 'active' || gameState?.status === 'finished')}
               />
             </div>
           </>

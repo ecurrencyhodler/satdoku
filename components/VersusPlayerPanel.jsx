@@ -16,6 +16,7 @@ export default function VersusPlayerPanel({
 }) {
   const [copied, setCopied] = useState(false);
   const [localName, setLocalName] = useState(player?.name || '');
+  const [isPendingReady, setIsPendingReady] = useState(false);
   const prevPlayerNameRef = useRef(player?.name || '');
   const isEditingRef = useRef(false);
   
@@ -30,6 +31,20 @@ export default function VersusPlayerPanel({
       prevPlayerNameRef.current = currentPlayerName;
     }
   }, [player?.name]);
+
+  // Reset pending ready state when player becomes ready (confirmed by server)
+  useEffect(() => {
+    if (player?.ready) {
+      setIsPendingReady(false);
+    }
+  }, [player?.ready]);
+
+  // Reset pending ready state when game is no longer waiting (new game started)
+  useEffect(() => {
+    if (gameStatus !== 'waiting') {
+      setIsPendingReady(false);
+    }
+  }, [gameStatus]);
 
   const handleCopyUrl = async () => {
     if (!roomUrl) return;
@@ -81,15 +96,23 @@ export default function VersusPlayerPanel({
         <div className="player-score">Score: {player?.score || 0}</div>
         {isYou && gameStatus === 'waiting' && (
           <button 
-            onClick={onReadyClick} 
-            className="start-button"
-            disabled={player?.ready || (player2Connected !== undefined && !player2Connected)}
+            onClick={() => {
+              setIsPendingReady(true);
+              onReadyClick?.();
+            }} 
+            className={`start-button ${isPendingReady ? 'pending' : ''}`}
+            disabled={player?.ready || isPendingReady || (player2Connected !== undefined && !player2Connected)}
           >
-            Start Game
+            {isPendingReady ? (
+              <span className="ready-button-content">
+                <span className="ready-spinner"></span>
+              </span>
+            ) : player?.ready ? (
+              'Ready'
+            ) : (
+              'Start Game'
+            )}
           </button>
-        )}
-        {player?.ready && gameStatus === 'waiting' && (
-          <div className="ready-indicator">Ready</div>
         )}
       </div>
     );
@@ -144,18 +167,26 @@ export default function VersusPlayerPanel({
       )}
       {isYou && gameStatus === 'waiting' && (
         <button 
-          onClick={onReadyClick} 
-          className="start-button"
-          disabled={player?.ready || (player2Connected !== undefined && !player2Connected)}
+          onClick={() => {
+            setIsPendingReady(true);
+            onReadyClick?.();
+          }} 
+          className={`start-button ${isPendingReady ? 'pending' : ''}`}
+          disabled={player?.ready || isPendingReady || (player2Connected !== undefined && !player2Connected)}
         >
-          Start Game
+          {isPendingReady ? (
+            <span className="ready-button-content">
+              <span className="ready-spinner"></span>
+            </span>
+          ) : player?.ready ? (
+            'Ready'
+          ) : (
+            'Start Game'
+          )}
         </button>
       )}
       {isWaiting && (
         <div className="waiting-indicator">Waiting for player...</div>
-      )}
-      {!isWaiting && player?.ready && gameStatus === 'waiting' && (
-        <div className="ready-indicator">Ready</div>
       )}
       {!isWaiting && player?.connected === false && (
         <div className="disconnected-indicator">Disconnected</div>
