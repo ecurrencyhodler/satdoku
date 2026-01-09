@@ -3,7 +3,7 @@ import http from 'http';
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { getRoom, updateRoomState } from '../lib/redis/versusRooms.js';
+import { getRoom, updateRoomState, cleanupAbandonedGames } from '../lib/redis/versusRooms.js';
 import { getRedisClient } from '../lib/redis/client.js';
 
 // Load environment variables from .env
@@ -105,7 +105,9 @@ async function updatePlayerConnectionStatus(roomId, playerId, connected) {
       ...room.players,
       [playerId]: {
         ...room.players[playerId],
-        connected
+        connected,
+        // Set lastDisconnectedAt when disconnecting, clear it when connecting
+        lastDisconnectedAt: connected ? null : new Date().toISOString()
       }
     }
   };
@@ -415,6 +417,25 @@ wss.on('connection', async (ws, req) => {
 
 server.listen(PORT, () => {
   console.log(`[WebSocket] Server started on port ${PORT}`);
+  
+  // Run cleanup every 10 minutes
+  const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+  setInterval(async () => {
+    try {
+      await cleanupAbandonedGames();
+    } catch (error) {
+      console.error('[WebSocket] Error in periodic cleanup:', error);
+    }
+  }, CLEANUP_INTERVAL_MS);
+  
+  // Run initial cleanup after 1 minute (to allow server to fully start)
+  setTimeout(async () => {
+    try {
+      await cleanupAbandonedGames();
+    } catch (error) {
+      console.error('[WebSocket] Error in initial cleanup:', error);
+    }
+  }, 60 * 1000);
 });
 
 // Graceful shutdown

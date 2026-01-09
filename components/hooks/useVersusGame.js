@@ -52,7 +52,13 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
     const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
     
     if (message.type === 'state_update' && message.room) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:54',message:'WebSocket state_update received in hook',data:{messageType:message.type,gameStatus:message.room?.gameStatus,winner:message.room?.winner,hasPlayers:!!message.room?.players?.player1&&!!message.room?.players?.player2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       const clientState = transformVersusStateToClient(message.room, playerId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:56',message:'Setting gameState from WebSocket',data:{clientStateGameStatus:clientState?.gameStatus,clientStateWinner:clientState?.winner},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       setGameState(clientState);
     } else if (message.type === 'countdown' || message.type === 'countdown_start') {
       // Update countdown in state

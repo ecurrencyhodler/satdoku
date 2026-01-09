@@ -11,7 +11,6 @@ import VersusCountdown from './VersusCountdown.jsx';
 import VersusInviteUrl from './VersusInviteUrl.jsx';
 import VersusNotification from './VersusNotification.jsx';
 import VersusReconnecting from './VersusReconnecting.jsx';
-import VersusWinModal from './Modals/VersusWinModal.jsx';
 import GameBoard from './GameBoard.jsx';
 import NumberPad from './NumberPad.jsx';
 import NoteControls from './NoteControls.jsx';
@@ -28,8 +27,6 @@ export default function VersusPage({
 }) {
   const [selectedCell, setSelectedCell] = useState(null);
   const [noteMode, setNoteMode] = useState(false);
-  const [showWinModal, setShowWinModal] = useState(false);
-  const [winStats, setWinStats] = useState(null);
   const [notification, setNotification] = useState(null);
   const [difficulty, setDifficulty] = useState(null);
   const [playerName, setPlayerName] = useState(initialPlayerName);
@@ -75,6 +72,11 @@ export default function VersusPage({
 
   // Wrap WebSocket message handler to capture notifications
   const handleWebSocketMessage = useCallback((message) => {
+    // #region agent log
+    if (message.type === 'state_update' && message.room) {
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VersusPage.jsx:78',message:'WebSocket state_update received',data:{messageType:message.type,gameStatus:message.room?.gameStatus,winner:message.room?.winner,hasPlayers:!!message.room?.players?.player1&&!!message.room?.players?.player2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    }
+    // #endregion
     // Track when player successfully joins room via WebSocket
     if (message.type === 'joined') {
       setHasJoinedRoomViaWS(true);
@@ -139,14 +141,7 @@ export default function VersusPage({
     selectedCell,
     gameState,
     setGameState,
-    (stats) => {
-      setWinStats({
-        winner: stats.winner,
-        player1: stats.player1,
-        player2: stats.player2
-      });
-      setShowWinModal(true);
-    },
+    null, // onWin - win modal removed
     null, // onGameOver
     () => {
       // onPurchaseLife - could open purchase modal
@@ -359,19 +354,23 @@ export default function VersusPage({
   } else if (mode === 'create' && showDifficultySelection) {
     // Show difficulty selection ONLY if no roomId exists
     return (
-      <div className="versus-page create-mode">
-        <div className="versus-container">
-          <h1>Create Versus Game</h1>
+      <div className="versus-create-wrapper">
+        <div className="container versus-create-container">
+          <header>
+            <h1>Satdoku</h1>
+          </header>
+          <h2 className="versus-create-heading">Create Versus Game</h2>
           <div className="difficulty-selection">
-            <label>Your Name:</label>
+            <label className="versus-form-label">Your Name:</label>
             <input
               type="text"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               maxLength={20}
-              className="name-input"
+              className="name-input versus-name-input"
+              placeholder="Player 1"
             />
-            <label>Select Difficulty:</label>
+            <label className="versus-form-label">Select Difficulty:</label>
             <div className="difficulty-buttons">
               <button onClick={() => handleDifficultySelect('beginner')}>Beginner</button>
               <button onClick={() => handleDifficultySelect('medium')}>Medium</button>
@@ -625,12 +624,6 @@ export default function VersusPage({
           </>
         )}
       </div>
-
-      <VersusWinModal
-        show={showWinModal}
-        winStats={winStats}
-        onClose={() => setShowWinModal(false)}
-      />
     </div>
   );
 }

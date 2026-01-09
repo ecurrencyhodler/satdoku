@@ -146,6 +146,18 @@ export async function GET(request) {
       );
     }
 
+    // Check if user is a spectator (even if joinResult.success is true)
+    if (joinResult.isSpectator) {
+      return NextResponse.json({
+        success: true,
+        roomId,
+        playerId: null,
+        isSpectator: true,
+        room,
+        sessionId: sessionId
+      });
+    }
+
     // Get updated room
     const updatedRoom = await getRoom(roomId);
     
