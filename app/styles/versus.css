@@ -745,7 +745,7 @@
 .versus-create-heading {
   text-align: center;
   margin-bottom: 20px;
-  font-size: 1.5em;
+  font-size: 1.125em;
   font-weight: bold;
   color: #4a5568;
   transition: color 0.2s;
@@ -770,7 +770,7 @@
 .versus-name-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #718096;
   border-radius: 6px;
   font-size: 14px;
   margin-bottom: 20px;
@@ -835,5 +835,51 @@
 
 .dark .versus-name-input::placeholder {
   color: #9ca3af;
+}
+
+.versus-rules {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dark .versus-rules {
+}
+
+.versus-rules-title {
+  margin: 0 0 12px 0;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #4a5568;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.dark .versus-rules-title {
+  color: #e2e8f0;
+}
+
+.versus-rules-list {
+  margin: 0;
+  padding-left: 0;
+  list-style-position: inside;
+  color: #4a5568;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+.dark .versus-rules-list {
+  color: #cbd5e0;
+}
+
+.versus-rules-list li {
+  margin-bottom: 8px;
+}
+
+.versus-rules-list li:last-child {
+  margin-bottom: 0;
 }
 
