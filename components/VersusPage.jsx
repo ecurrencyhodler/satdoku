@@ -32,7 +32,8 @@ export default function VersusPage({
   const [noteMode, setNoteMode] = useState(false);
   const [notification, setNotification] = useState(null);
   const [difficulty, setDifficulty] = useState(null);
-  const [playerName, setPlayerName] = useState(initialPlayerName);
+  // Initialize to empty if default so placeholder shows
+  const [playerName, setPlayerName] = useState(initialPlayerName === 'Player 1' ? '' : initialPlayerName);
   // Only show difficulty selection if creating AND no roomId exists yet
   const [showDifficultySelection, setShowDifficultySelection] = useState(mode === 'create' && !roomId);
   const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
@@ -410,7 +411,8 @@ export default function VersusPage({
     // Immediately hide difficulty selection to prevent re-showing during navigation
     setShowDifficultySelection(false);
     if (onCreateRoom) {
-      await onCreateRoom(selectedDifficulty, playerName);
+      // Pass empty string if name is empty (server will default to 'Player 1')
+      await onCreateRoom(selectedDifficulty, playerName.trim() || '');
     }
   }, [onCreateRoom, playerName]);
 

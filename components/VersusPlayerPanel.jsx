@@ -17,16 +17,33 @@ export default function VersusPlayerPanel({
   isPlayer1Panel = false
 }) {
   const [copied, setCopied] = useState(false);
-  const [localName, setLocalName] = useState(player?.name || '');
+  // Initialize to empty if name is default "Player 1" or "Player 2" so placeholder shows
+  const getInitialName = () => {
+    if (!player?.name) return '';
+    const name = player.name;
+    if (name === 'Player 1' || name === 'Player 2') {
+      return '';
+    }
+    return name;
+  };
+  const [localName, setLocalName] = useState(getInitialName());
   const [isPendingReady, setIsPendingReady] = useState(false);
   const prevPlayerNameRef = useRef(player?.name || '');
   const isEditingRef = useRef(false);
+  
+  // Determine placeholder text based on which panel this is (only for current player's own input)
+  const placeholderText = isYou ? (isPlayer1Panel ? 'Player 1' : isPlayer2Panel ? 'Player 2' : '') : '';
   
   // Sync local name with prop when player name changes externally (but not while user is editing)
   useEffect(() => {
     const currentPlayerName = player?.name || '';
     if (!isEditingRef.current && prevPlayerNameRef.current !== currentPlayerName) {
-      setLocalName(currentPlayerName);
+      // If name is default, set to empty to show placeholder
+      if (currentPlayerName === 'Player 1' || currentPlayerName === 'Player 2') {
+        setLocalName('');
+      } else {
+        setLocalName(currentPlayerName);
+      }
       prevPlayerNameRef.current = currentPlayerName;
     } else if (prevPlayerNameRef.current !== currentPlayerName) {
       // Update ref even if not syncing
@@ -81,7 +98,11 @@ export default function VersusPlayerPanel({
               }}
               onBlur={(e) => {
                 isEditingRef.current = false;
-                onNameChange?.(e.target.value);
+                // Only update if name is not empty (let server use default if empty)
+                const trimmedName = e.target.value.trim();
+                if (trimmedName) {
+                  onNameChange?.(trimmedName);
+                }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -90,6 +111,7 @@ export default function VersusPlayerPanel({
               }}
               className="name-input"
               maxLength={20}
+              placeholder={placeholderText}
             />
           ) : (
             <span>{player?.name || 'Player'}</span>
@@ -169,7 +191,11 @@ export default function VersusPlayerPanel({
               }}
               onBlur={(e) => {
                 isEditingRef.current = false;
-                onNameChange?.(e.target.value);
+                // Only update if name is not empty (let server use default if empty)
+                const trimmedName = e.target.value.trim();
+                if (trimmedName) {
+                  onNameChange?.(trimmedName);
+                }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -178,6 +204,7 @@ export default function VersusPlayerPanel({
               }}
               className="name-input"
               maxLength={20}
+              placeholder={placeholderText}
             />
           ) : (
             <span>{player?.name || 'Player'}</span>
