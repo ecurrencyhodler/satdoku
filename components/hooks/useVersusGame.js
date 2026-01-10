@@ -32,9 +32,6 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
       const data = await response.json();
 
       if (data.success && data.state) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:35',message:'state loaded successfully',data:{status:data.state.status,player1Connected:data.state.players?.player1?.connected,player2Connected:data.state.players?.player2?.connected,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         console.log('[useVersusGame] State loaded successfully, status:', data.state.status, 'start_at:', data.state.start_at);
         setGameState(data.state);
         setError(null);

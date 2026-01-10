@@ -36,6 +36,9 @@ export function usePurchaseProcessing() {
       // Route to appropriate payment processor
       if (paymentType === 'tutor_chat') {
         processTutorChatPayment(checkoutId);
+      } else if (paymentType === 'versus_life_purchase') {
+        const roomId = searchParams?.get('roomId');
+        processVersusLifePurchase(checkoutId, roomId);
       } else {
         processLifePurchase(checkoutId);
       }
@@ -107,6 +110,113 @@ export function usePurchaseProcessing() {
             } else {
               setError(data.error || 'Failed to unlock conversation');
               setStatus('error');
+            }
+          })
+          .catch(err => {
+            setError('Network error while processing payment');
+            setStatus('error');
+          });
+      });
+  };
+
+  // Process versus life purchase
+  const processVersusLifePurchase = (checkoutId, roomId) => {
+    setStatus('granting');
+
+    if (!roomId) {
+      console.error('[usePurchaseProcessing] No roomId found for versus life purchase');
+      setError('Room ID is required');
+      setStatus('error');
+      return;
+    }
+
+    // Check if already processed on server (idempotency check)
+    fetch(`/api/checkout/status?checkout-id=${encodeURIComponent(checkoutId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.processed) {
+          // Already processed - redirect back to versus room
+          console.log('[usePurchaseProcessing] Versus life purchase already processed');
+          setStatus('success');
+          hasProcessed.current = true;
+          setTimeout(() => {
+            router.push(`/versus?room=${roomId}`);
+          }, 500);
+          return;
+        }
+
+        // Process versus life purchase via API
+        fetch('/api/versus/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'purchaseLife',
+            roomId,
+            checkoutId
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              console.log('[usePurchaseProcessing] Versus life purchase processed successfully');
+              setStatus('success');
+              hasProcessed.current = true;
+              setTimeout(() => {
+                router.push(`/versus?room=${roomId}`);
+              }, 500);
+            } else {
+              // Handle specific error codes
+              if (data.errorCode === 'ALREADY_PROCESSED') {
+                console.log('[usePurchaseProcessing] Versus life purchase already processed');
+                setStatus('success');
+                hasProcessed.current = true;
+                setTimeout(() => {
+                  router.push(`/versus?room=${roomId}`);
+                }, 500);
+              } else {
+                console.error('[usePurchaseProcessing] Failed to process versus life purchase:', data.error);
+                setError(data.error || 'Failed to grant life');
+                setStatus('error');
+              }
+            }
+          })
+          .catch(err => {
+            console.error('[usePurchaseProcessing] Error processing versus life purchase:', err);
+            setError('Network error while processing payment');
+            setStatus('error');
+          });
+      })
+      .catch(err => {
+        console.error('[usePurchaseProcessing] Error checking checkout status:', err);
+        // Continue with processing anyway
+        fetch('/api/versus/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'purchaseLife',
+            roomId,
+            checkoutId
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setStatus('success');
+              hasProcessed.current = true;
+              setTimeout(() => {
+                router.push(`/versus?room=${roomId}`);
+              }, 500);
+            } else {
+              if (data.errorCode === 'ALREADY_PROCESSED') {
+                setStatus('success');
+                hasProcessed.current = true;
+                setTimeout(() => {
+                  router.push(`/versus?room=${roomId}`);
+                }, 500);
+              } else {
+                setError(data.error || 'Failed to grant life');
+                setStatus('error');
+              }
             }
           })
           .catch(err => {

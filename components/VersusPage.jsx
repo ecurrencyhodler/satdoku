@@ -13,6 +13,7 @@ import VersusInviteUrl from './VersusInviteUrl.jsx';
 import VersusNotification from './VersusNotification.jsx';
 import VersusReconnecting from './VersusReconnecting.jsx';
 import VersusWinModal from './Modals/VersusWinModal.jsx';
+import VersusPurchaseLifeModal from './Modals/VersusPurchaseLifeModal.jsx';
 import GameBoard from './GameBoard.jsx';
 import NumberPad from './NumberPad.jsx';
 import NoteControls from './NoteControls.jsx';
@@ -39,6 +40,8 @@ export default function VersusPage({
   const [showWinModal, setShowWinModal] = useState(false);
   const [winStats, setWinStats] = useState(null);
   const [hasDismissedWinModal, setHasDismissedWinModal] = useState(false);
+  // Purchase life modal state
+  const [showPurchaseLifeModal, setShowPurchaseLifeModal] = useState(false);
   
   const isMobile = useMobileDetection();
   const isLoadingStateRef = useRef(false);
@@ -165,8 +168,8 @@ export default function VersusPage({
     null, // onWin - win modal removed
     null, // onGameOver
     () => {
-      // onPurchaseLife - could open purchase modal
-      console.log('Open purchase modal');
+      // onPurchaseLife - open purchase modal
+      setShowPurchaseLifeModal(true);
     },
     () => isLoadingStateRef.current,
     noteMode
@@ -274,6 +277,52 @@ export default function VersusPage({
     await originalHandleCellInput(value);
   }, [selectedCell, originalHandleCellInput]);
 
+  // Erase button handler - clears selected cell with mistake or all notes
+  const handleErase = useCallback(async () => {
+    if (!roomId) return;
+    
+    // Check if we should clear selected cell with mistake
+    if (selectedCell && gameState) {
+      const row = selectedCell.row;
+      const col = selectedCell.col;
+      const currentValue = gameState.board?.[row]?.[col] ?? 0;
+      const puzzleValue = gameState.puzzle?.[row]?.[col] ?? 0;
+      const solutionValue = gameState.solution?.[row]?.[col] ?? 0;
+      const isPrefilled = puzzleValue !== 0;
+      const isCorrect = currentValue !== 0 && currentValue === solutionValue;
+      const hasMistake = currentValue !== 0 && !isPrefilled && !isCorrect;
+      
+      if (hasMistake) {
+        // Try to clear the cell by placing 0
+        try {
+          await handleCellInput(0);
+          return; // Don't clear notes if we cleared a cell
+        } catch (error) {
+          console.error('Error clearing cell:', error);
+        }
+      }
+    }
+    
+    // Default: clear all notes
+    try {
+      const response = await fetch('/api/versus/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'clearNotes',
+          roomId
+        })
+      });
+      const result = await response.json();
+      if (result.success && result.state) {
+        const clientState = transformVersusStateToClient(result.state, playerId);
+        setGameState(clientState);
+      }
+    } catch (error) {
+      console.error('Error clearing notes:', error);
+    }
+  }, [roomId, selectedCell, gameState, handleCellInput, playerId, setGameState]);
+
   // Track if ready request is in progress to prevent duplicate clicks
   const isReadyRequestInProgressRef = useRef(false);
 
@@ -335,7 +384,7 @@ export default function VersusPage({
     }
 
     try {
-      await fetch('/api/versus/name', {
+      const response = await fetch('/api/versus/name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -344,12 +393,14 @@ export default function VersusPage({
         })
       });
       
+      const result = await response.json();
+      
       // Reload state to get updated name
       loadState();
     } catch (error) {
       console.error('Error updating name:', error);
     }
-  }, [roomId, playerId, onPlayerNameChange, loadState]);
+  }, [roomId, playerId, onPlayerNameChange, loadState, playerName]);
 
   // Handle difficulty selection and room creation
   const handleDifficultySelect = useCallback(async (selectedDifficulty) => {
@@ -393,6 +444,83 @@ export default function VersusPage({
     return () => document.removeEventListener('click', handleDocumentClick);
   }, [selectedCell]);
 
+  // Keyboard input handler for desktop
+  useEffect(() => {
+    // Only enable keyboard input on desktop (not mobile)
+    if (isMobile || isSpectator) return;
+
+    const handleKeyDown = (e) => {
+      const currentStatus = gameState?.status || gameState?.gameStatus;
+      // Only handle keyboard input when game is active/playing
+      if (currentStatus !== 'active' && currentStatus !== 'playing') return;
+
+      // Don't interfere with text input fields
+      const target = e.target;
+      const isInputElement = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+
+      // Check if selected cell is locked (prefilled)
+      let isSelectedCellLocked = false;
+      if (selectedCell && gameState) {
+        const row = selectedCell.row;
+        const col = selectedCell.col;
+        const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
+        isSelectedCellLocked = isPrefilled;
+      }
+
+      // Toggle note mode with 'N' key
+      if ((e.key === 'n' || e.key === 'N') && !isInputElement) {
+        e.preventDefault();
+        setNoteMode(prev => !prev);
+      } else if (e.key >= '1' && e.key <= '9') {
+        // Don't process number input if cell is locked or no cell selected
+        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
+          e.preventDefault();
+          handleCellInput(parseInt(e.key));
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+        // Don't process clear input if cell is locked or no cell selected
+        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
+          e.preventDefault();
+          handleCellInput(0);
+        }
+      } else if (e.key.startsWith('Arrow')) {
+        // Only handle arrow keys if a cell is already selected and not in an input field
+        if (!selectedCell || isInputElement) {
+          return;
+        }
+
+        e.preventDefault();
+
+        let newRow = selectedCell.row;
+        let newCol = selectedCell.col;
+
+        switch (e.key) {
+          case 'ArrowUp':
+            newRow = Math.max(0, newRow - 1);
+            break;
+          case 'ArrowDown':
+            newRow = Math.min(8, newRow + 1);
+            break;
+          case 'ArrowLeft':
+            newCol = Math.max(0, newCol - 1);
+            break;
+          case 'ArrowRight':
+            newCol = Math.min(8, newCol + 1);
+            break;
+        }
+
+        setSelectedCell({ row: newRow, col: newCol });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState, selectedCell, setSelectedCell, handleCellInput, noteMode, setNoteMode, isMobile, isSpectator]);
+
   // Broadcast cell selection via API
   const broadcastCellSelection = useCallback(async (row, col) => {
     if (!roomId) return;
@@ -435,6 +563,7 @@ export default function VersusPage({
               <li>Invite a challenger by sharing a link</li>
               <li>Both players press start to play</li>
               <li>Player with more points at the end of the gamewins</li>
+              <li>Cells your opponent fills are highlighted in orange</li>
               <li>Buy a life with bitcoin if you run out</li>
             </ol>
           </div>
@@ -498,6 +627,16 @@ export default function VersusPage({
           setHasDismissedWinModal(true);
         }}
       />
+      <VersusPurchaseLifeModal
+        isOpen={showPurchaseLifeModal}
+        onClose={() => setShowPurchaseLifeModal(false)}
+        onSuccess={() => {
+          setShowPurchaseLifeModal(false);
+          // Reload state to get updated lives
+          loadState();
+        }}
+        roomId={roomId}
+      />
       
       <header className="versus-header">
         <h1>Satdoku</h1>
@@ -547,6 +686,7 @@ export default function VersusPage({
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
                       opponentFilledCells={isSpectator ? null : opponentFilledCells}
+                      clearedMistakes={isSpectator ? null : (gameState.clearedMistakes || [])}
                     />
                   ) : (
                     <GameBoard
@@ -572,26 +712,7 @@ export default function VersusPage({
                       <NoteControls
                         noteMode={noteMode}
                         onToggleNoteMode={() => setNoteMode(!noteMode)}
-                        onClear={async () => {
-                          if (!roomId) return;
-                          try {
-                            const response = await fetch('/api/versus/action', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                action: 'clearNotes',
-                                roomId
-                              })
-                            });
-                            const result = await response.json();
-                            if (result.success && result.state) {
-                              const clientState = transformVersusStateToClient(result.state, playerId);
-                              setGameState(clientState);
-                            }
-                          } catch (error) {
-                            console.error('Error clearing notes:', error);
-                          }
-                        }}
+                        onClear={handleErase}
                         disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
                         versus={true}
                       />
@@ -649,6 +770,7 @@ export default function VersusPage({
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
                       opponentFilledCells={isSpectator ? null : opponentFilledCells}
+                      clearedMistakes={isSpectator ? null : (gameState.clearedMistakes || [])}
                     />
                   ) : (
                     <GameBoard
@@ -674,26 +796,7 @@ export default function VersusPage({
                       <NoteControls
                         noteMode={noteMode}
                         onToggleNoteMode={() => setNoteMode(!noteMode)}
-                        onClear={async () => {
-                          if (!roomId) return;
-                          try {
-                            const response = await fetch('/api/versus/action', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                action: 'clearNotes',
-                                roomId
-                              })
-                            });
-                            const result = await response.json();
-                            if (result.success && result.state) {
-                              const clientState = transformVersusStateToClient(result.state, playerId);
-                              setGameState(clientState);
-                            }
-                          } catch (error) {
-                            console.error('Error clearing notes:', error);
-                          }
-                        }}
+                        onClear={handleErase}
                         disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
                         versus={true}
                       />

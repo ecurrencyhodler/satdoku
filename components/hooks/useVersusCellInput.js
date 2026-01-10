@@ -52,7 +52,39 @@ export function useVersusCellInput(
       return;
     }
 
-    // Handle number placement
+    // Handle number placement (or clearing if value is 0)
+    // If value is 0, clear the cell
+    if (value === 0) {
+      try {
+        const response = await fetch('/api/versus/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'clearCell',
+            roomId,
+            row: selectedCell.row,
+            col: selectedCell.col
+          })
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          console.error('[useVersusCellInput] Clear cell failed:', result.error);
+          return;
+        }
+
+        if (result.state) {
+          const { transformVersusStateToClient } = await import('../../lib/game/versusGameStateClient.js');
+          const clientState = transformVersusStateToClient(result.state, gameState.playerId);
+          setGameState(clientState);
+        }
+      } catch (error) {
+        console.error('[useVersusCellInput] Error clearing cell:', error);
+      }
+      return;
+    }
+    
     try {
       const response = await fetch('/api/versus/action', {
         method: 'POST',

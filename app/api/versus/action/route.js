@@ -5,6 +5,7 @@ import { handleVersusToggleNote } from '../../../../lib/game/actionHandlers/vers
 import { handleVersusSelectCell } from '../../../../lib/game/actionHandlers/versusSelectCell.js';
 import { handleVersusPurchaseLife } from '../../../../lib/game/actionHandlers/versusPurchaseLife.js';
 import { handleVersusClearNotes } from '../../../../lib/game/actionHandlers/versusClearNotes.js';
+import { handleVersusClearCell } from '../../../../lib/game/actionHandlers/versusClearCell.js';
 
 /**
  * POST /api/versus/action - Process game actions
@@ -47,6 +48,9 @@ export async function POST(request) {
         break;
       case 'clearNotes':
         result = await handleVersusClearNotes(roomId, sessionId);
+        break;
+      case 'clearCell':
+        result = await handleVersusClearCell(roomId, sessionId, body);
         break;
       default:
         return NextResponse.json(

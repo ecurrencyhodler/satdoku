@@ -30,7 +30,7 @@ export default function VersusPlayerPanel({
       // Update ref even if not syncing
       prevPlayerNameRef.current = currentPlayerName;
     }
-  }, [player?.name]);
+  }, [player?.name, localName]);
 
   // Reset pending ready state when player becomes ready (confirmed by server)
   useEffect(() => {
@@ -114,6 +114,20 @@ export default function VersusPlayerPanel({
             )}
           </button>
         )}
+        {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
+          <div className="versus-rules">
+            <h3 className="versus-rules-title">Versus Rules</h3>
+            <ol className="versus-rules-list">
+              <li>Type in your name above</li>
+              <li>Select a difficulty</li>
+              <li>Invite a challenger by sharing a link</li>
+              <li>Both players press start to play</li>
+              <li>Player with more points at the end of the game wins</li>
+              <li>Cells your opponent fills are highlighted in orange</li>
+              <li>Buy a life with bitcoin if you run out</li>
+            </ol>
+          </div>
+        )}
       </div>
     );
   }
@@ -184,6 +198,19 @@ export default function VersusPlayerPanel({
             'Start Game'
           )}
         </button>
+      )}
+      {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
+        <div className="versus-rules">
+          <h3 className="versus-rules-title">Versus Rules</h3>
+          <ol className="versus-rules-list">
+            <li>Type in your name above</li>
+            <li>Both players press start to play</li>
+            <li>Player with more points at the end of the game wins</li>
+            <li>Cells your opponent fills are highlighted in orange</li>
+            <li>Buy a life with bitcoin if you run out</li>
+            <li>Invite a spectator by sharing a link</li>
+          </ol>
+        </div>
       )}
       {isWaiting && (
         <div className="waiting-indicator">Waiting for player...</div>

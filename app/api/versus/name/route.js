@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
-import { updatePlayerName } from '../../../../lib/supabase/versusRooms.js';
+import { getRoom, updatePlayerName, updateRoomState } from '../../../../lib/supabase/versusRooms.js';
 
 /**
  * POST /api/versus/name - Update player name
@@ -26,8 +26,7 @@ export async function POST(request) {
       );
     }
 
-    // Get room to determine player ID
-    const { getRoom } = await import('../../../../lib/redis/versusRooms.js');
+    // Get room to determine player ID (read from Supabase - same source as update)
     const room = await getRoom(roomId);
     
     if (!room) {
@@ -44,10 +43,27 @@ export async function POST(request) {
     } else if (room.players.player2?.sessionId === sessionId) {
       playerId = 'player2';
     } else {
-      return NextResponse.json(
-        { success: false, error: 'Player not found in room' },
-        { status: 403 }
-      );
+      // Fallback: If player2 exists but sessionId doesn't match, and player1 exists,
+      // this might be a cookie mismatch issue. Try to update player2's sessionId to match.
+      // This handles the case where the cookie changed between join and name update.
+      if (room.players.player2 && room.players.player1 && room.players.player1.sessionId !== sessionId) {
+        // Update player2's sessionId to match the current cookie
+        room.players.player2.sessionId = sessionId;
+        const updateResult = await updateRoomState(roomId, room, room.version);
+        if (updateResult.success) {
+          playerId = 'player2';
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Player not found in room' },
+            { status: 403 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Player not found in room' },
+          { status: 403 }
+        );
+      }
     }
 
     // Update name

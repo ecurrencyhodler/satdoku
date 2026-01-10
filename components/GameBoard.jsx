@@ -13,7 +13,8 @@ export default function GameBoard({
   notes = [],
   noteMode = false,
   opponentSelectedCell = null,
-  opponentFilledCells = null
+  opponentFilledCells = null,
+  clearedMistakes = null
 }) {
   const getBoxIndex = (row, col) => {
     const boxRow = Math.floor(row / 3);
@@ -56,15 +57,21 @@ export default function GameBoard({
           }
 
           return Array.from({ length: BOARD_SIZE }, (_, col) => {
-            const value = board[row]?.[col] ?? 0;
+            const cellKey = `${row},${col}`;
+            const isClearedMistake = clearedMistakes && clearedMistakes.includes(cellKey);
+            
+            // If this mistake was cleared by the current player, show it as empty
+            const displayValue = isClearedMistake ? 0 : (board[row]?.[col] ?? 0);
+            
             const isPrefilled = puzzle?.[row]?.[col] !== 0;
             const isSelected = selectedCell?.row === row && selectedCell?.col === col;
             const isOpponentSelected = opponentSelectedCell?.row === row && opponentSelectedCell?.col === col;
-            const cellKey = `${row},${col}`;
             const isOpponentFilled = opponentFilledCells && opponentFilledCells.has(cellKey);
 
             // Determine if the value is incorrect (user-entered but doesn't match solution)
-            const isIncorrect = !isPrefilled && value !== 0 && solution && solution[row]?.[col] !== 0 && value !== solution[row]?.[col];
+            // Use the actual board value (not displayValue) to check if it's a mistake
+            const actualValue = board[row]?.[col] ?? 0;
+            const isIncorrect = !isPrefilled && actualValue !== 0 && solution && solution[row]?.[col] !== 0 && actualValue !== solution[row]?.[col] && !isClearedMistake;
 
             // Calculate highlighting based on selected cell
             let isHighlightedRow = false;
@@ -73,7 +80,10 @@ export default function GameBoard({
             let isHighlightedSameNumber = false;
 
             if (selectedCell) {
-              const selectedValue = board[selectedCell.row]?.[selectedCell.col] ?? 0;
+              // Get display value for selected cell (accounting for cleared mistakes)
+              const selectedCellKey = `${selectedCell.row},${selectedCell.col}`;
+              const isSelectedClearedMistake = clearedMistakes && clearedMistakes.includes(selectedCellKey);
+              const selectedValue = isSelectedClearedMistake ? 0 : (board[selectedCell.row]?.[selectedCell.col] ?? 0);
               const isSelectedCellEmpty = selectedValue === 0;
 
               if (isSelectedCellEmpty) {
@@ -85,7 +95,7 @@ export default function GameBoard({
                 isHighlightedBox = selectedBoxIndex === currentBoxIndex;
               } else {
                 // Filled cell: highlight all cells with the same number
-                isHighlightedSameNumber = value === selectedValue && value !== 0;
+                isHighlightedSameNumber = displayValue === selectedValue && displayValue !== 0;
               }
             }
 
@@ -94,7 +104,7 @@ export default function GameBoard({
                 key={`${row}-${col}`}
                 row={row}
                 col={col}
-                value={value}
+                value={displayValue}
                 isPrefilled={isPrefilled}
                 isIncorrect={isIncorrect}
                 isSelected={isSelected}
