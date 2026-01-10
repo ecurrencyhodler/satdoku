@@ -12,7 +12,9 @@ export default function VersusPlayerPanel({
   roomUrl = null,
   showCopyUrl = false,
   isWaiting = false,
-  player2Connected = undefined
+  player2Connected = undefined,
+  isPlayer2Panel = false,
+  isPlayer1Panel = false
 }) {
   const [copied, setCopied] = useState(false);
   const [localName, setLocalName] = useState(player?.name || '');
@@ -114,6 +116,22 @@ export default function VersusPlayerPanel({
             )}
           </button>
         )}
+        {!isYou && isPlayer2Panel && gameStatus === 'waiting' && player && (
+          <button 
+            className="start-button"
+            disabled={true}
+          >
+            {player?.ready ? 'Ready' : (isWaiting === false ? 'Connected' : 'Waiting...')}
+          </button>
+        )}
+        {!isYou && isPlayer1Panel && gameStatus === 'waiting' && player && (
+          <button 
+            className="start-button"
+            disabled={true}
+          >
+            {player?.ready ? 'Ready' : 'Challenger Connected'}
+          </button>
+        )}
         {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
           <div className="versus-rules">
             <h3 className="versus-rules-title">Versus Rules</h3>
@@ -199,6 +217,22 @@ export default function VersusPlayerPanel({
           )}
         </button>
       )}
+      {!isYou && isPlayer2Panel && gameStatus === 'waiting' && player && (
+        <button 
+          className="start-button"
+          disabled={true}
+        >
+          {player?.ready ? 'Ready' : (isWaiting === false ? 'Connected' : 'Waiting...')}
+        </button>
+      )}
+        {!isYou && isPlayer1Panel && gameStatus === 'waiting' && player && (
+          <button 
+            className="start-button"
+            disabled={true}
+          >
+            {player?.ready ? 'Ready' : 'Connected'}
+          </button>
+        )}
       {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
         <div className="versus-rules">
           <h3 className="versus-rules-title">Versus Rules</h3>
@@ -211,9 +245,6 @@ export default function VersusPlayerPanel({
             <li>Invite a spectator by sharing a link</li>
           </ol>
         </div>
-      )}
-      {isWaiting && (
-        <div className="waiting-indicator">Waiting for player...</div>
       )}
       {!isWaiting && player?.connected === false && (
         <div className="disconnected-indicator">Disconnected</div>

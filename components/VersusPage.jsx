@@ -662,7 +662,8 @@ export default function VersusPage({
                 onReadyClick={handleReadyClick}
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer1}
-                player2Connected={isPlayer1 ? !!player2Data : undefined}
+                player2Connected={isPlayer1 ? !!player2Data : (isPlayer2 ? true : undefined)}
+                isPlayer1Panel={true}
               />
             </div>
             <div className="versus-board-container" onClick={handleBoardBackgroundClick}>
@@ -736,6 +737,7 @@ export default function VersusPage({
                 isWaiting={!player2Data}
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer2 && roomId && (gameState?.status === 'active' || gameState?.status === 'finished')}
+                isPlayer2Panel={true}
               />
             </div>
           </>
@@ -743,10 +745,19 @@ export default function VersusPage({
           <>
             <div className="versus-panel mobile-top">
               <VersusPlayerPanel
-                player={opponentData}
+                player={isPlayer1 && !opponentData ? {
+                  name: 'Player 2',
+                  score: 0,
+                  lives: 2,
+                  ready: false
+                } : opponentData}
                 isYou={false}
                 gameStatus={gameState?.gameStatus}
                 compact={true}
+                isPlayer2Panel={isPlayer1}
+                isPlayer1Panel={isPlayer2}
+                isWaiting={isPlayer1 ? !player2Data : undefined}
+                player2Connected={isPlayer2 ? true : (isPlayer1 ? !!player2Data : undefined)}
               />
             </div>
             <div className="versus-board-container mobile">
