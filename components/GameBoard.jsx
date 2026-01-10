@@ -48,7 +48,7 @@ export default function GameBoard({
                 isHighlightedColumn={false}
                 isHighlightedBox={false}
                 isHighlightedSameNumber={false}
-                onClick={onCellClick}
+                onClick={() => onCellClick(row, col)}
                 hasLives={hasLives}
                 notes={notes[row]?.[col] || []}
               />
@@ -104,7 +104,7 @@ export default function GameBoard({
                 isHighlightedColumn={isHighlightedColumn}
                 isHighlightedBox={isHighlightedBox}
                 isHighlightedSameNumber={isHighlightedSameNumber}
-                onClick={onCellClick}
+                onClick={() => onCellClick(row, col)}
                 hasLives={hasLives}
                 notes={notes[row]?.[col] || []}
               />

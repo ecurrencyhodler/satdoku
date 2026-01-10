@@ -560,6 +560,11 @@
   background: #c6f6d5;
   border-radius: 8px;
   margin-bottom: 15px;
+  transition: background-color 0.2s;
+}
+
+.dark .winner-section {
+  background: #22543d;
 }
 
 .winner-badge {
@@ -567,16 +572,33 @@
   font-weight: bold;
   color: #22543d;
   margin-bottom: 10px;
+  transition: color 0.2s;
+}
+
+.dark .winner-badge {
+  color: #68d391;
 }
 
 .winner-name {
   font-size: 1.3em;
   font-weight: bold;
   margin-bottom: 5px;
+  color: #2d3748;
+  transition: color 0.2s;
+}
+
+.dark .winner-name {
+  color: #e2e8f0;
 }
 
 .winner-score {
   font-size: 1.1em;
+  color: #2d3748;
+  transition: color 0.2s;
+}
+
+.dark .winner-score {
+  color: #cbd5e0;
 }
 
 .loser-section {
@@ -584,6 +606,11 @@
   padding: 15px;
   background: #fed7d7;
   border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.dark .loser-section {
+  background: #742a2a;
 }
 
 .loser-badge {
@@ -591,11 +618,31 @@
   font-weight: bold;
   color: #742a2a;
   margin-bottom: 10px;
+  transition: color 0.2s;
+}
+
+.dark .loser-badge {
+  color: #fc8181;
 }
 
 .loser-name {
   font-weight: bold;
   margin-bottom: 5px;
+  color: #2d3748;
+  transition: color 0.2s;
+}
+
+.dark .loser-name {
+  color: #e2e8f0;
+}
+
+.loser-score {
+  color: #2d3748;
+  transition: color 0.2s;
+}
+
+.dark .loser-score {
+  color: #cbd5e0;
 }
 
 /* Opponent selected cell */

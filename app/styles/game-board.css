@@ -88,14 +88,14 @@
 }
 
 .cell-locked {
-    background: #f7fafc;
+    background: #f7fafc !important;
     cursor: default;
     font-weight: 500;
     transition: background-color 0.2s;
 }
 
 .dark .cell-locked {
-    background: #2d3748;
+    background: #2d3748 !important;
     color: #9ca3af;
 }
 

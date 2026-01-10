@@ -174,6 +174,8 @@ export default function VersusPage({
 
   // Track opponent-filled cells
   const [opponentFilledCells, setOpponentFilledCells] = useState(new Set());
+  // Store the initial board at game start for comparison
+  const initialBoardRef = useRef(null);
 
   // Calculate countdown from start_at timestamp using the hook
   // MUST be called before any conditional returns to follow Rules of Hooks
@@ -195,58 +197,67 @@ export default function VersusPage({
   }, [gameState?.gameStatus]);
 
   // Compute opponent-filled cells based on board state
+  // A cell is opponent-filled if:
+  // 1. It has a value (not 0)
+  // 2. It's not prefilled (not in puzzle)
+  // 3. It's NOT in our player-filled cells set
+  // Spectators should never see orange cells, so skip this computation for them
   useEffect(() => {
+    // Spectators should never see opponent-filled cells
+    if (isSpectator) {
+      setOpponentFilledCells(new Set());
+      return;
+    }
+
     if (!gameState?.board || !gameState?.puzzle) return;
 
     const board = gameState.board;
     const puzzle = gameState.puzzle;
     const opponentFilled = new Set();
-    const previousBoard = previousBoardRef.current;
 
-    // Check if our last move attempt succeeded
-    if (lastMoveAttemptRef.current && previousBoard) {
+    // Check if our last move attempt succeeded and add it to our filled cells
+    if (lastMoveAttemptRef.current && previousBoardRef.current) {
       const { row, col, value } = lastMoveAttemptRef.current;
       const currentValue = board[row]?.[col] ?? 0;
-      const previousValue = previousBoard[row]?.[col] ?? 0;
+      const previousValue = previousBoardRef.current[row]?.[col] ?? 0;
       
       // If the cell now has the value we tried to place, it was our move
       if (currentValue === value && previousValue !== value) {
         const cellKey = `${row},${col}`;
         playerFilledCellsRef.current.add(cellKey);
       }
-      
-      // Clear the move attempt after processing
-      lastMoveAttemptRef.current = null;
     }
 
-    // A cell is opponent-filled if:
-    // 1. It has a value (not 0)
-    // 2. It's not prefilled (not in puzzle)
-    // 3. It's not in the player's filled cells set
+    // Clean up: if a cell in our filled set is now empty or changed, remove it
+    for (const cellKey of playerFilledCellsRef.current) {
+      const [row, col] = cellKey.split(',').map(Number);
+      const currentValue = board[row]?.[col] ?? 0;
+      // Remove if cell is now empty or doesn't match what we placed
+      if (currentValue === 0) {
+        playerFilledCellsRef.current.delete(cellKey);
+      }
+    }
+
+    // Now identify opponent-filled cells
     for (let row = 0; row < 9; row++) {
       for (let col = 0; col < 9; col++) {
         const value = board[row]?.[col] ?? 0;
-        const isPrefilled = puzzle[row]?.[col] !== 0;
+        const puzzleValue = puzzle[row]?.[col] ?? 0;
         const cellKey = `${row},${col}`;
-        const isInPlayerSet = playerFilledCellsRef.current.has(cellKey);
         
-        if (value !== 0 && !isPrefilled && !isInPlayerSet) {
+        // A cell is opponent-filled if:
+        // 1. It has a value
+        // 2. It's not from the puzzle (prefilled)
+        // 3. It's NOT in our filled cells set
+        if (value !== 0 && puzzleValue === 0 && !playerFilledCellsRef.current.has(cellKey)) {
           opponentFilled.add(cellKey);
         }
       }
     }
 
-    // Clean up: if a cell in playerFilledCellsRef is now empty, remove it
-    for (const cellKey of playerFilledCellsRef.current) {
-      const [row, col] = cellKey.split(',').map(Number);
-      if (board[row]?.[col] === 0) {
-        playerFilledCellsRef.current.delete(cellKey);
-      }
-    }
-
     setOpponentFilledCells(opponentFilled);
     previousBoardRef.current = board.map(row => [...row]);
-  }, [gameState?.board, gameState?.puzzle]);
+  }, [gameState?.board, gameState?.puzzle, isSpectator]);
 
   // Track last attempted move
   const lastMoveAttemptRef = useRef(null);
@@ -353,29 +364,53 @@ export default function VersusPage({
   }, [onCreateRoom, playerName]);
 
   // Handle cell selection
-  const handleCellClick = useCallback(async (row, col) => {
+  const handleCellClick = useCallback((row, col) => {
     const currentStatus = gameState?.status || gameState?.gameStatus;
     if (currentStatus !== 'active' && currentStatus !== 'playing' || isSpectator) return;
     setSelectedCell({ row, col });
+  }, [gameState, isSpectator]);
 
-    // Broadcast cell selection via API
-    if (roomId) {
-      try {
-        await fetch('/api/versus/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'selectCell',
-            roomId,
-            row,
-            col
-          })
-        });
-      } catch (error) {
-        console.error('Error selecting cell:', error);
-      }
+  // Handle clicking outside the board to deselect
+  const handleBoardBackgroundClick = useCallback((e) => {
+    // Only deselect if clicking directly on the game-board div (not on cells or other elements)
+    if (selectedCell && e.target.id === 'game-board') {
+      setSelectedCell(null);
     }
-  }, [gameState, isSpectator, roomId]);
+  }, [selectedCell]);
+
+  // Document-level click handler to catch clicks outside the board container
+  useEffect(() => {
+    const handleDocumentClick = (e) => {
+      // Check if click is outside game board and controls
+      if (selectedCell && 
+          !e.target.closest('#game-board') &&
+          !e.target.closest('.versus-controls-container') &&
+          !e.target.closest('.versus-panel')) {
+        setSelectedCell(null);
+      }
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, [selectedCell]);
+
+  // Broadcast cell selection via API
+  const broadcastCellSelection = useCallback(async (row, col) => {
+    if (!roomId) return;
+    try {
+      await fetch('/api/versus/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'selectCell',
+          roomId,
+          row,
+          col
+        })
+      });
+    } catch (error) {
+      console.error('Error selecting cell:', error);
+    }
+  }, [roomId]);
 
   // CRITICAL: If roomId exists, NEVER show difficulty selection - prevents flashing during navigation
   if (roomId) {
@@ -479,7 +514,7 @@ export default function VersusPage({
                 player2Connected={isPlayer1 ? !!player2Data : undefined}
               />
             </div>
-            <div className="versus-board-container">
+            <div className="versus-board-container" onClick={handleBoardBackgroundClick}>
               {showCountdown && (
                 <VersusCountdown 
                   countdown={calculatedCountdown} 
@@ -499,7 +534,7 @@ export default function VersusPage({
                       notes={gameState.notes || []}
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
-                      opponentFilledCells={opponentFilledCells}
+                      opponentFilledCells={isSpectator ? null : opponentFilledCells}
                     />
                   ) : (
                     <GameBoard
@@ -601,7 +636,7 @@ export default function VersusPage({
                       notes={gameState.notes || []}
                       noteMode={noteMode}
                       opponentSelectedCell={gameState.opponentSelectedCell}
-                      opponentFilledCells={opponentFilledCells}
+                      opponentFilledCells={isSpectator ? null : opponentFilledCells}
                     />
                   ) : (
                     <GameBoard

@@ -32,10 +32,16 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
       const data = await response.json();
 
       if (data.success && data.state) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:35',message:'state loaded successfully',data:{status:data.state.status,player1Connected:data.state.players?.player1?.connected,player2Connected:data.state.players?.player2?.connected,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         console.log('[useVersusGame] State loaded successfully, status:', data.state.status, 'start_at:', data.state.start_at);
         setGameState(data.state);
         setError(null);
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:40',message:'state load failed',data:{error:data.error,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         console.error('[useVersusGame] Failed to load state:', data.error);
         setError(data.error || 'Failed to load game state');
       }
@@ -135,10 +141,29 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
         loadStateRef.current();
       }
     } else if (message.type === 'player_connected' || message.type === 'player_disconnected') {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:137',message:'player connection status change message',data:{type:message.type,playerId:message.playerId,sessionId:message.sessionId,roomId,isLoading:isLoadingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       // Reload state to get updated connection status
       // Only reload if we have a roomId and aren't already loading
       if (roomId && !isLoadingRef.current) {
-        loadStateRef.current();
+        // For player_connected, add a small delay to ensure database update has completed
+        if (message.type === 'player_connected') {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:144',message:'scheduling state reload for player_connected',data:{playerId:message.playerId,roomId,delay:100},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          setTimeout(() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:147',message:'executing state reload for player_connected',data:{playerId:message.playerId,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            loadStateRef.current();
+          }, 100); // 100ms delay to allow database update to complete
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:151',message:'executing immediate state reload for player_disconnected',data:{playerId:message.playerId,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          loadStateRef.current();
+        }
       }
     } else if (message.type === 'notification') {
       // Notification received - fetch authoritative state from Postgres

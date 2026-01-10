@@ -45,8 +45,8 @@ export default function VersusWinModal({ show, winStats, onClose }) {
   const loserData = isPlayer1Winner ? player2 : player1;
 
   return (
-    <div className="modal-overlay versus-win-modal-overlay" onClick={onClose}>
-      <div className="modal-content versus-win-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay versus-win-modal-overlay">
+      <div className="modal-content versus-win-modal">
         <button onClick={onClose} className="versus-win-modal-close" aria-label="Close">
           ×
         </button>

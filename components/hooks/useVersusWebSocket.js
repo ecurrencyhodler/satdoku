@@ -85,25 +85,78 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
             });
           }
         })
-        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
           // Player joined (key is sessionId)
           // newPresences contains [{ playerId, sessionId }]
+          const joinedPlayerId = newPresences[0]?.playerId;
+          
+          // Only update database if it's a player (not a spectator)
+          if (joinedPlayerId === 'player1' || joinedPlayerId === 'player2') {
+            try {
+              const response = await fetch('/api/versus/connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  roomId,
+                  playerId: joinedPlayerId,
+                  connected: true
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!result.success) {
+                console.error('[useVersusWebSocket] Failed to update connection status:', result.error);
+              }
+            } catch (error) {
+              console.error('[useVersusWebSocket] Error updating connection status:', error);
+            }
+          }
+          
+          // Notify message handler AFTER database update completes
+          // This ensures state reload happens after connection status is updated
           if (onMessageRef.current) {
             onMessageRef.current({
               type: 'player_connected',
               sessionId: key,
-              playerId: newPresences[0]?.playerId
+              playerId: joinedPlayerId
             });
           }
         })
-        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        .on('presence', { event: 'leave' }, async ({ key, leftPresences }) => {
           // Player left (key is sessionId)
           // leftPresences contains [{ playerId, sessionId }]
+          const leftPlayerId = leftPresences[0]?.playerId;
+          
+          // Only update database if it's a player (not a spectator)
+          if (leftPlayerId === 'player1' || leftPlayerId === 'player2') {
+            try {
+              const response = await fetch('/api/versus/connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  roomId,
+                  playerId: leftPlayerId,
+                  connected: false
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (!result.success) {
+                console.error('[useVersusWebSocket] Failed to update connection status:', result.error);
+              }
+            } catch (error) {
+              console.error('[useVersusWebSocket] Error updating connection status:', error);
+            }
+          }
+          
+          // Notify message handler
           if (onMessageRef.current) {
             onMessageRef.current({
               type: 'player_disconnected',
               sessionId: key,
-              playerId: leftPresences[0]?.playerId
+              playerId: leftPlayerId
             });
           }
         });
@@ -200,6 +253,22 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           clearTimeout(reconnectTimeoutRef.current);
         }
         if (channelRef.current) {
+          // Update connection status before untracking
+          if (roomId && (playerId === 'player1' || playerId === 'player2')) {
+            // Fire and forget - don't wait for response
+            fetch('/api/versus/connection', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                roomId,
+                playerId,
+                connected: false
+              })
+            }).catch(err => {
+              console.error('[useVersusWebSocket] Error updating connection status on unmount:', err);
+            });
+          }
+          
           channelRef.current.unsubscribe();
           channelRef.current.untrack();
           channelRef.current = null;
@@ -213,6 +282,22 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (channelRef.current) {
+        // Update connection status before untracking
+        if (roomId && (playerId === 'player1' || playerId === 'player2')) {
+          // Fire and forget - don't wait for response
+          fetch('/api/versus/connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId,
+              playerId,
+              connected: false
+            })
+          }).catch(err => {
+            console.error('[useVersusWebSocket] Error updating connection status on cleanup:', err);
+          });
+        }
+        
         channelRef.current.unsubscribe();
         channelRef.current.untrack();
         channelRef.current = null;
