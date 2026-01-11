@@ -227,7 +227,7 @@ export default function VersusPlayerPanel({
       </div>
       {showCopyUrl && roomUrl && (
         <button onClick={handleCopyUrl} className="copy-url-button">
-          {copied ? 'Copied!' : (gameStatus === 'waiting' ? 'Invite Challenger' : 'Invite Spectator')}
+          {copied ? 'Copied!' : (gameStatus === 'waiting' ? 'Invite Player' : 'Invite Spectator')}
         </button>
       )}
       {isYou && gameStatus === 'waiting' && (
