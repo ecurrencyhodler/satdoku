@@ -26,10 +26,10 @@ export default function StatsPage() {
   const [timeRange, setTimeRange] = useState("30d");
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
-    gamesCompleted: 0,
-    mistakesMade: 0,
-    chatsCompleted: 0,
-    messagesReceived: 0,
+    soloPuzzlesPlayed: 0,
+    soloPuzzlesCompleted: 0,
+    versusPuzzlesPlayed: 0,
+    versusPuzzlesCompleted: 0,
   });
   const [chartData, setChartData] = useState([]);
 
@@ -48,10 +48,10 @@ export default function StatsPage() {
         // Only update state if this request hasn't been cancelled
         if (!cancelled) {
           setMetrics({
-            gamesCompleted: data.gamesCompleted || 0,
-            mistakesMade: data.mistakesMade || 0,
-            chatsCompleted: data.chatsCompleted || 0,
-            messagesReceived: data.messagesReceived || 0,
+            soloPuzzlesPlayed: data.soloPuzzlesPlayed || 0,
+            soloPuzzlesCompleted: data.soloPuzzlesCompleted || 0,
+            versusPuzzlesPlayed: data.versusPuzzlesPlayed || 0,
+            versusPuzzlesCompleted: data.versusPuzzlesCompleted || 0,
           });
           setChartData(data.chartData || []);
           setLoading(false);
@@ -75,7 +75,7 @@ export default function StatsPage() {
   }, [timeRange]); // Re-fetch when timeRange changes
 
   // API already returns the correct date range, no need to filter again
-  const totalGames = chartData.reduce((sum, item) => sum + item.games, 0);
+  const totalGames = chartData.reduce((sum, item) => sum + (item.total || 0), 0);
 
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
@@ -98,32 +98,32 @@ export default function StatsPage() {
       >
         <Card>
           <CardHeader>
-            <CardDescription>Total puzzles completed</CardDescription>
-            <CardTitle>{loading ? '...' : metrics.gamesCompleted.toLocaleString()}</CardTitle>
+            <CardDescription>Solo puzzles played</CardDescription>
+            <CardTitle>{loading ? '...' : metrics.soloPuzzlesPlayed.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Total mistakes made</CardDescription>
-            <CardTitle>{loading ? '...' : metrics.mistakesMade.toLocaleString()}</CardTitle>
+            <CardDescription>Solo puzzles completed</CardDescription>
+            <CardTitle>{loading ? '...' : metrics.soloPuzzlesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Total chats completed</CardDescription>
-            <CardTitle>{loading ? '...' : metrics.chatsCompleted.toLocaleString()}</CardTitle>
+            <CardDescription>Versus puzzles played</CardDescription>
+            <CardTitle>{loading ? '...' : metrics.versusPuzzlesPlayed.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>Total messages received</CardDescription>
-            <CardTitle>{loading ? '...' : metrics.messagesReceived.toLocaleString()}</CardTitle>
+            <CardDescription>Versus puzzles completed</CardDescription>
+            <CardTitle>{loading ? '...' : metrics.versusPuzzlesCompleted.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardFooter />
         </Card>
@@ -274,7 +274,7 @@ export default function StatsPage() {
                 }
               />
               <Area
-                dataKey="games"
+                dataKey="total"
                 type="monotone"
                 fill="url(#fillGames)"
                 fillOpacity={0.6}

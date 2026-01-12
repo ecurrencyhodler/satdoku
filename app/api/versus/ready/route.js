@@ -91,16 +91,11 @@ export async function POST(request) {
         // We successfully set start_at - get updated room and broadcast
         const finalRoom = await getRoom(roomId);
         
-        // Track puzzle start for both players (fire and forget)
-        // This ensures versus games are included in "games played" stats
+        // Track puzzle start for player1 only (with roomId to avoid double counting)
+        // This ensures versus games are included in "games played" stats, counted once per room
         if (finalRoom?.players?.player1?.sessionId) {
-          trackPuzzleStart(finalRoom.players.player1.sessionId, finalRoom.difficulty).catch(err => {
+          trackPuzzleStart(finalRoom.players.player1.sessionId, finalRoom.difficulty, roomId).catch(err => {
             console.error('[versus/ready] Failed to track puzzle start for player1:', err);
-          });
-        }
-        if (finalRoom?.players?.player2?.sessionId) {
-          trackPuzzleStart(finalRoom.players.player2.sessionId, finalRoom.difficulty).catch(err => {
-            console.error('[versus/ready] Failed to track puzzle start for player2:', err);
           });
         }
         
@@ -123,17 +118,12 @@ export async function POST(request) {
         // start_at was already set by another request - still broadcast to ensure all clients are notified
         const finalRoom = await getRoom(roomId);
         
-        // Track puzzle start for both players if not already tracked (fire and forget)
+        // Track puzzle start for player1 only (with roomId to avoid double counting)
         // This handles the race condition where both players click ready simultaneously
         // Only track if puzzle_sessions entries don't exist yet (trackPuzzleStart will handle duplicates gracefully)
         if (finalRoom?.players?.player1?.sessionId) {
-          trackPuzzleStart(finalRoom.players.player1.sessionId, finalRoom.difficulty).catch(err => {
+          trackPuzzleStart(finalRoom.players.player1.sessionId, finalRoom.difficulty, roomId).catch(err => {
             console.error('[versus/ready] Failed to track puzzle start for player1:', err);
-          });
-        }
-        if (finalRoom?.players?.player2?.sessionId) {
-          trackPuzzleStart(finalRoom.players.player2.sessionId, finalRoom.difficulty).catch(err => {
-            console.error('[versus/ready] Failed to track puzzle start for player2:', err);
           });
         }
         

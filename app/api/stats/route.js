@@ -18,82 +18,88 @@ export async function GET(request) {
 
     const supabase = createSupabaseClient();
 
-    // First, get all conversations that started in the time range
-    const conversationsResult = await supabase
-      .from('tutor_conversations')
-      .select('conversation_id, started_at')
-      .gte('started_at', startDate.toISOString());
-
-    const conversationIds = conversationsResult.data?.map(c => c.conversation_id) || [];
-
     // Fetch all stats in parallel with date filtering
     const [
-      gamesCompletedResult,
-      mistakesResult,
-      messagesResult,
-      gamesPlayedResult
+      soloPuzzlesPlayedResult,
+      soloPuzzlesCompletedResult,
+      versusPuzzlesPlayedResult,
+      versusPuzzlesCompletedResult,
+      soloGamesPlayedResult,
+      versusGamesPlayedResult
     ] = await Promise.all([
-      // Total games completed (filtered by started_at to match games played logic)
-      supabase
-        .from('puzzle_completions')
-        .select('id', { count: 'exact', head: true })
-        .gte('started_at', startDate.toISOString()),
-
-      // Total mistakes made - get from puzzle_sessions (includes all games, not just completed)
+      // Solo puzzles played - count puzzle_sessions where room_id IS NULL
       supabase
         .from('puzzle_sessions')
-        .select('mistakes')
+        .select('id', { count: 'exact', head: true })
+        .is('room_id', null)
         .gte('started_at', startDate.toISOString()),
 
-      // Total messages received - get all messages from conversations in the time range
-      // Only get messages for conversations that started in the time range
-      conversationIds.length > 0
-        ? supabase
-            .from('tutor_messages')
-            .select('conversation_id, user_messages')
-            .in('conversation_id', conversationIds)
-        : Promise.resolve({ data: [] }),
+      // Solo puzzles completed - count puzzle_sessions where status='completed' and room_id IS NULL
+      supabase
+        .from('puzzle_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .is('room_id', null)
+        .gte('started_at', startDate.toISOString()),
 
-      // Games played over time (for chart) - respect timeRange
+      // Versus puzzles played - count versus_rooms where start_at is set
+      supabase
+        .from('versus_rooms')
+        .select('room_id', { count: 'exact', head: true })
+        .not('start_at', 'is', null)
+        .gte('start_at', startDate.toISOString()),
+
+      // Versus puzzles completed - count versus_rooms where status = 'finished'
+      supabase
+        .from('versus_rooms')
+        .select('room_id', { count: 'exact', head: true })
+        .eq('status', 'finished')
+        .gte('start_at', startDate.toISOString()),
+
+      // Solo games played over time (for chart) - respect timeRange
       supabase
         .from('puzzle_sessions')
         .select('started_at')
+        .is('room_id', null)
         .gte('started_at', startDate.toISOString())
         .order('started_at', { ascending: false })
+        .limit(1000),
+
+      // Versus games played over time (for chart) - respect timeRange
+      supabase
+        .from('versus_rooms')
+        .select('start_at')
+        .not('start_at', 'is', null)
+        .gte('start_at', startDate.toISOString())
+        .order('start_at', { ascending: false })
         .limit(1000)
     ]);
 
-    // Calculate total mistakes
-    const totalMistakes = mistakesResult.data?.reduce((sum, row) => sum + (row.mistakes || 0), 0) || 0;
-
-    // Calculate total messages - sum all user_messages
-    const totalMessages = messagesResult.data?.reduce((sum, row) => sum + (row.user_messages || 0), 0) || 0;
-
-    // Count completed conversations - only those that have messages
-    // A conversation is "completed" if it has a corresponding entry in tutor_messages with user_messages > 0
-    const completedConversationIds = new Set();
-    if (messagesResult.data) {
-      messagesResult.data.forEach(msg => {
-        if (msg.user_messages > 0) {
-          completedConversationIds.add(msg.conversation_id);
-        }
-      });
-    }
-    const chatsCompleted = completedConversationIds.size;
-
-    // Process games played data for chart (group by date)
-    const gamesByDate = {};
-    if (gamesPlayedResult.data) {
-      gamesPlayedResult.data.forEach(session => {
+    // Process solo games played data for chart (group by date)
+    const soloGamesByDate = {};
+    if (soloGamesPlayedResult.data) {
+      soloGamesPlayedResult.data.forEach(session => {
         if (session.started_at) {
           const date = new Date(session.started_at);
           const dateKey = date.toISOString().split('T')[0];
-          gamesByDate[dateKey] = (gamesByDate[dateKey] || 0) + 1;
+          soloGamesByDate[dateKey] = (soloGamesByDate[dateKey] || 0) + 1;
         }
       });
     }
 
-    // Generate chart data for the selected time range
+    // Process versus games played data for chart (group by date)
+    const versusGamesByDate = {};
+    if (versusGamesPlayedResult.data) {
+      versusGamesPlayedResult.data.forEach(room => {
+        if (room.start_at) {
+          const date = new Date(room.start_at);
+          const dateKey = date.toISOString().split('T')[0];
+          versusGamesByDate[dateKey] = (versusGamesByDate[dateKey] || 0) + 1;
+        }
+      });
+    }
+
+    // Generate chart data for the selected time range (combined solo + versus)
     const chartData = [];
     const now = new Date();
     
@@ -112,17 +118,19 @@ export async function GET(request) {
       date.setDate(date.getDate() - i);
       date.setHours(0, 0, 0, 0); // Normalize to start of day for consistent date keys
       const dateKey = date.toISOString().split('T')[0];
+      const solo = soloGamesByDate[dateKey] || 0;
+      const versus = versusGamesByDate[dateKey] || 0;
       chartData.push({
         date: dateKey,
-        games: gamesByDate[dateKey] || 0
+        total: solo + versus
       });
     }
 
     const responseData = {
-      gamesCompleted: gamesCompletedResult.count || 0,
-      mistakesMade: totalMistakes,
-      chatsCompleted: chatsCompleted,
-      messagesReceived: totalMessages,
+      soloPuzzlesPlayed: soloPuzzlesPlayedResult.count || 0,
+      soloPuzzlesCompleted: soloPuzzlesCompletedResult.count || 0,
+      versusPuzzlesPlayed: versusPuzzlesPlayedResult.count || 0,
+      versusPuzzlesCompleted: versusPuzzlesCompletedResult.count || 0,
       chartData: chartData
     };
     return Response.json(responseData);
@@ -130,10 +138,10 @@ export async function GET(request) {
     console.error('Error fetching stats:', error);
     return Response.json(
       {
-        gamesCompleted: 0,
-        mistakesMade: 0,
-        chatsCompleted: 0,
-        messagesReceived: 0,
+        soloPuzzlesPlayed: 0,
+        soloPuzzlesCompleted: 0,
+        versusPuzzlesPlayed: 0,
+        versusPuzzlesCompleted: 0,
         chartData: []
       },
       { status: 500 }

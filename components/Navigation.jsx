@@ -54,7 +54,7 @@ export default function Navigation() {
   const navLinks = (
     <>
       <Link href="/" className={pathname === '/' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
-        Game
+        Solo
       </Link>
       <Link href="/versus" className={pathname === '/versus' ? 'nav-link active' : 'nav-link'} onClick={closeMenu}>
         Versus
