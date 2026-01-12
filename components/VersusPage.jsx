@@ -3,9 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useVersusWebSocket } from './hooks/useVersusWebSocket.js';
 import { useVersusGame } from './hooks/useVersusGame.js';
+import { useVersusPresence } from './hooks/useVersusPresence.js';
 import { useVersusCellInput } from './hooks/useVersusCellInput.js';
 import { useMobileDetection } from './hooks/useMobileDetection.js';
 import { useVersusCountdown } from './hooks/useVersusCountdown.js';
+import { useVersusKeyboard } from './hooks/useVersusKeyboard.js';
+import { useOpponentCellTracking } from './hooks/useOpponentCellTracking.js';
+import { useVersusPlayerActions } from './hooks/useVersusPlayerActions.js';
 import { transformVersusStateToClient } from '../lib/game/versusGameStateClient.js';
 import VersusPlayerPanel from './VersusPlayerPanel.jsx';
 import VersusCountdown from './VersusCountdown.jsx';
@@ -14,9 +18,8 @@ import VersusNotification from './VersusNotification.jsx';
 import VersusReconnecting from './VersusReconnecting.jsx';
 import VersusWinModal from './Modals/VersusWinModal.jsx';
 import VersusPurchaseLifeModal from './Modals/VersusPurchaseLifeModal.jsx';
-import GameBoard from './GameBoard.jsx';
-import NumberPad from './NumberPad.jsx';
-import NoteControls from './NoteControls.jsx';
+import VersusGameBoard from './VersusGameBoard.jsx';
+import VersusDifficultySelection from './VersusDifficultySelection.jsx';
 
 export default function VersusPage({
   mode = 'play', // 'create' or 'play'
@@ -48,9 +51,7 @@ export default function VersusPage({
   const isLoadingStateRef = useRef(false);
   const hasSeenPlayer1ConnectedRef = useRef(false);
   const [hasJoinedRoomViaWS, setHasJoinedRoomViaWS] = useState(false);
-  // Track which cells the current player has filled
-  const playerFilledCellsRef = useRef(new Set());
-  const previousBoardRef = useRef(null);
+  const triggerPresenceUpdateRef = useRef(null);
   
   // For both players, delay initial state load until WebSocket connects
   // Player1: waits for WebSocket connection before loading
@@ -94,6 +95,16 @@ export default function VersusPage({
       }
     }
     
+    // Handle presence events forwarded from useVersusWebSocket
+    // These events fire in useVersusWebSocket (registered before subscribe)
+    // but the listeners in useVersusPresence don't fire (registered after subscribe)
+    // So we trigger update here when presence messages are received
+    if (message.type === 'presence_sync' || message.type === 'presence_join' || message.type === 'presence_leave') {
+      if (triggerPresenceUpdateRef.current) {
+        triggerPresenceUpdateRef.current();
+      }
+    }
+    
     const result = handleWebSocketMessageFromHook(message);
     // If the handler returns a notification, display it
     if (result && typeof result === 'object' && result.type) {
@@ -106,7 +117,7 @@ export default function VersusPage({
   }, [handleWebSocketMessageFromHook, enableInitialLoad, loadState]);
 
   // WebSocket connection - must be called before useEffect that uses isConnected
-  const { isConnected, isReconnecting, sendMessage } = useVersusWebSocket(
+  const { isConnected, isReconnecting, sendMessage, channel } = useVersusWebSocket(
     roomId,
     sessionId,
     playerId,
@@ -114,18 +125,26 @@ export default function VersusPage({
     handleReconnect
   );
 
-
-
-
-  // Track if we've ever seen player1 connected for this room
+  // Presence = UX only (prescription: "Use presence for UX only")
+  // Postgres decides game state (prescription: "Let Postgres decide game state")
+  const { player1Connected: presencePlayer1Connected, player2Connected: presencePlayer2Connected, opponentSelectedCell: presenceOpponentSelectedCell, triggerUpdate: triggerPresenceUpdate } = useVersusPresence(channel, playerId);
+  
+  // Store triggerPresenceUpdate in ref so it's available in handleWebSocketMessage callback
   useEffect(() => {
-    const player1Connected = gameState?.players?.player1?.connected === true;
-    if (roomId && player1Connected && !hasSeenPlayer1ConnectedRef.current) {
+    triggerPresenceUpdateRef.current = triggerPresenceUpdate;
+  }, [triggerPresenceUpdate]);
+
+
+
+
+  // Track if we've ever seen player1 connected for this room (using presence)
+  useEffect(() => {
+    if (roomId && presencePlayer1Connected && !hasSeenPlayer1ConnectedRef.current) {
       hasSeenPlayer1ConnectedRef.current = true;
       // Force a single re-render to show the game
       setShowDifficultySelection(false);
     }
-  }, [roomId, gameState?.players?.player1?.connected]);
+  }, [roomId, presencePlayer1Connected]);
 
   // Reset the ref when roomId changes
   useEffect(() => {
@@ -160,6 +179,13 @@ export default function VersusPage({
     }
   }, [gameState?.status, gameState?.winner, showWinModal, hasDismissedWinModal]);
 
+  // Calculate countdown from start_at timestamp using the hook
+  // MUST be called before any conditional returns to follow Rules of Hooks
+  const { countdown: calculatedCountdown, isActive: countdownFinished } = useVersusCountdown(gameState?.start_at);
+
+  // Track opponent-filled cells
+  const { opponentFilledCells, trackMoveAttempt } = useOpponentCellTracking(gameState, isSpectator);
+
   // Cell input handling
   const { handleCellInput: originalHandleCellInput } = useVersusCellInput(
     roomId,
@@ -176,107 +202,16 @@ export default function VersusPage({
     noteMode
   );
 
-  // Track opponent-filled cells
-  const [opponentFilledCells, setOpponentFilledCells] = useState(new Set());
-  // Store the initial board at game start for comparison
-  const initialBoardRef = useRef(null);
-
-  // Calculate countdown from start_at timestamp using the hook
-  // MUST be called before any conditional returns to follow Rules of Hooks
-  const { countdown: calculatedCountdown, isActive: countdownFinished } = useVersusCountdown(gameState?.start_at);
-  
-  // Track when start_at changes
-  useEffect(() => {
-    // start_at changes are handled by useVersusCountdown hook
-  }, [gameState?.start_at, playerId, calculatedCountdown, countdownFinished]);
-
-
-  // Reset player filled cells when game starts
-  useEffect(() => {
-    const currentStatus = gameState?.status || gameState?.gameStatus;
-    if ((currentStatus === 'active' || currentStatus === 'playing') && previousBoardRef.current === null) {
-      // Game just started, clear any previous tracking
-      playerFilledCellsRef.current.clear();
-    }
-  }, [gameState?.gameStatus]);
-
-  // Compute opponent-filled cells based on board state
-  // A cell is opponent-filled if:
-  // 1. It has a value (not 0)
-  // 2. It's not prefilled (not in puzzle)
-  // 3. It's NOT in our player-filled cells set
-  // Spectators should never see orange cells, so skip this computation for them
-  useEffect(() => {
-    // Spectators should never see opponent-filled cells
-    if (isSpectator) {
-      setOpponentFilledCells(new Set());
-      return;
-    }
-
-    if (!gameState?.board || !gameState?.puzzle) return;
-
-    const board = gameState.board;
-    const puzzle = gameState.puzzle;
-    const opponentFilled = new Set();
-
-    // Check if our last move attempt succeeded and add it to our filled cells
-    if (lastMoveAttemptRef.current && previousBoardRef.current) {
-      const { row, col, value } = lastMoveAttemptRef.current;
-      const currentValue = board[row]?.[col] ?? 0;
-      const previousValue = previousBoardRef.current[row]?.[col] ?? 0;
-      
-      // If the cell now has the value we tried to place, it was our move
-      if (currentValue === value && previousValue !== value) {
-        const cellKey = `${row},${col}`;
-        playerFilledCellsRef.current.add(cellKey);
-      }
-    }
-
-    // Clean up: if a cell in our filled set is now empty or changed, remove it
-    for (const cellKey of playerFilledCellsRef.current) {
-      const [row, col] = cellKey.split(',').map(Number);
-      const currentValue = board[row]?.[col] ?? 0;
-      // Remove if cell is now empty or doesn't match what we placed
-      if (currentValue === 0) {
-        playerFilledCellsRef.current.delete(cellKey);
-      }
-    }
-
-    // Now identify opponent-filled cells
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
-        const value = board[row]?.[col] ?? 0;
-        const puzzleValue = puzzle[row]?.[col] ?? 0;
-        const cellKey = `${row},${col}`;
-        
-        // A cell is opponent-filled if:
-        // 1. It has a value
-        // 2. It's not from the puzzle (prefilled)
-        // 3. It's NOT in our filled cells set
-        if (value !== 0 && puzzleValue === 0 && !playerFilledCellsRef.current.has(cellKey)) {
-          opponentFilled.add(cellKey);
-        }
-      }
-    }
-
-    setOpponentFilledCells(opponentFilled);
-    previousBoardRef.current = board.map(row => [...row]);
-  }, [gameState?.board, gameState?.puzzle, isSpectator]);
-
-  // Track last attempted move
-  const lastMoveAttemptRef = useRef(null);
-
   // Wrapper for handleCellInput to track player moves
   const handleCellInput = useCallback(async (value) => {
     if (!selectedCell) return;
     
     // Track the move attempt
-    const cellKey = `${selectedCell.row},${selectedCell.col}`;
-    lastMoveAttemptRef.current = value !== 0 ? { row: selectedCell.row, col: selectedCell.col, value } : null;
+    trackMoveAttempt(selectedCell.row, selectedCell.col, value);
     
     // Call the original handler
     await originalHandleCellInput(value);
-  }, [selectedCell, originalHandleCellInput]);
+  }, [selectedCell, originalHandleCellInput, trackMoveAttempt]);
 
   // Erase button handler - clears selected cell with mistake or all notes
   const handleErase = useCallback(async () => {
@@ -324,84 +259,24 @@ export default function VersusPage({
     }
   }, [roomId, selectedCell, gameState, handleCellInput, playerId, setGameState]);
 
-  // Track if ready request is in progress to prevent duplicate clicks
-  const isReadyRequestInProgressRef = useRef(false);
-
-  // Handle ready button click
-  const handleReadyClick = useCallback(async () => {
-    if (!roomId) return;
-    
-    // Prevent duplicate clicks while request is in progress
-    if (isReadyRequestInProgressRef.current) {
-      return;
-    }
-
-    // Check current ready status - if already ready, don't make another request
-    const currentReady = gameState?.players?.[playerId]?.ready;
-    if (currentReady) {
-      return;
-    }
-
-    // Player 1 cannot start until player 2 has joined
-    if (playerId === 'player1' && !gameState?.players?.player2) {
-      return;
-    }
-
-    isReadyRequestInProgressRef.current = true;
-
-    try {
-      const response = await fetch('/api/versus/ready', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          ready: true
-        })
-      });
-
-      const result = await response.json();
-
-      // API response is just a nudge - fetch authoritative state from Postgres
-      // Postgres is the authority, Realtime will notify us of changes
-      if (result.success) {
-        // Fetch authoritative state from Postgres (will be triggered by broadcasts)
-        // The broadcast from the API will trigger a Postgres fetch in useVersusGame
-        // No need to update state here - Postgres subscription and broadcasts handle it
+  // Player actions (ready, name change)
+  const { handleReadyClick, handleNameChange: handleNameChangeFromHook } = useVersusPlayerActions(
+    roomId,
+    playerId,
+    gameState,
+    loadState,
+    (newName) => {
+      setPlayerName(newName);
+      if (onPlayerNameChange) {
+        onPlayerNameChange(newName);
       }
-    } catch (error) {
-      console.error('Error setting ready:', error);
-    } finally {
-      isReadyRequestInProgressRef.current = false;
     }
-  }, [roomId, gameState, playerId]);
+  );
 
-  // Handle name change
+  // Wrapper for name change to update local state
   const handleNameChange = useCallback(async (newName) => {
-    if (!roomId || !playerId) return;
-
-    setPlayerName(newName);
-    if (onPlayerNameChange) {
-      onPlayerNameChange(newName);
-    }
-
-    try {
-      const response = await fetch('/api/versus/name', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          name: newName
-        })
-      });
-      
-      const result = await response.json();
-      
-      // Reload state to get updated name
-      loadState();
-    } catch (error) {
-      console.error('Error updating name:', error);
-    }
-  }, [roomId, playerId, onPlayerNameChange, loadState, playerName]);
+    await handleNameChangeFromHook(newName);
+  }, [handleNameChangeFromHook]);
 
   // Handle difficulty selection and room creation
   const handleDifficultySelect = useCallback(async (selectedDifficulty) => {
@@ -447,100 +322,40 @@ export default function VersusPage({
   }, [selectedCell]);
 
   // Keyboard input handler for desktop
+  useVersusKeyboard({
+    gameState,
+    selectedCell,
+    setSelectedCell,
+    handleCellInput,
+    noteMode,
+    setNoteMode,
+    isMobile,
+    isSpectator
+  });
+
+  // Note: Cell selection is now tracked via presence, not via API calls
+
+  // Update presence with selected cell when it changes (ephemeral UI state)
   useEffect(() => {
-    // Only enable keyboard input on desktop (not mobile)
-    if (isMobile || isSpectator) return;
-
-    const handleKeyDown = (e) => {
+    if (channel && selectedCell && !isSpectator) {
       const currentStatus = gameState?.status || gameState?.gameStatus;
-      // Only handle keyboard input when game is active/playing
-      if (currentStatus !== 'active' && currentStatus !== 'playing') return;
-
-      // Don't interfere with text input fields
-      const target = e.target;
-      const isInputElement = target && (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      );
-
-      // Check if selected cell is locked (prefilled)
-      let isSelectedCellLocked = false;
-      if (selectedCell && gameState) {
-        const row = selectedCell.row;
-        const col = selectedCell.col;
-        const isPrefilled = gameState.puzzle?.[row]?.[col] !== 0;
-        isSelectedCellLocked = isPrefilled;
+      if (currentStatus === 'active' || currentStatus === 'playing') {
+        // Update presence with selected cell - this is ephemeral UI state
+        channel.track({
+          playerId: playerId,
+          sessionId: sessionId,
+          selectedCell: { row: selectedCell.row, col: selectedCell.col }
+        });
       }
-
-      // Toggle note mode with 'N' key
-      if ((e.key === 'n' || e.key === 'N') && !isInputElement) {
-        e.preventDefault();
-        setNoteMode(prev => !prev);
-      } else if (e.key >= '1' && e.key <= '9') {
-        // Don't process number input if cell is locked or no cell selected
-        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
-          e.preventDefault();
-          handleCellInput(parseInt(e.key));
-        }
-      } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-        // Don't process clear input if cell is locked or no cell selected
-        if (selectedCell && !isInputElement && !isSelectedCellLocked) {
-          e.preventDefault();
-          handleCellInput(0);
-        }
-      } else if (e.key.startsWith('Arrow')) {
-        // Only handle arrow keys if a cell is already selected and not in an input field
-        if (!selectedCell || isInputElement) {
-          return;
-        }
-
-        e.preventDefault();
-
-        let newRow = selectedCell.row;
-        let newCol = selectedCell.col;
-
-        switch (e.key) {
-          case 'ArrowUp':
-            newRow = Math.max(0, newRow - 1);
-            break;
-          case 'ArrowDown':
-            newRow = Math.min(8, newRow + 1);
-            break;
-          case 'ArrowLeft':
-            newCol = Math.max(0, newCol - 1);
-            break;
-          case 'ArrowRight':
-            newCol = Math.min(8, newCol + 1);
-            break;
-        }
-
-        setSelectedCell({ row: newRow, col: newCol });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, selectedCell, setSelectedCell, handleCellInput, noteMode, setNoteMode, isMobile, isSpectator]);
-
-  // Broadcast cell selection via API
-  const broadcastCellSelection = useCallback(async (row, col) => {
-    if (!roomId) return;
-    try {
-      await fetch('/api/versus/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'selectCell',
-          roomId,
-          row,
-          col
-        })
+    } else if (channel && !selectedCell && !isSpectator) {
+      // Clear selected cell from presence when deselected
+      channel.track({
+        playerId: playerId,
+        sessionId: sessionId,
+        selectedCell: null
       });
-    } catch (error) {
-      console.error('Error selecting cell:', error);
     }
-  }, [roomId]);
+  }, [channel, selectedCell, roomId, isSpectator, gameState, playerId, sessionId]);
 
   // CRITICAL: If roomId exists, NEVER show difficulty selection - prevents flashing during navigation
   if (roomId) {
@@ -552,44 +367,11 @@ export default function VersusPage({
   } else if (mode === 'create' && showDifficultySelection) {
     // Show difficulty selection ONLY if no roomId exists
     return (
-      <div className="versus-create-wrapper">
-        <div className="container versus-create-container">
-          <header>
-            <h1>Satdoku</h1>
-          </header>
-          <div className="versus-rules">
-            <h3 className="versus-rules-title">Versus Rules</h3>
-            <ol className="versus-rules-list">
-              <li>Type in your name below</li>
-              <li>Select a difficulty</li>
-              <li>Invite a challenger by sharing a link</li>
-              <li>Both players press start to play</li>
-              <li>Player with more points at the end of the gamewins</li>
-              <li>Cells your opponent fills are highlighted in orange</li>
-              <li>Buy a life with bitcoin if you run out</li>
-            </ol>
-          </div>
-          <h2 className="versus-create-heading"></h2>
-          <div className="difficulty-selection">
-            <label className="versus-form-label">Your Name:</label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              maxLength={20}
-              className="name-input versus-name-input"
-              placeholder="Player 1"
-              autoFocus
-            />
-            <label className="versus-form-label">Select Difficulty:</label>
-            <div className="difficulty-buttons">
-              <button onClick={() => handleDifficultySelect('beginner')}>Beginner</button>
-              <button onClick={() => handleDifficultySelect('medium')}>Medium</button>
-              <button onClick={() => handleDifficultySelect('hard')}>Hard</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <VersusDifficultySelection
+        playerName={playerName}
+        onPlayerNameChange={setPlayerName}
+        onDifficultySelect={handleDifficultySelect}
+      />
     );
   } else {
     // No roomId and no difficulty selection - return null
@@ -664,65 +446,28 @@ export default function VersusPage({
                 onReadyClick={handleReadyClick}
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer1}
-                player2Connected={isPlayer1 ? !!player2Data : (isPlayer2 ? true : undefined)}
+                player2Connected={isPlayer1 ? presencePlayer2Connected : (isPlayer2 ? true : undefined)}
                 isPlayer1Panel={true}
               />
             </div>
             <div className="versus-board-container" onClick={handleBoardBackgroundClick}>
-              {showCountdown && (
-                <VersusCountdown 
-                  countdown={calculatedCountdown} 
-                  visible={true}
-                />
-              )}
-              {gameState ? (
-                <>
-                  {boardVisible ? (
-                    <GameBoard
-                      board={gameState.board}
-                      puzzle={gameState.puzzle}
-                      solution={gameState.solution}
-                      selectedCell={selectedCell}
-                      onCellClick={handleCellClick}
-                      hasLives={yourData?.lives > 0}
-                      notes={gameState.notes || []}
-                      noteMode={noteMode}
-                      opponentSelectedCell={gameState.opponentSelectedCell}
-                      opponentFilledCells={isSpectator ? null : opponentFilledCells}
-                      clearedMistakes={isSpectator ? null : (gameState.clearedMistakes || [])}
-                    />
-                  ) : (
-                    <GameBoard
-                      board={Array(9).fill(null).map(() => Array(9).fill(0))}
-                      puzzle={Array(9).fill(null).map(() => Array(9).fill(0))}
-                      solution={null}
-                      selectedCell={null}
-                      onCellClick={() => {}}
-                      hasLives={true}
-                      notes={[]}
-                      noteMode={false}
-                      opponentSelectedCell={null}
-                      opponentFilledCells={null}
-                    />
-                  )}
-                  {!isSpectator && (
-                    <div className="versus-controls-container">
-                      <NumberPad
-                        onNumberClick={handleCellInput}
-                        disabled={!selectedCell || (gameState.status !== 'active' && gameState.gameStatus !== 'playing')}
-                        versus={true}
-                      />
-                      <NoteControls
-                        noteMode={noteMode}
-                        onToggleNoteMode={() => setNoteMode(!noteMode)}
-                        onClear={handleErase}
-                        disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
-                        versus={true}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : null}
+              <VersusGameBoard
+                gameState={gameState}
+                selectedCell={selectedCell}
+                opponentSelectedCell={presenceOpponentSelectedCell}
+                onCellClick={handleCellClick}
+                handleCellInput={handleCellInput}
+                handleErase={handleErase}
+                noteMode={noteMode}
+                setNoteMode={setNoteMode}
+                yourData={yourData}
+                opponentFilledCells={opponentFilledCells}
+                isSpectator={isSpectator}
+                boardVisible={boardVisible}
+                showCountdown={showCountdown}
+                calculatedCountdown={calculatedCountdown}
+                VersusCountdown={VersusCountdown}
+              />
             </div>
             <div className="versus-panel right">
               <VersusPlayerPanel
@@ -759,64 +504,27 @@ export default function VersusPage({
                 isPlayer2Panel={isPlayer1}
                 isPlayer1Panel={isPlayer2}
                 isWaiting={isPlayer1 ? !player2Data : undefined}
-                player2Connected={isPlayer2 ? true : (isPlayer1 ? !!player2Data : undefined)}
+                player2Connected={isPlayer2 ? true : (isPlayer1 ? presencePlayer2Connected : undefined)}
               />
             </div>
             <div className="versus-board-container mobile">
-              {showCountdown && (
-                <VersusCountdown 
-                  countdown={calculatedCountdown} 
-                  visible={true}
-                />
-              )}
-              {gameState ? (
-                <>
-                  {boardVisible ? (
-                    <GameBoard
-                      board={gameState.board}
-                      puzzle={gameState.puzzle}
-                      solution={gameState.solution}
-                      selectedCell={selectedCell}
-                      onCellClick={handleCellClick}
-                      hasLives={yourData?.lives > 0}
-                      notes={gameState.notes || []}
-                      noteMode={noteMode}
-                      opponentSelectedCell={gameState.opponentSelectedCell}
-                      opponentFilledCells={isSpectator ? null : opponentFilledCells}
-                      clearedMistakes={isSpectator ? null : (gameState.clearedMistakes || [])}
-                    />
-                  ) : (
-                    <GameBoard
-                      board={Array(9).fill(null).map(() => Array(9).fill(0))}
-                      puzzle={Array(9).fill(null).map(() => Array(9).fill(0))}
-                      solution={null}
-                      selectedCell={null}
-                      onCellClick={() => {}}
-                      hasLives={true}
-                      notes={[]}
-                      noteMode={false}
-                      opponentSelectedCell={null}
-                      opponentFilledCells={null}
-                    />
-                  )}
-                  {!isSpectator && (
-                    <div className="versus-controls-container">
-                      <NumberPad
-                        onNumberClick={handleCellInput}
-                        disabled={!selectedCell || (gameState.status !== 'active' && gameState.gameStatus !== 'playing')}
-                        versus={true}
-                      />
-                      <NoteControls
-                        noteMode={noteMode}
-                        onToggleNoteMode={() => setNoteMode(!noteMode)}
-                        onClear={handleErase}
-                        disabled={gameState.status !== 'active' && gameState.gameStatus !== 'playing'}
-                        versus={true}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : null}
+              <VersusGameBoard
+                gameState={gameState}
+                selectedCell={selectedCell}
+                opponentSelectedCell={presenceOpponentSelectedCell}
+                onCellClick={handleCellClick}
+                handleCellInput={handleCellInput}
+                handleErase={handleErase}
+                noteMode={noteMode}
+                setNoteMode={setNoteMode}
+                yourData={yourData}
+                opponentFilledCells={opponentFilledCells}
+                isSpectator={isSpectator}
+                boardVisible={boardVisible}
+                showCountdown={showCountdown}
+                calculatedCountdown={calculatedCountdown}
+                VersusCountdown={VersusCountdown}
+              />
             </div>
             <div className="versus-panel mobile-bottom">
               <VersusPlayerPanel
@@ -826,7 +534,7 @@ export default function VersusPage({
                 onNameChange={handleNameChange}
                 onReadyClick={handleReadyClick}
                 compact={true}
-                player2Connected={isPlayer1 ? !!player2Data : undefined}
+                player2Connected={isPlayer1 ? presencePlayer2Connected : undefined}
               />
             </div>
           </>

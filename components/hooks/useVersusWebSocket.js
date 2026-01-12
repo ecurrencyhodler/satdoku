@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client-browser.js';
+import { createPresenceHandlers, calculateReconnectDelay } from './useVersusWebSocketHelpers.js';
 
 /**
  * Hook for managing Supabase Realtime connection in versus mode
@@ -73,95 +74,35 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           // Note: Messages are cleaned up by the cron job at /api/cron/cleanup-versus-rooms/
           // No client-side deletion needed
         })
-        // Set up presence handlers
+        // Register presence event listeners BEFORE subscribing (required for sync to fire)
+        // Listen for presence.sync (prescription: "Listen for presence.sync")
         .on('presence', { event: 'sync' }, () => {
-          const presenceState = channel.presenceState();
-          // Update connection status from presence
-          // presenceState format: { [sessionId]: [{ playerId, sessionId }] }
+          // Notify message handler to trigger presence update in useVersusPresence
           if (onMessageRef.current) {
             onMessageRef.current({
               type: 'presence_sync',
-              presenceState
+              presenceState: channel.presenceState()
             });
           }
         })
-        .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
-          // Player joined (key is sessionId)
-          // newPresences contains [{ playerId, sessionId }]
-          const joinedPlayerId = newPresences[0]?.playerId;
-          
-          // Only update database if it's a player (not a spectator)
-          if (joinedPlayerId === 'player1' || joinedPlayerId === 'player2') {
-            try {
-              const response = await fetch('/api/versus/connection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  roomId,
-                  playerId: joinedPlayerId,
-                  connected: true
-                })
-              });
-              
-              const result = await response.json();
-              
-              if (!result.success) {
-                console.error('[useVersusWebSocket] Failed to update connection status:', result.error);
-              }
-            } catch (error) {
-              console.error('[useVersusWebSocket] Error updating connection status:', error);
-            }
-          }
-          
-          // Notify message handler AFTER database update completes
-          // This ensures state reload happens after connection status is updated
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
           if (onMessageRef.current) {
             onMessageRef.current({
-              type: 'player_connected',
-              sessionId: key,
-              playerId: joinedPlayerId
+              type: 'presence_join',
+              presenceState: channel.presenceState()
             });
           }
         })
-        .on('presence', { event: 'leave' }, async ({ key, leftPresences }) => {
-          // Player left (key is sessionId)
-          // leftPresences contains [{ playerId, sessionId }]
-          const leftPlayerId = leftPresences[0]?.playerId;
-          
-          // Only update database if it's a player (not a spectator)
-          if (leftPlayerId === 'player1' || leftPlayerId === 'player2') {
-            try {
-              const response = await fetch('/api/versus/connection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  roomId,
-                  playerId: leftPlayerId,
-                  connected: false
-                })
-              });
-              
-              const result = await response.json();
-              
-              if (!result.success) {
-                console.error('[useVersusWebSocket] Failed to update connection status:', result.error);
-              }
-            } catch (error) {
-              console.error('[useVersusWebSocket] Error updating connection status:', error);
-            }
-          }
-          
-          // Notify message handler
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
           if (onMessageRef.current) {
             onMessageRef.current({
-              type: 'player_disconnected',
-              sessionId: key,
-              playerId: leftPlayerId
+              type: 'presence_leave',
+              presenceState: channel.presenceState()
             });
           }
         });
 
-      // Subscribe to channel first (must be done before tracking presence)
+      // Subscribe to channel (presence listeners must be registered before this)
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('[useVersusWebSocket] Connected to room:', roomId);
@@ -169,10 +110,11 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           setIsReconnecting(false);
           reconnectAttemptRef.current = 0;
           
-          // Track presence AFTER subscription is confirmed
+          // Track presence immediately on join (prescription: "Track presence immediately on join")
           channel.track({
             playerId: playerId,
-            sessionId: sessionId
+            sessionId: sessionId,
+            selectedCell: null // Initialize with no selected cell
           });
           
           // Send joined message to handler
@@ -188,10 +130,7 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
           
           // Attempt reconnection
           if (shouldReconnectRef.current && roomId && sessionId) {
-            const delay = Math.min(
-              1000 * Math.pow(2, reconnectAttemptRef.current),
-              30000 // 30 seconds max
-            );
+            const delay = calculateReconnectDelay(reconnectAttemptRef.current);
             
             setIsReconnecting(true);
             reconnectAttemptRef.current++;
@@ -222,10 +161,7 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
       setIsReconnecting(true);
       
       // Retry connection
-      const delay = Math.min(
-        1000 * Math.pow(2, reconnectAttemptRef.current),
-        30000
-      );
+      const delay = calculateReconnectDelay(reconnectAttemptRef.current);
       reconnectTimeoutRef.current = setTimeout(() => {
         if (shouldReconnectRef.current && roomId && sessionId) {
           reconnectAttemptRef.current++;
@@ -238,37 +174,19 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
   }, [roomId, sessionId, playerId]);
 
   useEffect(() => {
+    // Subscribe once per room (prescription: "Subscribe once per room")
     // Only connect if we have both roomId and a valid sessionId
     if (roomId && sessionId && sessionId !== 'active' && sessionId.startsWith('session_')) {
-      // Delay for player2 to ensure room update from API join has propagated
-      const delay = playerId === 'player2' ? 800 : 200;
-      const connectTimer = setTimeout(() => {
-        connect();
-      }, delay);
+      // Connect immediately
+      connect();
       
       return () => {
-        clearTimeout(connectTimer);
         shouldReconnectRef.current = false;
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
         if (channelRef.current) {
-          // Update connection status before untracking
-          if (roomId && (playerId === 'player1' || playerId === 'player2')) {
-            // Fire and forget - don't wait for response
-            fetch('/api/versus/connection', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                roomId,
-                playerId,
-                connected: false
-              })
-            }).catch(err => {
-              console.error('[useVersusWebSocket] Error updating connection status on unmount:', err);
-            });
-          }
-          
+          // Clean up: unsubscribe and untrack presence
           channelRef.current.unsubscribe();
           channelRef.current.untrack();
           channelRef.current = null;
@@ -282,22 +200,6 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (channelRef.current) {
-        // Update connection status before untracking
-        if (roomId && (playerId === 'player1' || playerId === 'player2')) {
-          // Fire and forget - don't wait for response
-          fetch('/api/versus/connection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              roomId,
-              playerId,
-              connected: false
-            })
-          }).catch(err => {
-            console.error('[useVersusWebSocket] Error updating connection status on cleanup:', err);
-          });
-        }
-        
         channelRef.current.unsubscribe();
         channelRef.current.untrack();
         channelRef.current = null;
@@ -316,6 +218,7 @@ export function useVersusWebSocket(roomId, sessionId, playerId, onMessage, onRec
   return {
     isConnected,
     isReconnecting,
-    sendMessage
+    sendMessage,
+    channel: channelRef.current
   };
 }

@@ -1,7 +1,6 @@
 import { updatePlayerConnectionStatus } from '../../../../lib/supabase/versusRooms.js';
 import { getSessionId } from '../../../../lib/session/cookieSession.js';
 import { getRoom } from '../../../../lib/supabase/versusRooms.js';
-import { appendFileSync } from 'fs';
 
 export async function POST(request) {
   try {
@@ -31,19 +30,8 @@ export async function POST(request) {
       );
     }
     
-    // #region agent log
-    const logPath = '/Users/andrewyang/code/satdoku/.cursor/debug.log';
-    const logEntry = JSON.stringify({location:'route.js:33',message:'connection API called',data:{roomId,playerId,connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})+'\n';
-    appendFileSync(logPath, logEntry);
-    // #endregion
-    
     // Update connection status
     const result = await updatePlayerConnectionStatus(roomId, playerId, connected);
-    
-    // #region agent log
-    const logEntry2 = JSON.stringify({location:'route.js:40',message:'connection API result',data:{success:result.success,error:result.error,roomId,playerId,connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})+'\n';
-    appendFileSync(logPath, logEntry2);
-    // #endregion
     
     if (!result.success) {
       return Response.json(

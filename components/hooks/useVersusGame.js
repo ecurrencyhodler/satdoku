@@ -33,12 +33,13 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
 
       if (data.success && data.state) {
         console.log('[useVersusGame] State loaded successfully, status:', data.state.status, 'start_at:', data.state.start_at);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:36',message:'loadState setting gameState',data:{opponentSelectedCell:data.state.opponentSelectedCell,playerId,currentOpponentSelectedCell:gameState?.opponentSelectedCell},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        // Note: opponentSelectedCell is now tracked via presence, not in gameState
         setGameState(data.state);
         setError(null);
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:40',message:'state load failed',data:{error:data.error,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         console.error('[useVersusGame] Failed to load state:', data.error);
         setError(data.error || 'Failed to load game state');
       }
@@ -138,29 +139,11 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
         loadStateRef.current();
       }
     } else if (message.type === 'player_connected' || message.type === 'player_disconnected') {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:137',message:'player connection status change message',data:{type:message.type,playerId:message.playerId,sessionId:message.sessionId,roomId,isLoading:isLoadingRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-      // Reload state to get updated connection status
-      // Only reload if we have a roomId and aren't already loading
+      // Presence event = "go refetch" from Postgres
+      // No delays, no DB writes - just trigger state reload
+      // Presence is ephemeral connection truth, Postgres is durable game truth
       if (roomId && !isLoadingRef.current) {
-        // For player_connected, add a small delay to ensure database update has completed
-        if (message.type === 'player_connected') {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:144',message:'scheduling state reload for player_connected',data:{playerId:message.playerId,roomId,delay:100},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          setTimeout(() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:147',message:'executing state reload for player_connected',data:{playerId:message.playerId,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-            loadStateRef.current();
-          }, 100); // 100ms delay to allow database update to complete
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:151',message:'executing immediate state reload for player_disconnected',data:{playerId:message.playerId,roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          loadStateRef.current();
-        }
+        loadStateRef.current();
       }
     } else if (message.type === 'notification') {
       // Notification received - fetch authoritative state from Postgres
@@ -177,15 +160,8 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
       }
       // Return notification to parent component
       return message.notification;
-    } else if (message.type === 'cell_selected') {
-      // Update opponent's selected cell (only if it's from the opponent, not ourselves)
-      if (message.playerId !== playerId) {
-        setGameState(prev => prev ? {
-          ...prev,
-          opponentSelectedCell: message.selectedCell
-        } : null);
-      }
     }
+    // Note: cell_selected messages are no longer used - cell selection is now tracked via presence
   }, [playerId, roomId]);
 
   // Initial load (only if enabled)

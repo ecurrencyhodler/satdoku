@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import NameInput from './VersusPlayerPanel/NameInput.jsx';
+import ReadyButton from './VersusPlayerPanel/ReadyButton.jsx';
+import StatsDisplay from './VersusPlayerPanel/StatsDisplay.jsx';
+import RulesSection from './VersusPlayerPanel/RulesSection.jsx';
 
 export default function VersusPlayerPanel({
   player,
@@ -78,209 +82,101 @@ export default function VersusPlayerPanel({
       console.error('Failed to copy URL:', error);
     }
   };
-  const canEditName = isYou && gameStatus === 'waiting';
-  const canStart = isYou && gameStatus === 'waiting' && !player?.ready;
 
-  if (compact) {
-    return (
-      <div className={`versus-player-panel compact ${isYou ? 'you' : 'opponent'}`}>
-        <div className="player-name">
-          {canEditName ? (
-            <input
-              type="text"
-              value={localName}
-              onChange={(e) => {
-                setLocalName(e.target.value);
-                isEditingRef.current = true;
-              }}
-              onFocus={() => {
-                isEditingRef.current = true;
-              }}
-              onBlur={(e) => {
-                isEditingRef.current = false;
-                // Only update if name is not empty (let server use default if empty)
-                const trimmedName = e.target.value.trim();
-                if (trimmedName) {
-                  onNameChange?.(trimmedName);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.target.blur();
-                }
-              }}
-              className="name-input"
-              maxLength={20}
-              placeholder={placeholderText}
-            />
-          ) : (
-            <span>{player?.name || 'Player'}</span>
-          )}
-        </div>
-        <div className="player-score">Score: {player?.score || 0}</div>
-        <div className="player-lives">Lives: {player?.lives || 0}</div>
-        <div className="player-mistakes">Mistakes: {player?.mistakes || 0}</div>
-        {isYou && gameStatus === 'waiting' && (
-          <button 
-            onClick={() => {
-              setIsPendingReady(true);
-              onReadyClick?.();
-            }} 
-            className={`start-button ${isPendingReady ? 'pending' : ''}`}
-            disabled={player?.ready || isPendingReady || (player2Connected !== undefined && !player2Connected)}
-          >
-            {isPendingReady ? (
-              <span className="ready-button-content">
-                <span className="ready-spinner"></span>
-              </span>
-            ) : player?.ready ? (
-              'Ready'
-            ) : (
-              'Start Game'
-            )}
-          </button>
-        )}
-        {!isYou && isPlayer2Panel && gameStatus === 'waiting' && player && (
-          <button 
-            className="start-button"
-            disabled={true}
-          >
-            {player?.ready ? 'Ready' : (isWaiting === false ? 'Connected' : 'Waiting...')}
-          </button>
-        )}
-        {!isYou && isPlayer1Panel && gameStatus === 'waiting' && player && (
-          <button 
-            className="start-button"
-            disabled={true}
-          >
-            {player?.ready ? 'Ready' : 'Challenger Connected'}
-          </button>
-        )}
-        {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
-          <div className="versus-rules">
-            <h3 className="versus-rules-title">Versus Rules</h3>
-            <ol className="versus-rules-list">
-              <li>Type in your name above</li>
-              <li>Select a difficulty</li>
-              <li>Invite a challenger by sharing a link</li>
-              <li>Both players press start to play</li>
-              <li>Player with more points at the end of the game wins</li>
-              <li>Cells your opponent fills are highlighted in orange</li>
-              <li>Buy a life with bitcoin if you run out</li>
-            </ol>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const canEditName = isYou && gameStatus === 'waiting';
+
+  const nameInputProps = {
+    value: localName,
+    onChange: (e) => {
+      setLocalName(e.target.value);
+      isEditingRef.current = true;
+    },
+    onFocus: () => {
+      isEditingRef.current = true;
+    },
+    onBlur: (e) => {
+      isEditingRef.current = false;
+      const trimmedName = e.target.value.trim();
+      if (trimmedName) {
+        onNameChange?.(trimmedName);
+      }
+    },
+    placeholder: placeholderText,
+    canEdit: canEditName,
+    playerName: player?.name,
+    compact
+  };
 
   return (
-    <div className={`versus-player-panel ${isYou ? 'you' : 'opponent'}`}>
-      <div className="player-header">
-        <div className="player-name">
-          {canEditName ? (
-            <input
-              type="text"
-              value={localName}
-              onChange={(e) => {
-                setLocalName(e.target.value);
-                isEditingRef.current = true;
-              }}
-              onFocus={() => {
-                isEditingRef.current = true;
-              }}
-              onBlur={(e) => {
-                isEditingRef.current = false;
-                // Only update if name is not empty (let server use default if empty)
-                const trimmedName = e.target.value.trim();
-                if (trimmedName) {
-                  onNameChange?.(trimmedName);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.target.blur();
-                }
-              }}
-              className="name-input"
-              maxLength={20}
-              placeholder={placeholderText}
-            />
-          ) : (
-            <span>{player?.name || 'Player'}</span>
+    <div className={`versus-player-panel ${compact ? 'compact' : ''} ${isYou ? 'you' : 'opponent'}`}>
+      {compact ? (
+        <>
+          <div className="player-name">
+            <NameInput {...nameInputProps} />
+          </div>
+          <StatsDisplay player={player} compact={true} />
+          <ReadyButton
+            isYou={isYou}
+            player={player}
+            gameStatus={gameStatus}
+            isPendingReady={isPendingReady}
+            onReadyClick={() => {
+              setIsPendingReady(true);
+              onReadyClick?.();
+            }}
+            player2Connected={player2Connected}
+            isPlayer2Panel={isPlayer2Panel}
+            isPlayer1Panel={isPlayer1Panel}
+            isWaiting={isWaiting}
+            compact={true}
+          />
+          <RulesSection
+            isYou={isYou}
+            gameStatus={gameStatus}
+            player2Connected={player2Connected}
+            isWaiting={isWaiting}
+            compact={true}
+          />
+        </>
+      ) : (
+        <>
+          <div className="player-header">
+            <div className="player-name">
+              <NameInput {...nameInputProps} />
+            </div>
+          </div>
+          <StatsDisplay player={player} compact={false} />
+          {showCopyUrl && roomUrl && (
+            <button onClick={handleCopyUrl} className="copy-url-button">
+              {copied ? 'Copied!' : (gameStatus === 'waiting' ? 'Invite Player' : 'Invite Spectator')}
+            </button>
           )}
-        </div>
-      </div>
-      <div className="player-stats">
-        <div className="stat">
-          <span className="stat-label">Score:</span>
-          <span className="stat-value">{player?.score || 0}</span>
-        </div>
-        <div className="stat">
-          <span className="stat-label">Lives:</span>
-          <span className="stat-value">{player?.lives || 0}</span>
-        </div>
-        <div className="stat">
-          <span className="stat-label">Mistakes:</span>
-          <span className="stat-value">{player?.mistakes || 0}</span>
-        </div>
-      </div>
-      {showCopyUrl && roomUrl && (
-        <button onClick={handleCopyUrl} className="copy-url-button">
-          {copied ? 'Copied!' : (gameStatus === 'waiting' ? 'Invite Player' : 'Invite Spectator')}
-        </button>
-      )}
-      {isYou && gameStatus === 'waiting' && (
-        <button 
-          onClick={() => {
-            setIsPendingReady(true);
-            onReadyClick?.();
-          }} 
-          className={`start-button ${isPendingReady ? 'pending' : ''}`}
-          disabled={player?.ready || isPendingReady || (player2Connected !== undefined && !player2Connected)}
-        >
-          {isPendingReady ? (
-            <span className="ready-button-content">
-              <span className="ready-spinner"></span>
-            </span>
-          ) : player?.ready ? (
-            'Ready'
-          ) : (
-            'Start Game'
+          <ReadyButton
+            isYou={isYou}
+            player={player}
+            gameStatus={gameStatus}
+            isPendingReady={isPendingReady}
+            onReadyClick={() => {
+              setIsPendingReady(true);
+              onReadyClick?.();
+            }}
+            player2Connected={player2Connected}
+            isPlayer2Panel={isPlayer2Panel}
+            isPlayer1Panel={isPlayer1Panel}
+            isWaiting={isWaiting}
+            compact={false}
+          />
+          <RulesSection
+            isYou={isYou}
+            gameStatus={gameStatus}
+            player2Connected={player2Connected}
+            isWaiting={isWaiting}
+            compact={false}
+          />
+          {!isWaiting && player?.connected === false && (
+            <div className="disconnected-indicator">Disconnected</div>
           )}
-        </button>
-      )}
-      {!isYou && isPlayer2Panel && gameStatus === 'waiting' && player && (
-        <button 
-          className="start-button"
-          disabled={true}
-        >
-          {player?.ready ? 'Ready' : (isWaiting === false ? 'Connected' : 'Waiting...')}
-        </button>
-      )}
-        {!isYou && isPlayer1Panel && gameStatus === 'waiting' && player && (
-          <button 
-            className="start-button"
-            disabled={true}
-          >
-            {player?.ready ? 'Ready' : 'Connected'}
-          </button>
-        )}
-      {isYou && gameStatus === 'waiting' && player2Connected === undefined && isWaiting === false && (
-        <div className="versus-rules">
-          <h3 className="versus-rules-title">Versus Rules</h3>
-          <ol className="versus-rules-list">
-            <li>Type in your name above</li>
-            <li>Both players press start to play</li>
-            <li>Player with more points at the end of the game wins</li>
-            <li>Cells your opponent fills are highlighted in orange</li>
-            <li>Buy a life with bitcoin if you run out</li>
-            <li>Invite a spectator by sharing a link</li>
-          </ol>
-        </div>
-      )}
-      {!isWaiting && player?.connected === false && (
-        <div className="disconnected-indicator">Disconnected</div>
+        </>
       )}
     </div>
   );

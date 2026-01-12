@@ -210,10 +210,40 @@
   transition: border-color 0.2s, background-color 0.2s, color 0.2s;
 }
 
+.name-input::placeholder {
+  color: #718096;
+  opacity: 1;
+}
+
+.name-input::-webkit-input-placeholder {
+  color: #718096;
+  opacity: 1;
+}
+
+.name-input::-moz-placeholder {
+  color: #718096;
+  opacity: 1;
+}
+
 .dark .name-input {
   background: #4a5568;
   border-color: #718096;
   color: #e2e8f0;
+}
+
+.dark .name-input::placeholder {
+  color: #e2e8f0;
+  opacity: 1;
+}
+
+.dark .name-input::-webkit-input-placeholder {
+  color: #e2e8f0;
+  opacity: 1;
+}
+
+.dark .name-input::-moz-placeholder {
+  color: #e2e8f0;
+  opacity: 1;
 }
 
 .player-stats {
