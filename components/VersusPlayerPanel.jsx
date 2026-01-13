@@ -18,7 +18,8 @@ export default function VersusPlayerPanel({
   isWaiting = false,
   player2Connected = undefined,
   isPlayer2Panel = false,
-  isPlayer1Panel = false
+  isPlayer1Panel = false,
+  isConnected = true // WebSocket connection status for "you" panel
 }) {
   const [copied, setCopied] = useState(false);
   // Initialize to empty if name is default "Player 1" or "Player 2" so placeholder shows
@@ -173,7 +174,17 @@ export default function VersusPlayerPanel({
             isWaiting={isWaiting}
             compact={false}
           />
-          {!isWaiting && player?.connected === false && (
+          {!isWaiting && isYou && (
+            <>
+              {!isConnected && (
+                <div className="disconnected-indicator">Connecting...</div>
+              )}
+              {isConnected && player?.connected === false && (
+                <div className="disconnected-indicator">Disconnected</div>
+              )}
+            </>
+          )}
+          {!isWaiting && !isYou && player?.connected === false && (
             <div className="disconnected-indicator">Disconnected</div>
           )}
         </>

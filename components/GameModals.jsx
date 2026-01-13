@@ -170,7 +170,21 @@ export default function GameModals({
       <DifficultySelectionModal
         isOpen={showDifficultySelectionModal}
         onClose={() => setShowDifficultySelectionModal(false)}
-        onSelectDifficulty={onKeepPlayingWithDifficulty}
+        onSelectDifficulty={(difficulty) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameModals.jsx:173','message':'DifficultySelectionModal onSelectDifficulty called','data':{difficulty,hasGameState:!!gameState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          // Close modal first
+          setShowDifficultySelectionModal(false);
+          // If gameState exists, use keepPlayingWithDifficulty, otherwise startNewGame
+          if (gameState) {
+            onKeepPlayingWithDifficulty(difficulty).catch(err => {
+              console.error('[GameModals] Error in onKeepPlayingWithDifficulty:', err);
+            });
+          } else {
+            startNewGame(difficulty);
+          }
+        }}
       />
     </>
   );

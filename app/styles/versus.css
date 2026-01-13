@@ -913,3 +913,94 @@
   margin-bottom: 0;
 }
 
+/* Idle Disconnect Overlay */
+.idle-disconnect-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1003;
+}
+
+.idle-disconnect-modal {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 400px;
+  margin: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.dark .idle-disconnect-modal {
+  background: #2d3748;
+  color: #e2e8f0;
+}
+
+.idle-disconnect-modal h2 {
+  margin: 0 0 15px 0;
+  font-size: 1.5em;
+  color: #2d3748;
+}
+
+.dark .idle-disconnect-modal h2 {
+  color: #e2e8f0;
+}
+
+.idle-disconnect-modal p {
+  margin: 0 0 25px 0;
+  color: #4a5568;
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+.dark .idle-disconnect-modal p {
+  color: #cbd5e0;
+}
+
+.idle-disconnect-modal .reconnect-button,
+.idle-disconnect-modal .home-button {
+  display: block;
+  width: 100%;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.idle-disconnect-modal .reconnect-button {
+  background: #4299e1;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.idle-disconnect-modal .reconnect-button:hover {
+  background: #3182ce;
+}
+
+.idle-disconnect-modal .home-button {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.idle-disconnect-modal .home-button:hover {
+  background: #e2e8f0;
+}
+
+.dark .idle-disconnect-modal .home-button {
+  background: #4a5568;
+  color: #e2e8f0;
+}
+
+.dark .idle-disconnect-modal .home-button:hover {
+  background: #5a6778;
+}
+

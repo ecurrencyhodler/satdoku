@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 /**
  * Hook for managing versus player actions (ready, name change)
@@ -11,6 +11,13 @@ import { useCallback, useRef } from 'react';
  */
 export function useVersusPlayerActions(roomId, playerId, gameState, loadState, onPlayerNameChange) {
   const isReadyRequestInProgressRef = useRef(false);
+  // Use ref to avoid recreating callback when loadState changes
+  const loadStateRef = useRef(loadState);
+  
+  // Keep ref in sync
+  useEffect(() => {
+    loadStateRef.current = loadState;
+  }, [loadState]);
 
   // Handle ready button click
   const handleReadyClick = useCallback(async () => {
@@ -81,11 +88,11 @@ export function useVersusPlayerActions(roomId, playerId, gameState, loadState, o
       const result = await response.json();
       
       // Reload state to get updated name
-      loadState();
+      loadStateRef.current();
     } catch (error) {
       console.error('Error updating name:', error);
     }
-  }, [roomId, playerId, onPlayerNameChange, loadState]);
+  }, [roomId, playerId, onPlayerNameChange]);
 
   return {
     handleReadyClick,

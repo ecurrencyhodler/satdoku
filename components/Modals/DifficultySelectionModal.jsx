@@ -30,10 +30,20 @@ export default function DifficultySelectionModal({ isOpen, onClose, onSelectDiff
     setLoading(true);
     setError(null);
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DifficultySelectionModal.jsx:22','message':'handleDifficultySelect called','data':{difficulty},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     try {
       await onSelectDifficulty(difficulty);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DifficultySelectionModal.jsx:35','message':'handleDifficultySelect success','data':{difficulty},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Only close on success - onSelectDifficulty will handle closing
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DifficultySelectionModal.jsx:38','message':'handleDifficultySelect error','data':{difficulty,error:err.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setError(err.message || 'Failed to start game. Please try again.');
       setLoading(false);
     }

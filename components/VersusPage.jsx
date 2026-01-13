@@ -10,6 +10,7 @@ import { useVersusCountdown } from './hooks/useVersusCountdown.js';
 import { useVersusKeyboard } from './hooks/useVersusKeyboard.js';
 import { useOpponentCellTracking } from './hooks/useOpponentCellTracking.js';
 import { useVersusPlayerActions } from './hooks/useVersusPlayerActions.js';
+import { useIdleTimeout } from './hooks/useIdleTimeout.js';
 import { transformVersusStateToClient } from '../lib/game/versusGameStateClient.js';
 import VersusPlayerPanel from './VersusPlayerPanel.jsx';
 import VersusCountdown from './VersusCountdown.jsx';
@@ -46,24 +47,15 @@ export default function VersusPage({
   const [hasDismissedWinModal, setHasDismissedWinModal] = useState(false);
   // Purchase life modal state
   const [showPurchaseLifeModal, setShowPurchaseLifeModal] = useState(false);
+  // Idle timeout state
+  const [isIdleDisconnected, setIsIdleDisconnected] = useState(false);
   
   const isMobile = useMobileDetection();
   const isLoadingStateRef = useRef(false);
   const hasSeenPlayer1ConnectedRef = useRef(false);
-  const [hasJoinedRoomViaWS, setHasJoinedRoomViaWS] = useState(false);
   const triggerPresenceUpdateRef = useRef(null);
-  
-  // For both players, delay initial state load until WebSocket connects
-  // Player1: waits for WebSocket connection before loading
-  // Player2: waits for WebSocket connection before loading
-  const [enableInitialLoad, setEnableInitialLoad] = useState(() => {
-    // Only enable immediate load if we don't have a roomId yet (before room creation)
-    return !roomId;
-  });
 
-  // Game state management - must be defined before WebSocket handlers so loadState is available
-  // Delay initial state load until WebSocket connects and joins for both players
-  // This prevents the "disconnected" message from flashing and ensures connection is ready
+  // Game state management - load immediately when roomId exists
   const {
     gameState,
     loading,
@@ -71,10 +63,9 @@ export default function VersusPage({
     loadState,
     handleWebSocketMessage: handleWebSocketMessageFromHook,
     setGameState
-  } = useVersusGame(roomId, sessionId, playerId, enableInitialLoad);
+  } = useVersusGame(roomId, sessionId, playerId);
 
-
-  // WebSocket connection handlers - must be defined before useVersusWebSocket hook
+  // WebSocket connection handlers
   const handleReconnect = useCallback(async () => {
     if (roomId) {
       return loadState();
@@ -83,18 +74,6 @@ export default function VersusPage({
 
   // Wrap WebSocket message handler to capture notifications
   const handleWebSocketMessage = useCallback((message) => {
-    // Track when player successfully joins room via WebSocket
-    if (message.type === 'joined') {
-      setHasJoinedRoomViaWS(true);
-      // Enable loading for both players once WebSocket connection is established
-      if (!enableInitialLoad) {
-        setEnableInitialLoad(true);
-        // Explicitly load state for player 2 when they first join
-        // This ensures gameState is populated so controls are visible
-        loadState();
-      }
-    }
-    
     // Handle presence events forwarded from useVersusWebSocket
     // These events fire in useVersusWebSocket (registered before subscribe)
     // but the listeners in useVersusPresence don't fire (registered after subscribe)
@@ -114,9 +93,9 @@ export default function VersusPage({
     if (message.type === 'notification' && message.notification) {
       setNotification(message.notification);
     }
-  }, [handleWebSocketMessageFromHook, enableInitialLoad, loadState]);
+  }, [handleWebSocketMessageFromHook]);
 
-  // WebSocket connection - must be called before useEffect that uses isConnected
+  // WebSocket connection
   const { isConnected, isReconnecting, sendMessage, channel } = useVersusWebSocket(
     roomId,
     sessionId,
@@ -133,9 +112,6 @@ export default function VersusPage({
   useEffect(() => {
     triggerPresenceUpdateRef.current = triggerPresenceUpdate;
   }, [triggerPresenceUpdate]);
-
-
-
 
   // Track if we've ever seen player1 connected for this room (using presence)
   useEffect(() => {
@@ -185,6 +161,18 @@ export default function VersusPage({
 
   // Track opponent-filled cells
   const { opponentFilledCells, trackMoveAttempt } = useOpponentCellTracking(gameState, isSpectator);
+
+  // Idle timeout - disconnect inactive users after 1 hour
+  const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+  const handleIdleTimeout = useCallback(() => {
+    setIsIdleDisconnected(true);
+    // The WebSocket will be cleaned up when component unmounts or roomId changes
+  }, []);
+  
+  // Only enable idle timeout when connected to a room and game is not finished
+  const currentGameStatus = gameState?.status || gameState?.gameStatus;
+  const idleTimeoutEnabled = !!(roomId && sessionId && currentGameStatus !== 'finished' && !isIdleDisconnected);
+  useIdleTimeout(handleIdleTimeout, IDLE_TIMEOUT_MS, idleTimeoutEnabled);
 
   // Cell input handling
   const { handleCellInput: originalHandleCellInput } = useVersusCellInput(
@@ -281,8 +269,6 @@ export default function VersusPage({
   // Handle difficulty selection and room creation
   const handleDifficultySelect = useCallback(async (selectedDifficulty) => {
     setDifficulty(selectedDifficulty);
-    setHasJoinedRoomViaWS(false);
-    setEnableInitialLoad(false); // Prevent loading until WebSocket connected
     // Immediately hide difficulty selection to prevent re-showing during navigation
     setShowDifficultySelection(false);
     if (onCreateRoom) {
@@ -392,9 +378,42 @@ export default function VersusPage({
   // Board should only be visible when the game is playing or finished, not during waiting
   const currentStatus = gameState?.status || gameState?.gameStatus;
   // Board is visible when game is active/playing/finished AND countdown has finished
-  const boardVisible = gameState && ((currentStatus === 'active' || currentStatus === 'playing') || currentStatus === 'finished') && countdownFinished;
+  // For finished games, always show board (countdownFinished may be false if start_at is null)
+  const boardVisible = gameState && ((currentStatus === 'active' || currentStatus === 'playing') || currentStatus === 'finished') && (countdownFinished || currentStatus === 'finished');
   // Show countdown when we have start_at, countdown hasn't finished, and status is active
   const showCountdown = gameState?.start_at && !countdownFinished && currentStatus === 'active';
+
+  // Show idle disconnect screen
+  if (isIdleDisconnected) {
+    return (
+      <div className={`versus-page ${isMobile ? 'mobile' : 'desktop'}`}>
+        <div className="idle-disconnect-overlay">
+          <div className="idle-disconnect-modal">
+            <h2>Disconnected Due to Inactivity</h2>
+            <p>You&apos;ve been disconnected after 1 hour of inactivity.</p>
+            <button 
+              className="reconnect-button"
+              onClick={() => {
+                setIsIdleDisconnected(false);
+                // Reload the page to reconnect
+                window.location.reload();
+              }}
+            >
+              Reconnect
+            </button>
+            <button 
+              className="home-button"
+              onClick={() => {
+                window.location.href = '/versus/create';
+              }}
+            >
+              Start New Game
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`versus-page ${isMobile ? 'mobile' : 'desktop'}`}>
@@ -448,6 +467,7 @@ export default function VersusPage({
                 showCopyUrl={isPlayer1}
                 player2Connected={isPlayer1 ? presencePlayer2Connected : (isPlayer2 ? true : undefined)}
                 isPlayer1Panel={true}
+                isConnected={isPlayer1 ? isConnected : true}
               />
             </div>
             <div className="versus-board-container" onClick={handleBoardBackgroundClick}>
@@ -485,6 +505,7 @@ export default function VersusPage({
                 roomUrl={roomId ? `/versus?room=${roomId}` : null}
                 showCopyUrl={isPlayer2 && roomId && (gameState?.status === 'active' || gameState?.status === 'finished')}
                 isPlayer2Panel={true}
+                isConnected={isPlayer2 ? isConnected : true}
               />
             </div>
           </>
@@ -535,6 +556,7 @@ export default function VersusPage({
                 onReadyClick={handleReadyClick}
                 compact={true}
                 player2Connected={isPlayer1 ? presencePlayer2Connected : undefined}
+                isConnected={isConnected}
               />
             </div>
           </>

@@ -31,6 +31,10 @@ export const StateManager = {
                 return { success: false, error: 'Not in browser context' };
             }
 
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:28','message':'sendGameAction called','data':{action:action.action,difficulty:action.difficulty,expectedVersion},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+
             const response = await fetch('/api/game-action', {
                 method: 'POST',
                 headers: {
@@ -40,7 +44,15 @@ export const StateManager = {
                 body: JSON.stringify({ ...action, expectedVersion }),
             });
 
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:43','message':'sendGameAction response received','data':{status:response.status,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+
             const result = await response.json();
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'localState.js:45','message':'sendGameAction result parsed','data':{success:result.success,error:result.error,errorCode:result.errorCode,hasState:!!result.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
 
             if (!response.ok) {
                 // Handle version conflicts

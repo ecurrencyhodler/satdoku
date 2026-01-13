@@ -13,14 +13,23 @@ export function useGameInitialization(setGameState, setSelectedCell, setShowPurc
 
   const startNewGame = useCallback(async (pendingDifficultyChange = null) => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:14','message':'startNewGame called','data':{difficulty:pendingDifficultyChange||'beginner'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       isLoadingStateRef.current = true;
       const difficulty = pendingDifficultyChange || 'beginner';
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:19','message':'Sending startNewGame action','data':{difficulty},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const result = await StateManager.sendGameAction({
         action: 'startNewGame',
         difficulty
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useGameInitialization.js:24','message':'startNewGame result received','data':{success:result.success,error:result.error,hasState:!!result.state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       if (result.success) {
         // Clear chat history when starting new game
         try {

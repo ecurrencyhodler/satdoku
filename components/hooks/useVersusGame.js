@@ -5,11 +5,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * @param {string} roomId - Room ID
  * @param {string} sessionId - Session ID
  * @param {string} playerId - Player ID
- * @param {boolean} enableInitialLoad - Whether to load state immediately on mount (default: true)
  */
-export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = true) {
+export function useVersusGame(roomId, sessionId, playerId) {
   const [gameState, setGameState] = useState(null);
-  const [loading, setLoading] = useState(enableInitialLoad);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const isLoadingRef = useRef(false);
   // Track if we've already loaded for this roomId to prevent multiple loads
@@ -33,9 +32,6 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
 
       if (data.success && data.state) {
         console.log('[useVersusGame] State loaded successfully, status:', data.state.status, 'start_at:', data.state.start_at);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/888a85b2-944a-43f1-8747-68d69a3f19fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useVersusGame.js:36',message:'loadState setting gameState',data:{opponentSelectedCell:data.state.opponentSelectedCell,playerId,currentOpponentSelectedCell:gameState?.opponentSelectedCell},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         // Note: opponentSelectedCell is now tracked via presence, not in gameState
         setGameState(data.state);
         setError(null);
@@ -164,13 +160,12 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
     // Note: cell_selected messages are no longer used - cell selection is now tracked via presence
   }, [playerId, roomId]);
 
-  // Initial load (only if enabled)
-  // Track the previous roomId to detect changes - initialize to null to detect first roomId
+  // Initial load when roomId exists
+  // Track the previous roomId to detect changes
   const prevRoomIdRef = useRef(null);
   
   useEffect(() => {
     // Reset hasLoadedForRoomRef when roomId actually changes to a different room
-    // Only reset if roomId changed from one non-null value to another
     const roomIdChanged = prevRoomIdRef.current !== null && prevRoomIdRef.current !== roomId && roomId !== null;
     if (roomIdChanged) {
       hasLoadedForRoomRef.current = null;
@@ -178,21 +173,19 @@ export function useVersusGame(roomId, sessionId, playerId, enableInitialLoad = t
     // Update prevRoomIdRef to current roomId (even if null)
     prevRoomIdRef.current = roomId;
     
-    // Check if we've already loaded for this room - if so, never load again
+    // Check if we've already loaded for this room - if so, don't load again
     const alreadyLoaded = hasLoadedForRoomRef.current === roomId;
     
-    // Only load if enabled, we have a roomId, and we haven't already loaded for this room
-    // Once we've loaded for a room, never load again (even if enableInitialLoad toggles)
-    if (roomId && enableInitialLoad && !alreadyLoaded) {
-      // Set the ref IMMEDIATELY and SYNCHRONOUSLY to prevent duplicate calls
-      // This must happen before calling loadState
+    // Load state when roomId exists and we haven't loaded for this room yet
+    if (roomId && !alreadyLoaded) {
       hasLoadedForRoomRef.current = roomId;
       loadStateRef.current();
-    } else if (roomId && !enableInitialLoad) {
-      // If initial load is disabled, set loading to false so component can render
+    } else if (!roomId) {
+      // No roomId - clear state and stop loading
+      setGameState(null);
       setLoading(false);
     }
-  }, [roomId, enableInitialLoad]);
+  }, [roomId]);
 
   return {
     gameState,
