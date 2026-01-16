@@ -650,6 +650,7 @@
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .dark .hamburger-menu {
@@ -668,10 +669,7 @@
 /* Mobile menu dropdown */
 .mobile-menu {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 1000;
     pointer-events: none;
     opacity: 0;
@@ -716,11 +714,6 @@
     color: #4299e1;
 }
 
-.dark .mobile-menu-content .mobile-menu-header {
-    border-bottom-color: #4299e1;
-    color: #4299e1;
-}
-
 .mobile-menu-content .nav-link {
     display: block;
     padding: 16px 24px;
@@ -729,18 +722,11 @@
     text-align: left;
     color: #718096;
     text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .dark .mobile-menu-content .nav-link {
     border-bottom-color: #4a5568;
-    color: #a0aec0;
-}
-
-.mobile-menu-content .nav-link:visited {
-    color: #718096;
-}
-
-.dark .mobile-menu-content .nav-link:visited {
     color: #a0aec0;
 }
 
@@ -759,12 +745,10 @@
 
 .mobile-menu-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: -1;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Fixed theme toggle in top right */
